@@ -1,0 +1,31 @@
+# 폐루프 측정 2026-10-06 (WSL Ubuntu-24.04, tinyIoT MN 1개 mn001 새 DB, 가상 칸 + MEC 컨트롤러가 CSE만 통해 통신)
+# 도구: python3 -m polagrid.closed_loop (polagrid/zone.py). 같은 날(2026-11-05, 맑음)을 CSE 경유와 물리 모델 직접 계산으로 각각 돌려 비교.
+# 패치: sqlite-wal-normal, fopt-member-notify, grp-mid-overflow, sqlite-missing-comma + serialize-requests, large-response (10-06)
+
+== 12칸(3x4), AI ①+② (15분마다 전 칸 탐색), 5분 단계
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.25        16.00       302         1129
+direct physics             0.33        16.25       306         1096
+[latency] 510 commands to 12 cells: command -> desk reading p50=28ms p95=48ms max=81ms
+(전체 17.6초)
+
+== 12칸, AI ③ 예측 (60일 교사 데이터 학습), 5분 단계
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       305          227
+direct physics             0.00        15.33       305          223
+[latency] 89 commands to 12 cells: command -> desk reading p50=19ms p95=28ms max=42ms
+
+== 100칸(10x10), AI ③ 예측 (30일 학습), 5분 단계
+[train] 30 days, 4320 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          1.25         5.92       847         1365
+direct physics             1.25         5.92       846         1366
+[latency] 125 commands to 100 cells: command -> desk reading p50=512ms p95=843ms max=1131ms
+(전체 3분 19초, 학습 포함)
+
+== 100칸, AI ①+② 탐색 (--step 15 --probe 60): 중단
+탐색 1회 = 명령 101번 × (칸 알림 100 + angle CIN 100). 20분 동안 CIN 약 67,000건(처리량 66/s → 33/s로 하락, MN CPU 100%)
+까지 진행됐으나 하루를 끝내지 못해 중단. 칸 수에 대해 O(N^2)이라 100칸에서는 맞지 않음.
+
+== 패치 부작용 측정: 요청 직렬화(serialize-requests) 후 MN 처리량 (tools/bench_tinyiot.sh 1000 3000, 새 DB)
+결과는 results/bench_tinyiot_mn_serialize_1006.txt (칸마다 AE 운영 처리량 295 req/s, 직렬화 전 577 req/s)

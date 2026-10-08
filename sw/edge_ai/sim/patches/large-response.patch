@@ -1,0 +1,40 @@
+--- a/source/server/httpd.c
++++ b/source/server/httpd.c
+@@ -457,18 +457,16 @@
+     char rsc[64];
+     char cnst[32], ot[32];
+     char response_headers[2048] = {'\0'};
+-    char buf[BUF_SIZE];
++    char *buf;
+     char *pc = NULL;
+-    memset(buf, 0, BUF_SIZE);
+     if (o2pt->response_pc)
+     {
+         pc = cJSON_PrintUnformatted(o2pt->response_pc);
+     }
+ 
+-    if (pc && strlen(pc) >= BUF_SIZE - 1)
+-    {
+-        handle_error(o2pt, RSC_NOT_ACCEPTABLE, "result size too big");
+-    }
++    /* 응답 본문이 BUF_SIZE(64KB)를 넘으면(GRP fopt가 멤버 수만큼 자원을 되돌려줄 때) 본문이 잘려 나갔다. 본문 길이만큼 버퍼를 키운다 */
++    size_t buf_size = BUF_SIZE + (pc ? strlen(pc) : 0);
++    buf = calloc(buf_size, sizeof(char));
+ 
+     sprintf(content_length, "%ld", pc ? strlen(pc) : 0);
+     sprintf(rsc, "%d", o2pt->rsc);
+@@ -497,12 +495,13 @@
+     sprintf(buf, "%s %d %s\r\n%s%s\r\n", HTTP_PROTOCOL_VERSION, status_code, status_msg, DEFAULT_RESPONSE_HEADERS, response_headers);
+     if (pc)
+     {
+-        strncat(buf, pc, BUF_SIZE - strlen(buf) - 1);
++        strncat(buf, pc, buf_size - strlen(buf) - 1);
+         strncat(buf, "\r\n", BUF_SIZE - strlen(buf) - 1);
+     }
+     logger("HTTP", LOG_LEVEL_DEBUG, "Response: \n%s", buf);
+ 
+     write(clients[slotno], buf, strlen(buf));
++    free(buf);
+ 
+     if (pc)
+     {

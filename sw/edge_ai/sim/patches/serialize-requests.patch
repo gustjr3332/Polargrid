@@ -1,0 +1,22 @@
+--- a/source/server/httpd.c
++++ b/source/server/httpd.c
+@@ -29,6 +29,9 @@
+ extern void route(oneM2MPrimitive *o2pt);
+ 
+ static char *buf[MAX_CONNECTIONS];
++// tinyIoT handles each request in its own thread but the resource tree (rtnode->obj) is not thread safe:
++// concurrent create/fopt crashed in get_ri_rtnode(). Serialize request routing.
++static pthread_mutex_t route_lock = PTHREAD_MUTEX_INITIALIZER;
+ 
+ // Client request
+ 
+@@ -415,7 +418,9 @@
+         o2pt->fc = qs;
+     }
+ 
++    pthread_mutex_lock(&route_lock);
+     route(o2pt);
++    pthread_mutex_unlock(&route_lock);
+ 
+     http_respond_to_client(o2pt, slotno);
+     free_o2pt(o2pt);

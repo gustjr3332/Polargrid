@@ -1,0 +1,128 @@
+--- a/source/server/sqlite_implement.c	2026-10-01 17:18:13.036245905 +0900
++++ b/source/server/sqlite_implement.c	2026-10-01 17:18:20.755733005 +0900
+@@ -391,7 +391,7 @@
+     const char *colname = NULL;
+     int bytes = 0;
+     int coltype = 0;
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     cJSON *arr = NULL;
+ 
+     for (int col = 0; col < cols; col++)
+@@ -406,8 +406,7 @@
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(stmt, col), bytes);
++            buf = (const char *)sqlite3_column_text(stmt, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -486,7 +485,7 @@
+     const char *colname = NULL;
+     int bytes = 0;
+     int coltype = 0;
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     cJSON *arr = NULL;
+ 
+     for (int col = 0; col < cols; col++)
+@@ -501,8 +500,7 @@
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(stmt, col), bytes);
++            buf = (const char *)sqlite3_column_text(stmt, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -1016,7 +1014,7 @@
+     sqlite3_stmt *res;
+     const char *colname = NULL;
+     char sql[1024] = {0};
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+ 
+     sprintf(sql, "SELECT * FROM general WHERE ty != 4 AND ty != 5 AND ty != 58;");
+     rc = sqlite3_prepare_v2(db, sql, -1, &res, NULL);
+@@ -1042,8 +1040,7 @@
+             switch (coltype)
+             {
+             case SQLITE_TEXT:
+-                memset(buf, 0, 256);
+-                strncpy(buf, sqlite3_column_text(res, col), bytes);
++                buf = (const char *)sqlite3_column_text(res, col);
+                 arr = cJSON_Parse(buf);
+                 if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                 {
+@@ -1089,8 +1086,7 @@
+                 switch (coltype)
+                 {
+                 case SQLITE_TEXT:
+-                    memset(buf, 0, 256);
+-                    strncpy(buf, sqlite3_column_text(res2, col), bytes);
++                    buf = (const char *)sqlite3_column_text(res2, col);
+                     arr = cJSON_Parse(buf);
+                     if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                     {
+@@ -1232,7 +1228,7 @@
+ RTNode *db_get_latest_cins()
+ {
+     char sql[1024] = {0};
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     const char *colname;
+     int rc = 0;
+     int cols, bytes, coltype;
+@@ -1268,8 +1264,7 @@
+             switch (coltype)
+             {
+             case SQLITE_TEXT:
+-                memset(buf, 0, 256);
+-                strncpy(buf, sqlite3_column_text(res, col), bytes);
++                buf = (const char *)sqlite3_column_text(res, col);
+                 arr = cJSON_Parse(buf);
+                 if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                 {
+@@ -1311,7 +1306,8 @@
+  */
+ cJSON *db_get_cin_laol(RTNode *parent_rtnode, int laol)
+ {
+-    char sql[1024] = {0}, buf[256] = {0};
++    char sql[1024] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     char *ord = NULL;
+     const char *colname;
+     int rc = 0;
+@@ -1364,8 +1360,7 @@
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(res, col), bytes);
++            buf = (const char *)sqlite3_column_text(res, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -2351,7 +2346,8 @@
+ 
+ cJSON *db_get_tsi_laol(RTNode *parent_rtnode, int laol) {
+     const char *ord = (laol == 0) ? "DESC" : "ASC";
+-    char sql[1024], buf[256];
++    char sql[1024];
++    const char *buf = NULL;
+     sqlite3_stmt *res = NULL;
+     snprintf(sql, sizeof(sql),
+              "SELECT * FROM general, tsi WHERE pi='%s' AND general.id = tsi.id "
+@@ -2371,8 +2367,7 @@
+         if (bytes == 0) continue;
+ 
+         if (coltype == SQLITE_TEXT) {
+-            memset(buf, 0, sizeof(buf));
+-            strncpy(buf, (const char*)sqlite3_column_text(res, col), bytes);
++            buf = (const char *)sqlite3_column_text(res, col);
+             cJSON *arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object)) cJSON_AddItemToObject(json, colname, arr);
+             else { cJSON_AddItemToObject(json, colname, cJSON_CreateString(buf)); cJSON_Delete(arr); }

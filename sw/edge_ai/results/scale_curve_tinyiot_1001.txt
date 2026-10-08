@@ -1,0 +1,26 @@
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:16
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.5s
+[edge] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=95ms p95=154ms max=154ms | zone-complete p95 (median over rounds)=95ms
+[in] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=187ms p95=207ms max=207ms | zone-complete p95 (median over rounds)=187ms
+  cpu avg us=4% sy=2% wa=0% busy-max=38%
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:33
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=1.1s
+[edge] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=126ms p95=180ms max=180ms | zone-complete p95 (median over rounds)=126ms
+[in] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=233ms p95=285ms max=285ms | zone-complete p95 (median over rounds)=233ms
+  cpu avg us=7% sy=3% wa=0% busy-max=38%
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:52
+[setup] 5 MN x 100 = 500 panels, ok=500 wall=2.5s
+[edge] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=187ms p95=269ms max=269ms | zone-complete p95 (median over rounds)=187ms
+[in] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=369ms p95=438ms max=438ms | zone-complete p95 (median over rounds)=369ms
+  cpu avg us=15% sy=5% wa=1% busy-max=100%
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=10 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:17:14
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=5.6s
+[edge] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=349ms p95=382ms max=382ms | zone-complete p95 (median over rounds)=349ms
+[in] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=676ms p95=801ms max=801ms | zone-complete p95 (median over rounds)=676ms
+  cpu avg us=26% sy=8% wa=0% busy-max=100%
+# scale curve, patched tinyIoT (WAL), bg 17/s (fresh DB)  MN=10 x 100 panels rounds=10 bg=17/s modes=edge,in  2026-10-01 21:17:44
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=5.3s
+[edge] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=335ms p95=461ms max=461ms | zone-complete p95 (median over rounds)=335ms
+[in] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=672ms p95=731ms max=731ms | zone-complete p95 (median over rounds)=672ms
+[bg] lux CIN ok=384 fail=0
+  cpu avg us=25% sy=7% wa=0% busy-max=100%

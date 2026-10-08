@@ -1,0 +1,104 @@
+# 수신기·배경 부하를 측정 스크립트 한 프로세스에서 돌린 첫 측정(클라이언트 GIL 병목 의심, 참고용)
+# 1000 panels hierarchy, patched tinyIoT (WAL), bg=0  MN=10 x 100 panels rounds=20 bg=0/s modes=edge,in  2026-10-01 20:53:47
+  running: 10  total RSS: 69 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=6.3s
+[edge] rounds=20 fopt_status=[200] missing=0/20000 | all-1000-panels complete p50=2165ms p95=3147ms max=3147ms | zone-complete p95 (median over rounds)=2165ms
+[in] rounds=20 fopt_status=[200, 404] missing=0/20000 | all-1000-panels complete p50=2509ms p95=4155ms max=4155ms | zone-complete p95 (median over rounds)=2509ms
+  after: running: 10  total RSS: 151 MB
+# 1000 panels hierarchy, patched tinyIoT (WAL), bg=17  MN=10 x 100 panels rounds=20 bg=17/s modes=edge,in  2026-10-01 20:55:55
+  running: 10  total RSS: 83 MB
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 497, in _make_request
+    conn.request(
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 395, in request
+    self.endheaders()
+  File "/usr/lib/python3.12/http/client.py", line 1360, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.12/http/client.py", line 1120, in _send_output
+    self.send(msg)
+  File "/usr/lib/python3.12/http/client.py", line 1064, in send
+    self.connect()
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 243, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 218, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x7f68142b9970>: Failed to establish a new connection: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 486, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 517, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='127.0.0.1', port=3001): Max retries exceeded with url: /TinyIoT-mn001 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f68142b9970>: Failed to establish a new connection: [Errno 111] Connection refused'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 174, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 96, in main
+    res = list(ex.map(setup, [(z, i) for z in zones for i in range(a.per)]))
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 86, in setup
+    rs = [post(f"{host}/{cse}", orig, {"m2m:ae": {"rn": rn, "api": "Npolagrid", "rr": True, "srv": ["3"], "poa": [nu]}}, 2),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 33, in post
+    return sess().post(url, headers=hdr(orig, ty), data=json.dumps(body), timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 637, in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 519, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=3001): Max retries exceeded with url: /TinyIoT-mn001 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f68142b9970>: Failed to establish a new connection: [Errno 111] Connection refused'))
+  after: running: 10  total RSS: 86 MB
+# 1000 panels hierarchy, patched tinyIoT (WAL), bg=170  MN=10 x 100 panels rounds=20 bg=170/s modes=edge,in  2026-10-01 20:56:01
+  running: 10  total RSS: 83 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=7.2s
+[edge] rounds=20 fopt_status=[200] missing=0/20000 | all-1000-panels complete p50=4132ms p95=16511ms max=16511ms | zone-complete p95 (median over rounds)=4132ms
+[in] rounds=20 fopt_status=[200, 404] missing=0/20000 | all-1000-panels complete p50=11666ms p95=19670ms max=19670ms | zone-complete p95 (median over rounds)=11666ms
+[bg] lux CIN ok=63194 fail=0
+  after: running: 10  total RSS: 211 MB

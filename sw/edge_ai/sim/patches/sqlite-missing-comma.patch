@@ -1,0 +1,11 @@
+--- /home/gustjr3332/tinyIoT/source/server/sqlite_implement.c	2026-04-14 12:42:19.000000000 +0900
++++ sqlite_implement.c	2026-09-29 20:47:44.326097379 +0900
+@@ -194,7 +194,7 @@
+      "st INT, cs INT, fcied INT, mni INT, mbs INT, mia INT, cni INT, cbs INT, "
+      "custom_attrs TEXT, loc TEXT, daci VARCHAR(200), "
+      "CONSTRAINT fk_id FOREIGN KEY (id) REFERENCES general(id) ON DELETE CASCADE );"
+-    }
++    },
+     {"ts",
+      "CREATE TABLE IF NOT EXISTS ts ( id INTEGER, "
+      "cr VARCHAR(45), mni INT, mbs INT, mia INT, cni INT, cbs INT, "

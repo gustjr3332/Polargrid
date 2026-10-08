@@ -1,0 +1,9 @@
+# Documents stay local (Korean working docs, contest PDFs)
+docs/
+*.md
+!hw/README.md
+!sw/actuator/README.md
+!sw/app_ui/README.md
+
+__pycache__/
+.pytest_cache/

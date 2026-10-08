@@ -1,0 +1,69 @@
+# 폐루프 latest 2026-10-07 19:32:05
+== --controller probe
+[setup] 12 cells on TinyIoT-mn001, run r69130
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.25        16.00       302         1129
+direct physics             0.33        16.25       306         1096
+[latency] 510 commands to 12 cells: command -> desk reading p50=26ms p95=42ms max=88ms
+== --controller predict
+[setup] 12 cells on TinyIoT-mn001, run r69153
+[train] 60 days, 8640 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       305          227
+direct physics             0.00        15.33       305          223
+[latency] 89 commands to 12 cells: command -> desk reading p50=17ms p95=26ms max=31ms
+== --rows 10 --cols 10 --controller predict --train-days 30
+[setup] 100 cells on TinyIoT-mn001, run r69181
+[train] 30 days, 4320 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          1.25         5.92       847         1365
+direct physics             1.25         5.92       846         1366
+[latency] 125 commands to 100 cells: command -> desk reading p50=580ms p95=815ms max=984ms
+# 폐루프 ACP 분리 후 (CAdmin은 ACP 생성에만, 실행 중 요청은 역할별 originator) 2026-10-07 21:29:15
+== ACP --controller probe
+[setup] 12 cells on TinyIoT-mn001, run r76159
+[acp] cell p1 -> p0/angle=403, viewer -> env/desks=403, viewer reads env/sun=200, viewer reads p0/angle=200
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.25        16.00       302         1129
+direct physics             0.33        16.25       306         1096
+[latency] 510 commands to 12 cells: command -> desk reading p50=26ms p95=43ms max=74ms
+== ACP --controller predict
+[setup] 12 cells on TinyIoT-mn001, run r76183
+[acp] cell p1 -> p0/angle=403, viewer -> env/desks=403, viewer reads env/sun=200, viewer reads p0/angle=200
+[train] 60 days, 8640 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       305          227
+direct physics             0.00        15.33       305          223
+[latency] 89 commands to 12 cells: command -> desk reading p50=19ms p95=29ms max=43ms
+== ACP --rows 10 --cols 10 --controller predict --train-days 30
+[setup] 100 cells on TinyIoT-mn001, run r76212
+[acp] cell p1 -> p0/angle=403, viewer -> env/desks=403, viewer reads env/sun=200, viewer reads p0/angle=200
+[train] 30 days, 4320 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          1.25         5.92       847         1365
+direct physics             1.25         5.92       846         1366
+[latency] 125 commands to 100 cells: command -> desk reading p50=561ms p95=951ms max=1264ms
+# 폐루프 FlexContainer(cod:opeLl) + 라벨 발견으로 GRP 구성 (ACP 분리 유지) 2026-10-07 21:41:54
+== FCNT --controller probe
+[setup] 12 cells on TinyIoT-mn001, run r76918
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.25        16.00       302         1129
+direct physics             0.33        16.25       306         1096
+[latency] 510 commands to 12 cells: command -> desk reading p50=21ms p95=32ms max=59ms
+== FCNT --controller predict
+[setup] 12 cells on TinyIoT-mn001, run r76939
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[train] 60 days, 8640 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       305          227
+direct physics             0.00        15.33       305          223
+[latency] 89 commands to 12 cells: command -> desk reading p50=17ms p95=28ms max=32ms
+== FCNT --rows 10 --cols 10 --controller predict --train-days 30
+[setup] 100 cells on TinyIoT-mn001, run r76966
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[train] 30 days, 4320 samples
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          1.25         5.92       847         1365
+direct physics             1.25         5.92       846         1366
+[latency] 125 commands to 100 cells: command -> desk reading p50=549ms p95=881ms max=991ms

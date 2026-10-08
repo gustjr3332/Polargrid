@@ -1,0 +1,14 @@
+--- a/source/server/sqlite_implement.c	2026-10-01 16:52:57.796257436 +0900
++++ b/source/server/sqlite_implement.c	2026-10-01 16:53:29.114865180 +0900
+@@ -253,6 +253,11 @@
+         return 0;
+     }
+ 
++    /* 쓰기마다 fsync하던 기본 저널 대신 WAL + synchronous=NORMAL (트랜잭션 밖에서만 설정 가능).
++       앱 크래시에는 안전, 전원 차단 시 마지막 커밋 일부 유실 가능 */
++    sqlite3_exec(db, "PRAGMA journal_mode = WAL;", NULL, NULL, NULL);
++    sqlite3_exec(db, "PRAGMA synchronous = NORMAL;", NULL, NULL, NULL);
++
+     // Begin transaction for atomic table creation
+     if (!execute_sql_with_error_handling("BEGIN TRANSACTION;", "Begin Transaction", &err_msg)) {
+         sqlite3_close(db);

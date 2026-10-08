@@ -1,0 +1,51 @@
+# latest (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:09:58
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.5s
+[edge] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=102ms p95=120ms max=120ms | zone-complete p95 (median over rounds)=102ms
+[in] no notifications (fopt_status=[200])
+  cpu avg us=1% sy=1% wa=0% busy-max=100%
+# latest (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:15:42
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=0.9s
+[edge] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=112ms p95=133ms max=133ms | zone-complete p95 (median over rounds)=112ms
+[in] no notifications (fopt_status=[200])
+  cpu avg us=1% sy=1% wa=0% busy-max=100%
+# latest (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:21:29
+# latest+ACP (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:30:15
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.4s
+[edge] rounds=10 fopt_status=['200'] missing=0/1000 | all-100-panels complete p50=97ms p95=126ms max=126ms | zone-complete p95 (median over rounds)=97ms
+[in] rounds=10 fopt_status=['200'] missing=0/1000 | all-100-panels complete p50=188ms p95=248ms max=248ms | zone-complete p95 (median over rounds)=188ms
+  cpu avg us=3% sy=2% wa=0% busy-max=13%
+# latest+ACP (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:30:32
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=0.9s
+[edge] rounds=10 fopt_status=['200'] missing=0/2000 | all-200-panels complete p50=112ms p95=159ms max=159ms | zone-complete p95 (median over rounds)=112ms
+[in] rounds=10 fopt_status=['200'] missing=0/2000 | all-200-panels complete p50=345ms p95=3157ms max=3157ms | zone-complete p95 (median over rounds)=345ms
+  cpu avg us=5% sy=3% wa=0% busy-max=16%
+# latest+ACP (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:30:55
+[setup] 5 MN x 100 = 500 panels, ok=500 wall=2.2s
+[edge] rounds=10 fopt_status=['200'] missing=0/5000 | all-500-panels complete p50=148ms p95=169ms max=169ms | zone-complete p95 (median over rounds)=148ms
+[in] rounds=10 fopt_status=['200'] missing=0/5000 | all-500-panels complete p50=873ms p95=978ms max=978ms | zone-complete p95 (median over rounds)=873ms
+  cpu avg us=379% sy=4% wa=2% busy-max=100%
+# latest+ACP (fresh DB)  MN=10 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:31:25
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=4.2s
+[edge] rounds=10 fopt_status=['200'] missing=0/10000 | all-1000-panels complete p50=271ms p95=297ms max=297ms | zone-complete p95 (median over rounds)=271ms
+[in] rounds=10 fopt_status=['200'] missing=0/10000 | all-1000-panels complete p50=1798ms p95=4741ms max=4741ms | zone-complete p95 (median over rounds)=1798ms
+  cpu avg us=12% sy=6% wa=0% busy-max=100%
+# latest+ACP, IN without serialize lock (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:38:17
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.5s
+[edge] rounds=10 fopt_status=['200'] missing=0/1000 | all-100-panels complete p50=100ms p95=136ms max=136ms | zone-complete p95 (median over rounds)=100ms
+[in] rounds=10 fopt_status=['200'] missing=0/1000 | all-100-panels complete p50=181ms p95=250ms max=250ms | zone-complete p95 (median over rounds)=181ms
+  cpu avg us=4% sy=2% wa=0% busy-max=16%
+# latest+ACP, IN without serialize lock (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:38:36
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=0.8s
+[edge] rounds=10 fopt_status=['200'] missing=0/2000 | all-200-panels complete p50=85ms p95=103ms max=103ms | zone-complete p95 (median over rounds)=85ms
+[in] rounds=10 fopt_status=['200'] missing=0/2000 | all-200-panels complete p50=171ms p95=189ms max=189ms | zone-complete p95 (median over rounds)=171ms
+  cpu avg us=5% sy=3% wa=0% busy-max=19%
+# latest+ACP, IN without serialize lock (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:38:56
+[setup] 5 MN x 100 = 500 panels, ok=500 wall=2.0s
+[edge] rounds=10 fopt_status=['200'] missing=0/5000 | all-500-panels complete p50=151ms p95=199ms max=199ms | zone-complete p95 (median over rounds)=151ms
+[in] rounds=10 fopt_status=['200'] missing=0/5000 | all-500-panels complete p50=292ms p95=369ms max=369ms | zone-complete p95 (median over rounds)=292ms
+  cpu avg us=64% sy=4% wa=3% busy-max=100%
+# latest+ACP, IN without serialize lock (fresh DB)  MN=10 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-07 19:39:17
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=4.5s
+[edge] rounds=10 fopt_status=['200'] missing=0/10000 | all-1000-panels complete p50=267ms p95=344ms max=344ms | zone-complete p95 (median over rounds)=267ms
+[in] rounds=10 fopt_status=['200'] missing=0/10000 | all-1000-panels complete p50=565ms p95=634ms max=634ms | zone-complete p95 (median over rounds)=565ms
+  cpu avg us=24% sy=6% wa=0% busy-max=100%

@@ -1,0 +1,8 @@
+20 test days, 60 training days, 2 desks; per-day averages, desk-hours summed over desks
+method                    glare h  under-lit h  mean lux  servo moves
+B0 fixed open                2.26        16.27      1100            0
+B1 blind                     0.00        21.24        93           24
+B2 schedule                  0.34        19.64       246           24
+Stats lookup table           0.56        16.42       417           59
+PolaGrid AI (1)+(2)          0.06        16.71       346          851
+PolaGrid AI (3) predict      0.24        16.47       379          136

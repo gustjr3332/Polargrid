@@ -1,0 +1,17 @@
+# tinyIoT bench 2026-10-07 19:08:52  N=1000 W=3000 BASE=http://127.0.0.1:3001/TinyIoT-mn001 pid=47957
+== layout=ae
+[setup] layout=ae N=1000 ok=1000 fail=0 wall=3.7s throughput=815 req/s
+  reg: p50=22ms p95=45ms max=75ms
+  cnt: p50=22ms p95=42ms max=74ms
+  cin: p50=22ms p95=45ms max=77ms
+[steady] writes=3000 ok=3000 wall=6.6s throughput=458 req/s
+  cin: p50=40ms p95=63ms max=227ms
+  cse_cpu_peak=43%  rss=21MB
+== layout=zone
+[setup] layout=zone N=1000 ok=1000 fail=0 wall=7.1s throughput=421 req/s
+  reg: p50=43ms p95=76ms max=144ms
+  cnt: p50=43ms p95=77ms max=147ms
+  cin: p50=45ms p95=80ms max=114ms
+[steady] writes=3000 ok=3000 wall=15.9s throughput=189 req/s
+  cin: p50=106ms p95=137ms max=397ms
+  cse_cpu_peak=61%  rss=28MB

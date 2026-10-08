@@ -1,0 +1,108 @@
+# fanout tmpfs MN (fresh DB) 100 panels
+[setup] N=100 ok=100 wall=1.3s
+[grp] 201 
+[grp] rounds=20 missing=0 per-panel p50=50ms p95=131ms | zone-complete p50=107ms p95=183ms max=183ms
+[each] rounds=20 missing=0 per-panel p50=86ms p95=1039ms | zone-complete p50=1052ms p95=2059ms max=2059ms
+# disk MN (~/polargrid/nodes/mn001, SQLite on ext4)  N=100 rounds=20  2026-10-01 16:50:43
+[setup] N=100 ok=100 wall=1.6s
+[grp] 201 
+[grp] rounds=20 missing=0 per-panel p50=772ms p95=1934ms | zone-complete p50=1637ms p95=2655ms max=2655ms
+[each] rounds=20 missing=0 per-panel p50=1347ms p95=3037ms | zone-complete p50=2755ms p95=5333ms max=5333ms
+# disk MN + WAL/synchronous=NORMAL patch (fresh DB)  N=100 rounds=20  2026-10-01 16:55:20
+[setup] N=100 ok=100 wall=1.1s
+[grp] 201 
+[grp] rounds=20 missing=0 per-panel p50=48ms p95=121ms | zone-complete p50=106ms p95=151ms max=151ms
+[each] rounds=20 missing=0 per-panel p50=88ms p95=1039ms | zone-complete p50=1086ms p95=2125ms max=2125ms
+# patched build (fopt notify + WAL + TEXT overflow fix), DB with existing 100-member GRP  N=100 rounds=5  2026-10-01 20:47:09
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 203, in _new_conn
+    sock = connection.create_connection(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 85, in create_connection
+    raise err
+  File "/usr/lib/python3/dist-packages/urllib3/util/connection.py", line 73, in create_connection
+    sock.connect(sa)
+ConnectionRefusedError: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 497, in _make_request
+    conn.request(
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 395, in request
+    self.endheaders()
+  File "/usr/lib/python3.12/http/client.py", line 1360, in endheaders
+    self._send_output(message_body, encode_chunked=encode_chunked)
+  File "/usr/lib/python3.12/http/client.py", line 1120, in _send_output
+    self.send(msg)
+  File "/usr/lib/python3.12/http/client.py", line 1064, in send
+    self.connect()
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 243, in connect
+    self.sock = self._new_conn()
+                ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 218, in _new_conn
+    raise NewConnectionError(
+urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection object at 0x7b8c9cc59940>: Failed to establish a new connection: [Errno 111] Connection refused
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 486, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 517, in increment
+    raise MaxRetryError(_pool, url, reason) from reason  # type: ignore[arg-type]
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='127.0.0.1', port=3001): Max retries exceeded with url: /TinyIoT-mn001 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7b8c9cc59940>: Failed to establish a new connection: [Errno 111] Connection refused'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/fanout_test.py", line 142, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/fanout_test.py", line 95, in main
+    mids = list(ex.map(setup, range(a.n)))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 449, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/fanout_test.py", line 85, in setup
+    r1 = post(a.base, orig, {"m2m:ae": {"rn": rn, "api": "Npolagrid", "rr": True, "srv": ["3"],
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/fanout_test.py", line 52, in post
+    return sess().post(url, headers=hdr(orig, ty), data=json.dumps(body))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 637, in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 519, in send
+    raise ConnectionError(e, request=request)
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='127.0.0.1', port=3001): Max retries exceeded with url: /TinyIoT-mn001 (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7b8c9cc59940>: Failed to establish a new connection: [Errno 111] Connection refused'))
+# patched build (fopt notify + WAL + TEXT overflow fix), DB already holding a 100-member GRP, after 2 restarts  N=100 rounds=5  2026-10-01 20:47:40
+[setup] N=100 ok=100 wall=0.7s
+[grp] 201 
+[grp] rounds=5 missing=0 per-panel p50=446ms p95=851ms | zone-complete p50=900ms p95=927ms max=927ms
+[each] rounds=5 missing=0 per-panel p50=340ms p95=646ms | zone-complete p50=674ms p95=691ms max=691ms

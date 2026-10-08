@@ -1,0 +1,11 @@
+--- a/source/server/onem2m.c	2026-10-01 16:48:41.501664422 +0900
++++ b/source/server/onem2m.c	2026-10-01 16:48:41.521037013 +0900
+@@ -1153,6 +1153,8 @@
+             }
+         
+ 			rsc = handle_onem2m_request(memberReq, target_rtnode);
++			if (memberReq->op != OP_DELETE && !memberReq->errFlag)
++				notify_via_sub(memberReq, target_rtnode);   /* fan-out으로 만든 멤버 자원도 구독 알림을 보냄 */
+ 			json = o2pt_to_json(memberReq);
+             if (json)
+             {

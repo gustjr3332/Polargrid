@@ -1,0 +1,5 @@
+# latest (fresh DB)  N=100 rounds=20  2026-10-07 19:09:36
+[setup] N=100 ok=100 wall=0.4s
+[grp] 201 
+[grp] rounds=20 missing=0 per-panel p50=63ms p95=169ms | zone-complete p50=125ms p95=231ms max=231ms
+[each] rounds=20 missing=0 per-panel p50=138ms p95=261ms | zone-complete p50=257ms p95=330ms max=330ms

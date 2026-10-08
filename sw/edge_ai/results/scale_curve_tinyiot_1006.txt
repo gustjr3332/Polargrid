@@ -1,0 +1,20 @@
+# serialize+large-response patches (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-06 12:33:00
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.6s
+[edge] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=164ms p95=466ms max=466ms | zone-complete p95 (median over rounds)=164ms
+[in] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=319ms p95=429ms max=429ms | zone-complete p95 (median over rounds)=319ms
+  cpu avg us=4% sy=2% wa=0% busy-max=17%
+# serialize+large-response patches (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-06 12:33:19
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=1.7s
+[edge] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=160ms p95=187ms max=187ms | zone-complete p95 (median over rounds)=160ms
+[in] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=363ms p95=464ms max=464ms | zone-complete p95 (median over rounds)=363ms
+  cpu avg us=8% sy=4% wa=0% busy-max=26%
+# serialize+large-response patches (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-06 12:33:43
+[setup] 5 MN x 100 = 500 panels, ok=500 wall=3.8s
+[edge] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=227ms p95=295ms max=295ms | zone-complete p95 (median over rounds)=227ms
+[in] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=603ms p95=2805ms max=2805ms | zone-complete p95 (median over rounds)=603ms
+  cpu avg us=18% sy=7% wa=0% busy-max=100%
+# serialize+large-response patches (fresh DB)  MN=10 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-06 12:34:12
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=8.2s
+[edge] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=734ms p95=2996ms max=2996ms | zone-complete p95 (median over rounds)=734ms
+[in] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=733ms p95=882ms max=882ms | zone-complete p95 (median over rounds)=733ms
+  cpu avg us=23% sy=11% wa=1% busy-max=100%

@@ -1,0 +1,48 @@
+=== cfg=default layout=ae ===
+[setup] layout=ae N=1000 ok=1000 fail=0 wall=74.3s throughput=40 req/s
+  reg: p50=296ms p95=644ms max=1103ms
+  cnt: p50=481ms p95=1019ms max=1654ms
+  cin: p50=560ms p95=1175ms max=1495ms
+[steady] writes=3000 ok=3000 wall=302.7s throughput=10 req/s
+  cin: p50=1757ms p95=4139ms max=7327ms
+mem=129.1MiB / 7.604GiB
+=== cfg=default layout=zone ===
+[setup] layout=zone N=1000 ok=1000 fail=0 wall=205.3s throughput=15 req/s
+  reg: p50=992ms p95=2781ms max=4359ms
+  cnt: p50=1114ms p95=2894ms max=4680ms
+  cin: p50=1351ms p95=3272ms max=5446ms
+[steady] writes=3000 ok=3000 wall=410.2s throughput=7 req/s
+  cin: p50=2411ms p95=5005ms max=8463ms
+mem=139.7MiB / 7.604GiB
+=== cfg=logoff layout=ae ===
+[setup] layout=ae N=1000 ok=1000 fail=0 wall=118.4s throughput=25 req/s
+  reg: p50=448ms p95=1185ms max=2241ms
+  cnt: p50=746ms p95=1839ms max=3380ms
+  cin: p50=819ms p95=2064ms max=3957ms
+[steady] writes=3000 ok=3000 wall=245.0s throughput=12 req/s
+  cin: p50=1460ms p95=2993ms max=5076ms
+mem=127MiB / 7.604GiB
+=== cfg=logoff layout=zone ===
+[setup] layout=zone N=1000 ok=1000 fail=0 wall=207.2s throughput=14 req/s
+  reg: p50=924ms p95=3325ms max=6837ms
+  cnt: p50=1010ms p95=4191ms max=7861ms
+  cin: p50=1137ms p95=4658ms max=8036ms
+[steady] writes=3000 ok=3000 wall=396.0s throughput=8 req/s
+  cin: p50=2464ms p95=4464ms max=6979ms
+mem=137.9MiB / 7.604GiB
+=== cfg=memory layout=ae ===
+[setup] layout=ae N=1000 ok=1000 fail=0 wall=32.8s throughput=91 req/s
+  reg: p50=138ms p95=238ms max=460ms
+  cnt: p50=226ms p95=349ms max=553ms
+  cin: p50=258ms p95=400ms max=640ms
+[steady] writes=3000 ok=3000 wall=38.2s throughput=78 req/s
+  cin: p50=244ms p95=372ms max=594ms
+mem=99.76MiB / 7.604GiB
+=== cfg=memory layout=zone ===
+[setup] layout=zone N=1000 ok=1000 fail=0 wall=33.5s throughput=90 req/s
+  reg: p50=193ms p95=304ms max=524ms
+  cnt: p50=204ms p95=324ms max=606ms
+  cin: p50=237ms p95=378ms max=568ms
+[steady] writes=3000 ok=3000 wall=41.7s throughput=72 req/s
+  cin: p50=265ms p95=417ms max=610ms
+mem=102.4MiB / 7.604GiB

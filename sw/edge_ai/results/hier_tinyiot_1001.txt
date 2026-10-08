@@ -1,0 +1,135 @@
+# 주의: 21:04~21:12 세 블록은 이전 측정 자원이 쌓인 DB(MN당 수천 개 AE·SUB)에서 잰 값. 21:16 이후는 run_scale_curve.sh가 새 DB로 잰 값(요약은 scale_curve_tinyiot_1001.txt)
+# 1000 panels hierarchy, patched tinyIoT (WAL), receivers multiprocess, bg=0  MN=10 x 100 panels rounds=20 bg=0/s modes=edge,in  2026-10-01 21:04:08
+  running: 10  total RSS: 103 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=5.4s
+[edge] rounds=20 fopt_status=[200] missing=0/20000 | all-1000-panels complete p50=3785ms p95=7842ms max=7842ms | zone-complete p95 (median over rounds)=3785ms
+[in] rounds=20 fopt_status=[200, 404] missing=0/20000 | all-1000-panels complete p50=5446ms p95=9068ms max=9068ms | zone-complete p95 (median over rounds)=5446ms
+  after: running: 10  total RSS: 195 MB
+# 1000 panels hierarchy, patched tinyIoT (WAL), receivers multiprocess, bg=17  MN=10 x 100 panels rounds=20 bg=17/s modes=edge,in  2026-10-01 21:08:06
+  running: 10  total RSS: 118 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=6.4s
+[edge] rounds=20 fopt_status=[200] missing=0/20000 | all-1000-panels complete p50=4511ms p95=10473ms max=10473ms | zone-complete p95 (median over rounds)=4511ms
+[in] rounds=20 fopt_status=[404] missing=0/20000 | all-1000-panels complete p50=6858ms p95=14355ms max=14355ms | zone-complete p95 (median over rounds)=6858ms
+[bg] lux CIN ok=4844 fail=0
+  after: running: 10  total RSS: 224 MB
+# 1000 panels hierarchy, patched tinyIoT (WAL), receivers multiprocess, bg=170  MN=10 x 100 panels rounds=20 bg=170/s modes=edge,in  2026-10-01 21:13:12
+  running: 10  total RSS: 127 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=8.3s
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connection.py", line 461, in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 1457, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 486, in send
+    resp = conn.urlopen(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 845, in urlopen
+    retries = retries.increment(
+              ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/retry.py", line 472, in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/util/util.py", line 39, in reraise
+    raise value
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 791, in urlopen
+    response = self._make_request(
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 539, in _make_request
+    self._raise_timeout(err=e, url=url, timeout_value=read_timeout)
+  File "/usr/lib/python3/dist-packages/urllib3/connectionpool.py", line 371, in _raise_timeout
+    raise ReadTimeoutError(
+urllib3.exceptions.ReadTimeoutError: HTTPConnectionPool(host='127.0.0.1', port=3001): Read timed out. (read timeout=30)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 198, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 169, in main
+    codes |= set(ex.map(lambda z: fire(z, body), zones))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 619, in result_iterator
+    yield _result_or_cancel(fs.pop())
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 317, in _result_or_cancel
+    return fut.result(timeout)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 456, in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/concurrent/futures/_base.py", line 401, in __get_result
+    raise self._exception
+  File "/usr/lib/python3.12/concurrent/futures/thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 169, in <lambda>
+    codes |= set(ex.map(lambda z: fire(z, body), zones))
+                                  ^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 161, in fire
+    r = post(url, "CAdmin", body, 4)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/tools/hier_test.py", line 35, in post
+    return sess().post(url, headers=hdr(orig, ty), data=json.dumps(body), timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 637, in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/requests/adapters.py", line 532, in send
+    raise ReadTimeout(e, request=request)
+requests.exceptions.ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=3001): Read timed out. (read timeout=30)
+  after: running: 10  total RSS: 207 MB
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=1 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:16
+  running: 1  total RSS: 5 MB
+[setup] 1 MN x 100 = 100 panels, ok=100 wall=0.5s
+[edge] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=95ms p95=154ms max=154ms | zone-complete p95 (median over rounds)=95ms
+[in] rounds=10 fopt_status=[200] missing=0/1000 | all-100-panels complete p50=187ms p95=207ms max=207ms | zone-complete p95 (median over rounds)=187ms
+  after: running: 1  total RSS: 12 MB
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=2 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:33
+  running: 2  total RSS: 11 MB
+[setup] 2 MN x 100 = 200 panels, ok=200 wall=1.1s
+[edge] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=126ms p95=180ms max=180ms | zone-complete p95 (median over rounds)=126ms
+[in] rounds=10 fopt_status=[200] missing=0/2000 | all-200-panels complete p50=233ms p95=285ms max=285ms | zone-complete p95 (median over rounds)=233ms
+  after: running: 2  total RSS: 25 MB
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=5 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:16:52
+  running: 5  total RSS: 27 MB
+[setup] 5 MN x 100 = 500 panels, ok=500 wall=2.5s
+[edge] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=187ms p95=269ms max=269ms | zone-complete p95 (median over rounds)=187ms
+[in] rounds=10 fopt_status=[200] missing=0/5000 | all-500-panels complete p50=369ms p95=438ms max=438ms | zone-complete p95 (median over rounds)=369ms
+  after: running: 5  total RSS: 63 MB
+# scale curve, patched tinyIoT (WAL) (fresh DB)  MN=10 x 100 panels rounds=10 bg=0/s modes=edge,in  2026-10-01 21:17:14
+  running: 10  total RSS: 54 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=5.6s
+[edge] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=349ms p95=382ms max=382ms | zone-complete p95 (median over rounds)=349ms
+[in] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=676ms p95=801ms max=801ms | zone-complete p95 (median over rounds)=676ms
+  after: running: 10  total RSS: 121 MB
+# scale curve, patched tinyIoT (WAL), bg 17/s (fresh DB)  MN=10 x 100 panels rounds=10 bg=17/s modes=edge,in  2026-10-01 21:17:44
+  running: 10  total RSS: 54 MB
+[setup] 10 MN x 100 = 1000 panels, ok=1000 wall=5.3s
+[edge] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=335ms p95=461ms max=461ms | zone-complete p95 (median over rounds)=335ms
+[in] rounds=10 fopt_status=[200] missing=0/10000 | all-1000-panels complete p50=672ms p95=731ms max=731ms | zone-complete p95 (median over rounds)=672ms
+[bg] lux CIN ok=384 fail=0
+  after: running: 10  total RSS: 125 MB
