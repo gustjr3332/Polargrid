@@ -1,0 +1,22 @@
+// mec:iotDev, the FlexContainer ETSI MEC Sandbox MEC033 (meep-iot-mgr) creates under the IoT platform AE.
+// Not in tinyIoT's bundled sdt_definitions; copy into <server>/sdt_definitions/ to accept it. Tested 2026-10-08 (201).
+[
+    {
+        "type"      : "mec:iotDev",
+        "lname"     : "iotDevice",
+        "sdttype"   : "device",
+        "cnd"       : "org.onem2m.common.mec.device.iotDevice",
+        "attributes": [
+            { "sname" : "devId",  "lname" : "devId",  "type" : "string",  "car" : "1" },
+            { "sname" : "rIPId",  "lname" : "rIPId",  "type" : "string",  "car" : "1" },
+            { "sname" : "enabd",  "lname" : "enabd",  "type" : "boolean", "car" : "1" },
+            { "sname" : "gpsi",   "lname" : "gpsi",   "type" : "string",  "car" : "01" },
+            { "sname" : "pei",    "lname" : "pei",    "type" : "string",  "car" : "01" },
+            { "sname" : "supi",   "lname" : "supi",   "type" : "string",  "car" : "01" },
+            { "sname" : "msisdn", "lname" : "msisdn", "type" : "string",  "car" : "01" },
+            { "sname" : "imei",   "lname" : "imei",   "type" : "string",  "car" : "01" },
+            { "sname" : "imsi",   "lname" : "imsi",   "type" : "string",  "car" : "01" },
+            { "sname" : "iccid",  "lname" : "iccid",  "type" : "string",  "car" : "01" }
+        ]
+    }
+]
