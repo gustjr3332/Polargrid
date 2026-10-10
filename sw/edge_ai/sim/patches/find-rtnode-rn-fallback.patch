@@ -1,0 +1,23 @@
+diff --git a/source/server/rtManager.c b/source/server/rtManager.c
+index 703cbbe..07343e7 100644
+--- a/source/server/rtManager.c
++++ b/source/server/rtManager.c
+@@ -289,6 +289,18 @@ RTNode *find_rtnode(char *addr)
+         rtnode = find_rtnode_by_ri(addr);
+     }
+ 
++    if (!rtnode && !(strncmp(addr, CSE_BASE_NAME, strlen(CSE_BASE_NAME)) == 0 && addr[strlen(CSE_BASE_NAME)] == '/') && addr[0] != '-')
++    {
++        // MEC033 iot-mgr addresses the AE as /<ae-rn>[/<child>] (no CSE name); retry as a CSEBase child
++        char *sr = malloc(strlen(CSE_BASE_NAME) + strlen(addr) + 2);
++        if (sr)
++        {
++            sprintf(sr, "%s/%s", CSE_BASE_NAME, addr);
++            rtnode = find_rtnode_by_rn(sr);
++            free(sr);
++        }
++    }
++
+     if (foptPtr)
+     {
+         foptPtr[0] = '/';
