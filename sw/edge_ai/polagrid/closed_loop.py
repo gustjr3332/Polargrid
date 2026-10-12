@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta
 
 import numpy as np
 
-from . import ai, evaluate
+from . import ai, evaluate, virtual
 from .onem2m import Client
 from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
 from .zone import Controller, Zone, roles
@@ -78,6 +78,7 @@ def main():
     ap.add_argument("--controller", choices=["probe", "predict"], default="probe")
     ap.add_argument("--probe", type=int, default=15, help="simulated minutes between AI (1) probes")
     ap.add_argument("--train-days", type=int, default=60, help="training days for the predict controller")
+    ap.add_argument("--model", help="saved predictor from `python -m polagrid.virtual train` (predict controller)")
     ap.add_argument("--port", type=int, default=9500)
     a = ap.parse_args()
 
@@ -92,6 +93,10 @@ def main():
 
     if a.controller == "probe":
         make = lambda: evaluate.polagrid_probe(room.n_cells, a.probe)
+    elif a.model:
+        model = virtual.load(room, a.model)
+        make = lambda: evaluate.polagrid_predict(model)
+        print(f"[model] loaded {a.model}")
     else:
         train = evaluate.days(date(2026, 1, 1), a.train_days, 365 // a.train_days, seed=1)
         logs = [row for d, cloud in train for row in evaluate.teacher_log(room, d, cloud)]

@@ -14,6 +14,8 @@ from scipy.optimize import linprog, nnls
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.multioutput import MultiOutputRegressor
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from .physics import DESK_MIN_LUX, GLARE_LUX, T_LEAK, T_OPEN, transmission
 
@@ -92,7 +94,8 @@ def predict_angles(model, x_row):
 
 def fit_preference(x, lux_offsets):
     """Learn how much brighter (+) or darker (-) the user wants the desk, from app corrections."""
-    return Ridge(alpha=1.0).fit(np.asarray(x), np.asarray(lux_offsets))
+    # scaled inputs: outdoor lux is ~1e4 while the other features are ~1, so unscaled Ridge extrapolates wildly
+    return make_pipeline(StandardScaler(), Ridge(alpha=1.0)).fit(np.asarray(x), np.asarray(lux_offsets))
 
 
 def preferred_min_lux(model, x_row):

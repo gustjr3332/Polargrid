@@ -7,3 +7,6 @@ docs/
 
 __pycache__/
 .pytest_cache/
+
+# Pre-trained models are rebuilt by python -m polagrid.virtual train
+models/

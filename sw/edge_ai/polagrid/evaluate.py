@@ -19,7 +19,7 @@ GLARE_MARGIN_LUX = 1_000    # AI (2) aims this far below GLARE_LUX, because the 
 
 
 def run_day(room, day, controller, cloud=0.0, noise=0.02, seed=0):
-    """Run one day. controller(ctx) -> new angles, where ctx has t, features, angles, measure.
+    """Run one day. controller(ctx) -> new angles, where ctx has t, features, angles, measure, desk_lux.
 
     Returns metrics and a log of (features, chosen angles) for training (3).
     """
@@ -43,7 +43,8 @@ def run_day(room, day, controller, cloud=0.0, noise=0.02, seed=0):
         reading = simulate(room, t, angles, cloud, noise, rng)
         outdoor = float(np.mean(reading["cell_lux"] / transmission(angles)))
         x = ai.features(t, alt, az, outdoor)
-        measure(controller({"t": t, "x": x, "outdoor": outdoor, "angles": angles, "measure": measure}))
+        measure(controller({"t": t, "x": x, "outdoor": outdoor, "angles": angles, "measure": measure,
+                            "desk_lux": reading["desk_lux"]}))
         truth = simulate(room, t, angles, cloud)
         glare_h += STEP_MIN / 60 * np.sum(truth["glare"] > 0)
         if alt > 0:
