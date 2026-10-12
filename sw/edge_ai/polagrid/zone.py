@@ -111,6 +111,10 @@ class Zone:
         self.c.create(f"{self.run}env/sun", f"C{self.run}env",
                       {"t": t.isoformat(), "alt": round(alt, 2), "az": round(az, 2),
                        "outdoor": round(window_lux(self.room, t, cloud))})
+        # desk sensors keep reporting while the sun moves, so a controller can read the desks without commanding
+        lux = simulate(self.room, t, self.angles, cloud, self.noise, self.rng)["desk_lux"]
+        self.c.create(f"{self.run}env/desks", f"C{self.run}env",
+                      {"cmd": f"t{int(t.timestamp())}", "lux": [round(float(v), 1) for v in lux]})
 
     def _on_command(self, path, con):
         i = int(path[1:])
@@ -157,6 +161,10 @@ class Controller:
 
     def sun(self):
         return self.c.latest(f"{self.run}env/sun", self.me)
+
+    def desks(self):
+        """Newest desk reading (lux per desk), taken at the cells' current angles."""
+        return np.array(self.c.latest(f"{self.run}env/desks", self.me)["lux"])
 
     def command(self, angles):
         """Send one angle table to every cell; return the desk reading taken after all cells applied it."""

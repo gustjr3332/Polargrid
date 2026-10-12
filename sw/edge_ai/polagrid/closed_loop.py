@@ -2,18 +2,20 @@
 
 Runs one simulated day over oneM2M, then the same day directly on the physics model (polagrid.evaluate), and
 prints both plus command latency. Controllers: "probe" = AI (1)+(2), which probes every cell (n+1 commands per
-probe), "predict" = AI (3), which commands once per step from a model trained on directly simulated days.
+probe), "online" = AI (1) estimated from the desk readings the CSE delivers (no probing; --real-turn makes the
+physical window differ from the model it starts from), "predict" = AI (3), which commands once per step from a model trained on directly simulated days.
 
 Run inside WSL, where the CSE and its notification callbacks live (IN and mn001 up: tools/run_in.sh, sim/nodes.sh):
     python3 -m polagrid.closed_loop --day 2026-11-05 --step 15
 """
 import argparse
+import dataclasses
 import statistics
 from datetime import date, datetime, timedelta
 
 import numpy as np
 
-from . import ai, evaluate, virtual
+from . import ai, evaluate, online, virtual
 from .onem2m import Client
 from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
 from .zone import Controller, Zone, roles
@@ -29,7 +31,7 @@ def run_day(zone, ctl, day, controller, cloud, step_min):
     for _ in range(steps):
         zone.set_environment(t, cloud)
         sun = ctl.sun()
-        ctx = {"t": t, "outdoor": sun["outdoor"], "angles": angles, "measure": ctl.command,
+        ctx = {"t": t, "outdoor": sun["outdoor"], "angles": angles, "measure": ctl.command, "desk_lux": ctl.desks(),
                "x": ai.features(t, sun["alt"], sun["az"], sun["outdoor"])}
         new = controller(ctx)
         if np.max(np.abs(new - angles)) > 0.05:
@@ -75,17 +77,20 @@ def main():
     ap.add_argument("--day", default="2026-11-05")
     ap.add_argument("--cloud", type=float, default=0.0)
     ap.add_argument("--step", type=int, default=5, help="simulated minutes per control step")
-    ap.add_argument("--controller", choices=["probe", "predict"], default="probe")
+    ap.add_argument("--controller", choices=["probe", "online", "predict"], default="probe")
     ap.add_argument("--probe", type=int, default=15, help="simulated minutes between AI (1) probes")
     ap.add_argument("--train-days", type=int, default=60, help="training days for the predict controller")
     ap.add_argument("--model", help="saved predictor from `python -m polagrid.virtual train` (predict controller)")
+    ap.add_argument("--real-turn", type=float, default=0.0,
+                    help="degrees the physical window is turned away from the model room (online controller)")
     ap.add_argument("--port", type=int, default=9500)
     a = ap.parse_args()
 
     room, day = Room(rows=a.rows, cols=a.cols), date.fromisoformat(a.day)
+    real = dataclasses.replace(room, window_azimuth=room.window_azimuth + a.real_turn)   # what the cells really see
     run = f"r{int(datetime.now().timestamp()) % 100000}"
     client = Client(a.host, a.cse)
-    zone, ctl = Zone(client, room, run, a.port), Controller(client, run, a.port + 1)
+    zone, ctl = Zone(client, real, run, a.port), Controller(client, run, a.port + 1)
     zone.setup()
     ctl.setup(room.n_cells)
     print(f"[setup] {room.n_cells} cells on {a.cse}, run {run}")
@@ -93,6 +98,8 @@ def main():
 
     if a.controller == "probe":
         make = lambda: evaluate.polagrid_probe(room.n_cells, a.probe)
+    elif a.controller == "online":
+        make = lambda: online.polagrid_online(room)
     elif a.model:
         model = virtual.load(room, a.model)
         make = lambda: evaluate.polagrid_predict(model)
@@ -104,7 +111,7 @@ def main():
         make = lambda: evaluate.polagrid_predict(model)
         print(f"[train] {len(train)} days, {len(logs)} samples")
     over_cse = run_day(zone, ctl, day, make(), a.cloud, a.step)
-    direct, _ = evaluate.run_day(room, day, make(), a.cloud)
+    direct, _ = evaluate.run_day(real, day, make(), a.cloud)
     lat = ctl.latencies
     print(f"{'':<22}{'glare h':>9}{'under-lit h':>13}{'mean lux':>10}{'servo moves':>13}")
     for name, m in (("over oneM2M (CSE)", over_cse), ("direct physics", direct)):

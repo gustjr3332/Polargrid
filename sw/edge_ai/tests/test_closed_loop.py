@@ -45,3 +45,11 @@ def test_command_reaches_every_cell_and_desk_reading_comes_back(loop):
 def test_each_role_gets_only_its_rights(loop):
     _, zone, _ = loop
     check_acp(zone.c, zone.run, zone.room.n_cells)
+
+
+def test_controller_reads_desk_lux_without_commanding(loop):
+    room, zone, ctl = loop
+    t = datetime(2026, 11, 5, 13, tzinfo=KST)
+    ctl.command(np.zeros(room.n_cells))
+    zone.set_environment(t)
+    assert np.allclose(ctl.desks(), simulate(room, t, zone.angles)["desk_lux"], atol=0.1)
