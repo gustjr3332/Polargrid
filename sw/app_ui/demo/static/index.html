@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PolaGrid Demo</title>
+<style>
+:root{--bg:#0b0f16;--panel:#121923;--line:#1f2a38;--fg:#d7e2ee;--dim:#7d8da1;--acc:#6cc4f5;--warn:#f0b35a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:16px/1.3 system-ui,Segoe UI,Arial,sans-serif}
+#app{display:grid;grid-template-columns:1fr 440px;grid-template-rows:56px 1fr 40px;height:100vh;gap:12px;padding:12px}
+header{grid-column:1/3;display:flex;align-items:center;gap:16px}
+h1{font-size:22px;margin:0;letter-spacing:.04em}
+.badge{background:var(--warn);color:#1a1205;font-weight:700;padding:4px 12px;border-radius:4px;letter-spacing:.08em}
+#stage{background:var(--panel);border:1px solid var(--line);border-radius:6px;min-height:0;position:relative}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+aside{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
+section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:clamp(8px,1.4vh,14px) 16px;flex:none}
+section h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.row{display:flex;justify-content:space-between;align-items:baseline;margin:clamp(3px,.6vh,6px) 0}
+.row b{font-size:clamp(20px,3vh,30px);font-variant-numeric:tabular-nums;font-weight:600}
+.row small{color:var(--dim);font-size:14px}
+.bar{position:relative;height:10px;background:#0b0f16;border-radius:5px;margin:4px 0 10px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:5px}
+.bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--warn)}
+#ctl{display:flex;flex-direction:column;gap:clamp(6px,1vh,10px)}
+#clock{font-size:clamp(28px,4vh,40px);font-variant-numeric:tabular-nums;font-weight:600}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button,select{background:#1a2535;color:var(--fg);border:1px solid #2c3d54;border-radius:4px;padding:clamp(5px,.9vh,8px) 14px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--acc)}
+footer{grid-column:1/3;display:flex;align-items:center;gap:28px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:0 16px;color:var(--dim)}
+footer b{color:var(--fg)}
+#mode{background:var(--acc);color:#04202f;font-weight:700;padding:2px 10px;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells, one real panel</span></header>
+  <div id="stage"><canvas id="cv"></canvas></div>
+  <aside>
+    <section><h2>Desk illuminance</h2>
+      <div class="row"><span>Desk A</span><b id="d0">-</b><small>lux</small></div>
+      <div class="bar"><i id="b0"></i><u id="t0"></u></div>
+      <div class="row"><span>Desk B</span><b id="d1">-</b><small>lux</small></div>
+      <div class="bar"><i id="b1"></i><u id="t1"></u></div>
+      <div class="row"><span>Glare index</span><b id="gl">-</b><small>h (cumulative)</small></div>
+      <div class="row"><small>Target line (demo setting)</small><small id="tg"></small></div>
+    </section>
+    <section><h2>Command to applied</h2>
+      <div class="row"><span>Latency p50</span><b id="p50">-</b><small>ms</small></div>
+      <div class="row"><span>Latency p95</span><b id="p95">-</b><small>ms</small></div>
+      <div class="row"><span>Servo moves</span><b id="mv">-</b><small>total</small></div>
+    </section>
+    <section id="ctl"><h2>Simulation</h2>
+      <div id="clock">--:--</div>
+      <div class="btns"><button id="run">Start</button>
+        <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select></div>
+      <div class="btns"><button id="ev-cloud">Cloud</button><button id="ev-turn">Turn window</button><button id="ev-reset">Reset</button></div>
+      <div style="color:var(--dim)" id="evs">Events: none</div>
+    </section>
+  </aside>
+  <footer>
+    <span>Connection: <span id="mode">Replay</span></span>
+    <span>Cells: <b id="nc">1000</b></span>
+    <span>Run: <b id="run-id">demo-0</b></span>
+    <span>Real cell index: <b id="rl">-</b></span>
+  </footer>
+</div>
+<script>
+"use strict";
+const ROWS = 25, COLS = 40, N = ROWS * COLS, TARGET = 500, RUN_ID = "demo-0";
+const $ = id => document.getElementById(id);
+const cv = $("cv"), g = cv.getContext("2d");
+let last = null;
+
+// ---- drawing entry: the only function a future SSE/Live source needs to call ----
+function onFrame(f) {
+  last = f;
+  draw(f);
+  $("clock").textContent = f.t.slice(11);
+  $("d0").textContent = f.desks[0]; $("d1").textContent = f.desks[1];
+  [0, 1].forEach(i => $("b" + i).style.width = Math.min(100, f.desks[i] / (TARGET * 2) * 100) + "%");
+  $("gl").textContent = f.glare_h.toFixed(1);
+  $("p50").textContent = f.lat_ms.p50; $("p95").textContent = f.lat_ms.p95;
+  $("mv").textContent = f.moves;
+  $("nc").textContent = f.cells.length;
+  $("rl").textContent = f.real.join(", ");
+}
+
+function draw(f) {
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const pad = 16, s = Math.floor(Math.min((r.width - 2 * pad) / COLS, (r.height - 2 * pad) / ROWS));
+  const ox = Math.round((r.width - s * COLS) / 2), oy = Math.round((r.height - s * ROWS) / 2);
+  g.clearRect(0, 0, r.width, r.height);
+  for (let i = 0; i < N; i++) {
+    const v = f.cells[i] / 100, x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
+    g.fillStyle = `hsl(205,${30 + 60 * v}%,${9 + 66 * v}%)`; // one hue, dark to bright
+    g.fillRect(x + 1, y + 1, s - 2, s - 2);
+  }
+  g.strokeStyle = "#fff"; g.lineWidth = 3; g.fillStyle = "#fff";
+  g.font = `700 ${Math.max(9, s * .3)}px system-ui`; g.textAlign = "center"; g.textBaseline = "middle";
+  for (const i of f.real) {
+    const x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
+    g.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
+    if (s >= 24) { g.fillStyle = "#000"; g.fillRect(x + 3, y + s / 2 - s * .17, s - 6, s * .34); g.fillStyle = "#fff"; g.fillText("REAL", x + s / 2, y + s / 2); }
+  }
+}
+
+// ---- fake frame generator (replace with SSE: es.onmessage = e => onFrame(JSON.parse(e.data))) ----
+const sim = { min: 6 * 60, running: false, speed: 1, cloud: false, turn: 0, cells: Array(N).fill(0), com: Array(N).fill(15), moves: 0, glare: 0, evs: [] };
+const DAY_REAL_S = 600, TICK_MS = 200; // 10 real minutes = 24 h at 1x
+
+function makeFrame(dtSim) {
+  const h = sim.min / 60 % 24;
+  const elev = Math.max(0, Math.sin((h - 6) / 12 * Math.PI)); // 0 before 06:00 and after 18:00
+  const sunI = elev * (sim.cloud ? .3 : 1);
+  const sunCol = ((h - 6) / 12 * COLS + sim.turn) % COLS; // window orientation shifts where the sun lands
+  let moved = 0;
+  for (let i = 0; i < N; i++) {
+    const c = i % COLS, rw = Math.floor(i / COLS);
+    let d = Math.abs(c - sunCol); d = Math.min(d, COLS - d);
+    const glare = sunI * Math.exp(-(d * d) / 50) * (1 - rw / ROWS * .4);
+    const target = elev === 0 ? 15 : Math.max(0, 100 - 100 * glare * 1.1);
+    const nv = sim.cells[i] + (target - sim.cells[i]) * .35;
+    if (Math.abs(nv - sim.com[i]) >= 12) { moved++; sim.com[i] = nv; } // a servo move = change of 12+ levels since the last move
+    sim.cells[i] = nv;
+  }
+  const avg = (a, b) => { let t = 0, n = 0; for (let r = 0; r < ROWS; r++) for (let c = a; c < b; c++) { t += sim.cells[r * COLS + c]; n++; } return t / n; };
+  const lux = [avg(6, 14), avg(26, 34)].map(o => Math.round(60 + 520 * sunI * (0.25 + o / 100 * .75) * (sim.cloud ? 1.6 : 1) + Math.random() * 12));
+  const glareNow = sunI * Math.max(avg(6, 14), avg(26, 34)) / 100;
+  if (glareNow > .6) sim.glare += dtSim / 60;
+  sim.moves += moved;
+  const p50 = Math.round(24 + Math.random() * 3 + moved / 40);
+  const hh = String(Math.floor(h)).padStart(2, "0"), mm = String(Math.floor(sim.min % 60)).padStart(2, "0");
+  return {
+    t: `2026-11-04T${hh}:${mm}`, cells: sim.cells.map(Math.round), real: [17], desks: lux,
+    sun: { elev: Math.round(elev * 70), lux: Math.round(100000 * sunI) }, glare_h: +sim.glare.toFixed(2),
+    lat_ms: { p50, p95: Math.round(p50 * 1.45 + Math.random() * 3) }, moves: sim.moves
+  };
+}
+
+function tick() {
+  const dtSim = sim.running ? TICK_MS / 1000 * 1440 / DAY_REAL_S * sim.speed : 0;
+  sim.min += dtSim;
+  onFrame(makeFrame(dtSim));
+}
+
+function evNote() { $("evs").textContent = "Events: " + (sim.evs.length ? sim.evs.join(", ") : "none"); }
+$("run").onclick = () => { sim.running = !sim.running; $("run").textContent = sim.running ? "Stop" : "Start"; };
+$("spd").onchange = e => sim.speed = +e.target.value;
+$("ev-cloud").onclick = () => { sim.cloud = true; if (!sim.evs.includes("Cloud")) sim.evs.push("Cloud"); evNote(); };
+$("ev-turn").onclick = () => { sim.turn += 10; sim.evs.push("Turn window"); evNote(); };
+$("ev-reset").onclick = () => { Object.assign(sim, { min: 6 * 60, cloud: false, turn: 0, moves: 0, glare: 0, evs: [] }); sim.com.fill(15); evNote(); };
+
+$("tg").textContent = TARGET + " lux";
+$("t0").style.left = $("t1").style.left = "50%"; // bar spans 0..2x target, so target sits at 50%
+$("run-id").textContent = RUN_ID;
+sim.cells.fill(15);
+const t0 = +new URLSearchParams(location.search).get("t"); if (t0) sim.min = t0 * 60; // ?t=12 starts at 12:00 (rehearsal)
+addEventListener("resize", () => last && draw(last));
+setInterval(tick, TICK_MS);
+tick();
+</script>
+</body>
+</html>

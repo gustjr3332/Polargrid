@@ -1,0 +1,299 @@
+# 2026-10-15 WSL Ubuntu-24.04, tinyIoT IN + fresh MN, online AI(1), step 5 min, 2026-11-05, no code changes
+# 1,000 cells = 10 independent zones (10x10 cells each, one MN each) driven by 10 parallel python processes (tools: ~/p.sh M, shown below)
+# per zone: python3 -m polagrid.closed_loop --host http://127.0.0.1:300k --cse TinyIoT-mn00k --rows 10 --cols 10 --controller online --step 5 --port 95k0
+# grep of mn001..010 server.log for segmentation/error: no match; dmesg segfault: none
+# install time and per-zone setup time were not measured separately (wall includes setup + day + direct run)
+#!/usr/bin/env bash
+M=$1; cd /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai
+D=/tmp/cl$M; rm -rf $D; mkdir -p $D
+bash tools/run_in.sh >/dev/null
+S=$(date +%s)
+bash tools/fresh_mn.sh $M >/dev/null
+for i in $(seq 90); do [ "$(ss -ltn | grep -cE ":(30(0[1-9]|[1-9][0-9])) ")" -ge "$M" ] && break; sleep 1; done
+echo "mn_up_s=$(( $(date +%s)-S )) $(bash ~/polargrid/nodes.sh status)"
+S2=$(date +%s); pids=""
+for k in $(seq $M); do
+  p=$(printf "%03d" $k)
+  /usr/bin/time -o $D/t$k.log -f "wall=%es" python3 -m polagrid.closed_loop --host http://127.0.0.1:$((3000+k)) --cse TinyIoT-mn$p --rows 10 --cols 10 --controller online --step 5 --port $((9500+10*k)) > $D/z$k.log 2>&1 &
+  pids="$pids $!"
+done
+( while true; do echo "$(date +%T) $(bash ~/polargrid/nodes.sh status)" >> $D/mem.log; sleep 15; done ) & MP=$!
+wait $pids; kill $MP
+echo "run_wall_s=$(( $(date +%s)-S2 )) after: $(bash ~/polargrid/nodes.sh status)"
+
+######## M=1 zones x 100 cells
+mn_up_s=4 running: 1  total RSS: 8 MB
+run_wall_s=66 after: running: 1  total RSS: 48 MB
+--z1
+[setup] 100 cells on TinyIoT-mn001, run r49924
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=475ms p95=802ms max=855ms
+wall=66.19s
+servers=11
+16:39:14 running: 1  total RSS: 40 MB
+16:39:29 running: 1  total RSS: 44 MB
+16:39:44 running: 1  total RSS: 48 MB
+-- raw logs
+[setup] 100 cells on TinyIoT-mn001, run r49924
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=475ms p95=802ms max=855ms
+-- RSS samples
+16:38:43 running: 1  total RSS: 8 MB
+16:38:58 running: 1  total RSS: 34 MB
+16:39:14 running: 1  total RSS: 40 MB
+16:39:29 running: 1  total RSS: 44 MB
+16:39:44 running: 1  total RSS: 48 MB
+
+######## M=3 zones x 100 cells
+mn_up_s=5 running: 3  total RSS: 26 MB
+run_wall_s=115 after: running: 3  total RSS: 140 MB
+--z1
+[setup] 100 cells on TinyIoT-mn001, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=943ms p95=1239ms max=1277ms
+wall=115.34s
+--z2
+[setup] 100 cells on TinyIoT-mn002, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=937ms p95=1248ms max=1327ms
+wall=115.37s
+--z3
+[setup] 100 cells on TinyIoT-mn003, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=941ms p95=1240ms max=1340ms
+wall=115.54s
+servers=11
+16:41:39 running: 3  total RSS: 122 MB
+16:41:54 running: 3  total RSS: 129 MB
+16:42:09 running: 3  total RSS: 137 MB
+-- raw logs
+[setup] 100 cells on TinyIoT-mn001, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=943ms p95=1239ms max=1277ms
+[setup] 100 cells on TinyIoT-mn002, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=937ms p95=1248ms max=1327ms
+[setup] 100 cells on TinyIoT-mn003, run r50024
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=941ms p95=1240ms max=1340ms
+-- RSS samples
+16:40:24 running: 3  total RSS: 26 MB
+16:40:39 running: 3  total RSS: 92 MB
+16:40:54 running: 3  total RSS: 99 MB
+16:41:09 running: 3  total RSS: 107 MB
+16:41:24 running: 3  total RSS: 114 MB
+16:41:39 running: 3  total RSS: 122 MB
+16:41:54 running: 3  total RSS: 129 MB
+16:42:09 running: 3  total RSS: 137 MB
+
+######## M=10 zones x 100 cells
+mn_up_s=4 running: 10  total RSS: 88 MB
+run_wall_s=356 after: running: 10  total RSS: 476 MB
+--z1
+[setup] 100 cells on TinyIoT-mn001, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2411ms p95=4603ms max=5962ms
+wall=355.58s
+--z2
+[setup] 100 cells on TinyIoT-mn002, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2335ms p95=4682ms max=6039ms
+wall=354.50s
+--z3
+[setup] 100 cells on TinyIoT-mn003, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2387ms p95=4589ms max=5733ms
+wall=354.97s
+--z4
+[setup] 100 cells on TinyIoT-mn004, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2359ms p95=4653ms max=6142ms
+wall=354.32s
+--z5
+[setup] 100 cells on TinyIoT-mn005, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2308ms p95=4562ms max=6083ms
+wall=351.64s
+--z6
+[setup] 100 cells on TinyIoT-mn006, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2394ms p95=4475ms max=5842ms
+wall=354.96s
+--z7
+[setup] 100 cells on TinyIoT-mn007, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2355ms p95=4593ms max=5983ms
+wall=353.80s
+--z8
+[setup] 100 cells on TinyIoT-mn008, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2444ms p95=4689ms max=6011ms
+wall=352.83s
+--z9
+[setup] 100 cells on TinyIoT-mn009, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2342ms p95=4787ms max=5328ms
+wall=352.15s
+--z10
+[setup] 100 cells on TinyIoT-mn010, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2380ms p95=4631ms max=5525ms
+wall=354.01s
+servers=11
+16:48:00 running: 10  total RSS: 468 MB
+16:48:15 running: 10  total RSS: 475 MB
+16:48:30 running: 10  total RSS: 476 MB
+-- raw logs
+[setup] 100 cells on TinyIoT-mn001, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2411ms p95=4603ms max=5962ms
+[setup] 100 cells on TinyIoT-mn002, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2335ms p95=4682ms max=6039ms
+[setup] 100 cells on TinyIoT-mn003, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2387ms p95=4589ms max=5733ms
+[setup] 100 cells on TinyIoT-mn004, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2359ms p95=4653ms max=6142ms
+[setup] 100 cells on TinyIoT-mn005, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2308ms p95=4562ms max=6083ms
+[setup] 100 cells on TinyIoT-mn006, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2394ms p95=4475ms max=5842ms
+[setup] 100 cells on TinyIoT-mn007, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2355ms p95=4593ms max=5983ms
+[setup] 100 cells on TinyIoT-mn008, run r50159
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2444ms p95=4689ms max=6011ms
+[setup] 100 cells on TinyIoT-mn009, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2342ms p95=4787ms max=5328ms
+[setup] 100 cells on TinyIoT-mn010, run r50160
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2380ms p95=4631ms max=5525ms
+-- RSS samples
+16:42:38 running: 10  total RSS: 88 MB
+16:42:53 running: 10  total RSS: 246 MB
+16:43:08 running: 10  total RSS: 270 MB
+16:43:23 running: 10  total RSS: 288 MB
+16:43:39 running: 10  total RSS: 306 MB
+16:43:54 running: 10  total RSS: 319 MB
+16:44:09 running: 10  total RSS: 332 MB
+16:44:25 running: 10  total RSS: 346 MB
+16:44:40 running: 10  total RSS: 359 MB
+16:44:55 running: 10  total RSS: 368 MB
+16:45:11 running: 10  total RSS: 375 MB
+16:45:26 running: 10  total RSS: 380 MB
+16:45:41 running: 10  total RSS: 384 MB
+16:45:57 running: 10  total RSS: 399 MB
+16:46:12 running: 10  total RSS: 408 MB
+16:46:27 running: 10  total RSS: 417 MB
+16:46:43 running: 10  total RSS: 423 MB
+16:46:58 running: 10  total RSS: 430 MB
+16:47:13 running: 10  total RSS: 437 MB
+16:47:29 running: 10  total RSS: 445 MB
+16:47:44 running: 10  total RSS: 465 MB
+16:48:00 running: 10  total RSS: 468 MB
+16:48:15 running: 10  total RSS: 475 MB
+16:48:30 running: 10  total RSS: 476 MB

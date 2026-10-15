@@ -1,0 +1,357 @@
+# 2026-10-15 closed-loop repeat. WSL Ubuntu-24.04, tinyIoT IN + MN x10 (fresh DB before each test via tools/run_in.sh + tools/fresh_mn.sh 10), --step 5, day 2026-11-05. No code changes.
+# commands: ~/q.sh TAG '1 2 .. 10'  (A concurrent) | ~/q.sh TAG '1..5' '6..10' (A sequential batches) ; each zone:
+#   python3 -m polagrid.closed_loop --host http://127.0.0.1:300k --cse TinyIoT-mn00k --rows 10 --cols 10 --controller online --step 5 --port 95k0
+# B: python3 -m polagrid.virtual train --rows 10 --cols 10 --days 120 --jitter --out /tmp/predictor_10x10.joblib   (train_s=153, rc=0)
+#    ~/q2.sh (q.sh with $CTL) CTL="--controller predict --model /tmp/predictor_10x10.joblib --step 5"
+#    B 5-zone: OMP/OPENBLAS/MKL_NUM_THREADS=1. First try without it (5 zones concurrently) was aborted by me after ~45 min, batch 1 not finished (thread oversubscription suspected, not verified).
+#    B 1-zone ran without the thread limit (158% CPU per process).
+# C: python3 tools/hier_test.py --mns 10 --per 100 --rounds 20 --bg 0 --modes edge   (MN restarted via nodes.sh stop/start 10; no fresh_mn.sh, so the MN DB still held the previous B run's zones; effect not checked)
+# CPU = /proc sampler (~/sampler.py), 5 s samples, % of all 8 threads, average over samples with py+tinyiot >= 1%.
+# Previous (closed_loop_1000_1015.txt / _cpu_1015.txt): conc p95 4475-4787 (run1), 6372-6650 (cpu run); seq p95 2688-2915.
+
+## A. online controller, per-zone p95/p50/max (ms), glare h, under-lit h, mean lux, servo moves, wall, CPU
+run          zones  p95 min/med/max    p50 min/max   max min/max   glare  under  moves  wall_s  CPU py / tinyiot
+conc #1      10     5551/5792/5906     1594/1694     6618/7610     0.00   5.92   510    348     17.1 / 75.4
+conc #2      10     4400/4737/4864     2836/2941     5375/6172     0.00   5.92   510    370     16.2 / 74.9
+seq  #1 5+5  10     1834/2169/2470     953/1658      2336/2906     0.00   5.92   510    381     12.9 / 50.1
+seq  #2 5+5  10     2413/2466/2557     1523/1780     2704/2909     0.00   5.92   510    444     12.5 / 50.7
+seq #1 batches done at +149 s / +381 s; seq #2 at +227 s / +443 s.
+Combined with previous: concurrent p95 range over 4 runs (4475-4787, 6372-6650, 5551-5906, 4400-4864): zone p95 4400..6650 ms.
+Sequential (2688-2915, 1834-2470, 2413-2557): 1834..2915 ms. Note seq #1 batch 1 (1834-1959) was faster than any earlier run.
+
+## B. AI (3) predict, 120-day jittered model trained for 10x10
+1 zone:      p95 2043 p50 830 max 4247 ms (128 commands), glare 4.92 h, under-lit 5.92 h, mean lux 1481, servo moves 1569, wall 237 s, CPU py 21.8 / tinyiot 6.7 (n=45)
+5+5 seq:     p95 min/med/max 2357/2731/2827 -> see zones below; glare 4.92 h all zones, moves 1569, wall 699 s (batch1 +344 s), CPU py 29.5 / tinyiot 35.8 (n=129)
+  zone p95 ms: 2365 2357 2366 2377 2385 | 2731 2672 2731 2806 2827 ; p50 1427-1658 ; max 2492-3434
+online (same room, same day) for comparison: glare 0.00 h, moves 510, mean lux 667
+training time: 153 s (limit 10 min)
+
+## C. simultaneous command, 10 MN x 100 panels, 20 rounds (hier_test edge mode)
+[edge] rounds=20 fopt_status=['200'] missing=0/20000 | all-1000-panels complete p50=4473ms p95=7166ms max=7166ms | zone-complete p95 (median over rounds)=4473ms
+(1 measurement; hier_test in this repo prints p95 over only 20 rounds so p95==max)
+
+## raw
+---- rA_conc1
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r54967
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1655ms p95=5693ms max=7481ms
+-- z2.log
+[setup] 100 cells on TinyIoT-mn002, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1608ms p95=5906ms max=7099ms
+-- z3.log
+[setup] 100 cells on TinyIoT-mn003, run r54967
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1618ms p95=5655ms max=7558ms
+-- z4.log
+[setup] 100 cells on TinyIoT-mn004, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1636ms p95=5656ms max=6618ms
+-- z5.log
+[setup] 100 cells on TinyIoT-mn005, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1594ms p95=5896ms max=6805ms
+-- z6.log
+[setup] 100 cells on TinyIoT-mn006, run r54967
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1694ms p95=5791ms max=7203ms
+-- z7.log
+[setup] 100 cells on TinyIoT-mn007, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1661ms p95=5551ms max=6903ms
+-- z8.log
+[setup] 100 cells on TinyIoT-mn008, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1665ms p95=5887ms max=6924ms
+-- z9.log
+[setup] 100 cells on TinyIoT-mn009, run r54966
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1679ms p95=5793ms max=7233ms
+-- z10.log
+[setup] 100 cells on TinyIoT-mn010, run r54967
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1653ms p95=5797ms max=7610ms
+-- cpu.log tail summary
+n=66 py=17.1 tiny=75.4
+---- rA_conc2
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2937ms p95=4750ms max=5600ms
+-- z2.log
+[setup] 100 cells on TinyIoT-mn002, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2898ms p95=4745ms max=5729ms
+-- z3.log
+[setup] 100 cells on TinyIoT-mn003, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2941ms p95=4633ms max=5700ms
+-- z4.log
+[setup] 100 cells on TinyIoT-mn004, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2905ms p95=4864ms max=5508ms
+-- z5.log
+[setup] 100 cells on TinyIoT-mn005, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2895ms p95=4729ms max=6172ms
+-- z6.log
+[setup] 100 cells on TinyIoT-mn006, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2869ms p95=4783ms max=5797ms
+-- z7.log
+[setup] 100 cells on TinyIoT-mn007, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2897ms p95=4400ms max=5988ms
+-- z8.log
+[setup] 100 cells on TinyIoT-mn008, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2906ms p95=4660ms max=5513ms
+-- z9.log
+[setup] 100 cells on TinyIoT-mn009, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2836ms p95=4635ms max=5375ms
+-- z10.log
+[setup] 100 cells on TinyIoT-mn010, run r55319
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=2871ms p95=4825ms max=5776ms
+-- cpu.log tail summary
+n=70 py=16.2 tiny=74.9
+---- rA_seq1
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r55693
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=991ms p95=1834ms max=2613ms
+-- z2.log
+[setup] 100 cells on TinyIoT-mn002, run r55693
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=982ms p95=1905ms max=2497ms
+-- z3.log
+[setup] 100 cells on TinyIoT-mn003, run r55693
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=962ms p95=1935ms max=2561ms
+-- z4.log
+[setup] 100 cells on TinyIoT-mn004, run r55693
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=953ms p95=1959ms max=2336ms
+-- z5.log
+[setup] 100 cells on TinyIoT-mn005, run r55693
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=989ms p95=1944ms max=2756ms
+-- z6.log
+[setup] 100 cells on TinyIoT-mn006, run r55843
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1656ms p95=2470ms max=2661ms
+-- z7.log
+[setup] 100 cells on TinyIoT-mn007, run r55843
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1653ms p95=2383ms max=2867ms
+-- z8.log
+[setup] 100 cells on TinyIoT-mn008, run r55843
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1637ms p95=2393ms max=2906ms
+-- z9.log
+[setup] 100 cells on TinyIoT-mn009, run r55843
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1656ms p95=2380ms max=2823ms
+-- z10.log
+[setup] 100 cells on TinyIoT-mn010, run r55843
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1658ms p95=2427ms max=2624ms
+-- cpu.log tail summary
+n=72 py=12.9 tiny=50.1
+---- rA_seq2
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r56079
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1726ms p95=2495ms max=2772ms
+-- z2.log
+[setup] 100 cells on TinyIoT-mn002, run r56079
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1717ms p95=2532ms max=2861ms
+-- z3.log
+[setup] 100 cells on TinyIoT-mn003, run r56079
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1750ms p95=2557ms max=2878ms
+-- z4.log
+[setup] 100 cells on TinyIoT-mn004, run r56079
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1780ms p95=2507ms max=2814ms
+-- z5.log
+[setup] 100 cells on TinyIoT-mn005, run r56079
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1715ms p95=2474ms max=2909ms
+-- z6.log
+[setup] 100 cells on TinyIoT-mn006, run r56306
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1530ms p95=2459ms max=2704ms
+-- z7.log
+[setup] 100 cells on TinyIoT-mn007, run r56306
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1549ms p95=2413ms max=2710ms
+-- z8.log
+[setup] 100 cells on TinyIoT-mn008, run r56306
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1523ms p95=2423ms max=2759ms
+-- z9.log
+[setup] 100 cells on TinyIoT-mn009, run r56306
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1562ms p95=2450ms max=2829ms
+-- z10.log
+[setup] 100 cells on TinyIoT-mn010, run r56306
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=1548ms p95=2447ms max=2752ms
+-- cpu.log tail summary
+n=84 py=12.5 tiny=50.7
+---- rB_1zone
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r56703
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=830ms p95=2043ms max=4247ms
+-- cpu.log tail summary
+n=45 py=21.8 tiny=6.7
+---- rB_seq1t
+-- z1.log
+[setup] 100 cells on TinyIoT-mn001, run r59758
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1427ms p95=2365ms max=2520ms
+-- z2.log
+[setup] 100 cells on TinyIoT-mn002, run r59758
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1436ms p95=2357ms max=2803ms
+-- z3.log
+[setup] 100 cells on TinyIoT-mn003, run r59758
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1438ms p95=2366ms max=2849ms
+-- z4.log
+[setup] 100 cells on TinyIoT-mn004, run r59758
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1435ms p95=2377ms max=2492ms
+-- z5.log
+[setup] 100 cells on TinyIoT-mn005, run r59758
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1431ms p95=2385ms max=2907ms
+-- z6.log
+[setup] 100 cells on TinyIoT-mn006, run r60101
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1585ms p95=2731ms max=3265ms
+-- z7.log
+[setup] 100 cells on TinyIoT-mn007, run r60101
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1657ms p95=2672ms max=3177ms
+-- z8.log
+[setup] 100 cells on TinyIoT-mn008, run r60101
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1640ms p95=2731ms max=3434ms
+-- z9.log
+[setup] 100 cells on TinyIoT-mn009, run r60101
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1626ms p95=2806ms max=2936ms
+-- z10.log
+[setup] 100 cells on TinyIoT-mn010, run r60101
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+over oneM2M (CSE)          4.92         5.92      1481         1569
+direct physics             4.92         5.92      1482         1569
+[latency] 128 commands to 100 cells: command -> desk reading p50=1658ms p95=2827ms max=3008ms
+-- cpu.log tail summary
+n=129 py=29.5 tiny=35.8

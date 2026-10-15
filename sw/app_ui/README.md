@@ -52,3 +52,21 @@ cells. Cell fill encodes open level; do not use color alone (add the number on t
 - Which phone and Android version the demo uses (decides the minimum SDK).
 - Whether the demo phone reaches the CSE directly (same Wi-Fi, port forward) or through the IN.
 - Does the app write the correction as an absolute offset in lux or as a +/- step.
+
+## Demo page (for the 11/4 maker contest)
+
+A separate web page shows 1,000 virtual cells and one real panel on one screen. It is a viewer, so like the app it reads
+the CSE only. Plan and phases: `docs/PolaGrid_시연페이지_계획.md` (Korean, local only).
+
+Status 2026-10-15: phase P0 is done. `demo/static/index.html` is one file with no libraries and draws a 25 x 40 grid on a
+canvas from generated frames, so the numbers on it are fake and the page says "DEMO DATA". It was checked by eye at
+1920 x 1080 (grid fills the panel, Start/Stop and the Cloud event work). Smoothness at 5 frames per second is not measured.
+
+- Every frame goes through `onFrame(frame)`. The frame format is the one in the plan (cells, real, desks, sun, glare_h,
+  lat_ms, moves). A live source only has to call that function.
+- `?t=12` in the address starts the clock at 12:00 for rehearsal.
+- Next (P1): a FastAPI server that reads the cell states, desk and sun containers from the CSE and serves frames. Reading
+  1,000 cells has not been timed yet.
+- Latency to expect: a one-day closed loop on 1,000 cells (10 MNs x 100 cells) finished without errors, but p95 was 4.4 to
+  6.7 s when all ten zones ran at once and 1.8 to 2.9 s when run as two batches of five (`sw/edge_ai/results/`). The page
+  therefore plays a recording by default and treats live mode as the extra.
