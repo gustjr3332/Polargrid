@@ -18,7 +18,9 @@ import numpy as np
 from . import ai, evaluate, online, virtual
 from .onem2m import Client
 from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
-from .zone import Controller, Zone, roles
+from .zone import WATCHDOG_MIN, Controller, Zone, roles
+
+HEARTBEAT_MIN = WATCHDOG_MIN // 3   # resend the table at least this often, or the cells' watchdog opens them
 
 
 def run_day(zone, ctl, day, controller, cloud, step_min):
@@ -28,22 +30,27 @@ def run_day(zone, ctl, day, controller, cloud, step_min):
     t = datetime(day.year, day.month, day.day, 7, tzinfo=KST)
     glare_h = dark_h = lux_sum = 0.0
     steps = 12 * 60 // step_min
+    sent, timeouts = t, 0
     for _ in range(steps):
         zone.set_environment(t, cloud)
         sun = ctl.sun()
         ctx = {"t": t, "outdoor": sun["outdoor"], "angles": angles, "measure": ctl.command, "desk_lux": ctl.desks(),
                "x": ai.features(t, sun["alt"], sun["az"], sun["outdoor"])}
         new = controller(ctx)
-        if np.max(np.abs(new - angles)) > 0.05:
-            ctl.command(new)
-        angles = np.asarray(new, dtype=float)
+        if np.max(np.abs(new - angles)) > 0.05 or t - sent >= timedelta(minutes=HEARTBEAT_MIN):
+            try:
+                ctl.command(new)
+                sent, angles = t, np.asarray(new, dtype=float)
+            except TimeoutError:
+                timeouts += 1                     # CSE unreachable: keep the old table, the cells' watchdog covers us
         truth = simulate(room, t, zone.angles, cloud)
         glare_h += step_min / 60 * np.sum(truth["glare"] > 0)
         if sun_position(t, room.lat, room.lon)[0] > 0:
             dark_h += step_min / 60 * np.sum(truth["desk_lux"] < DESK_MIN_LUX)
         lux_sum += truth["desk_lux"].mean()
         t += timedelta(minutes=step_min)
-    return {"glare_h": glare_h, "dark_h": dark_h, "mean_lux": lux_sum / steps, "moves": int(zone.moves)}
+    return {"glare_h": glare_h, "dark_h": dark_h, "mean_lux": lux_sum / steps, "moves": int(zone.moves),
+            "timeouts": timeouts, "watchdog_opens": zone.watchdog_opens}
 
 
 def check_acp(client, run, n_cells):
@@ -110,8 +117,12 @@ def main():
         model = ai.fit_predictor([x for x, _ in logs], [ang for _, ang in logs])
         make = lambda: evaluate.polagrid_predict(model)
         print(f"[train] {len(train)} days, {len(logs)} samples")
+    base = make
+    make = lambda: evaluate.night_closed(base())
     over_cse = run_day(zone, ctl, day, make(), a.cloud, a.step)
     direct, _ = evaluate.run_day(real, day, make(), a.cloud)
+    print(f"[safety] night mode on; over CSE: {over_cse['timeouts']} command timeouts, "
+          f"{over_cse['watchdog_opens']} watchdog opens (cells open after {WATCHDOG_MIN} min without a command)")
     lat = ctl.latencies
     print(f"{'':<22}{'glare h':>9}{'under-lit h':>13}{'mean lux':>10}{'servo moves':>13}")
     for name, m in (("over oneM2M (CSE)", over_cse), ("direct physics", direct)):

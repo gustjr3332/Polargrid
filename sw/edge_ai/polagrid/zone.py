@@ -26,6 +26,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import math
+from datetime import timedelta
 
 import numpy as np
 
@@ -36,6 +37,7 @@ ADMIN = "CAdmin"
 IN_CSI = "/tinyiot"  # CSE-ID the IN puts in front of originators it forwards
 MOVE_DEG = 1.0      # angle change that counts as a servo move
 WAIT_S = 30
+WATCHDOG_MIN = 30   # a cell with no command for this long (simulated time) opens itself; controllers send a heartbeat
 ALL, C, R, N, DISC = 63, 1, 2, 16, 32   # acop bits
 OPEN_LEVEL = "org.onem2m.common.moduleclass.openLevel"
 
@@ -75,8 +77,8 @@ class Zone:
         self.c, self.room, self.run, self.noise = client, room, run, noise
         self.rng = np.random.default_rng(seed)
         self.angles = np.zeros(room.n_cells)
-        self.moves = 0
-        self.t, self.cloud = None, 0.0
+        self.moves = self.watchdog_opens = 0
+        self.t, self.cloud, self.last_cmd = None, 0.0, None
         self._done, self._lock = {}, threading.Lock()
         self.rx = Receiver(port, self._on_command)
 
@@ -107,6 +109,8 @@ class Zone:
     def set_environment(self, t, cloud=0.0):
         """Move the simulated clock and publish the sun reading."""
         self.t, self.cloud = t, cloud
+        if self.last_cmd is not None and t - self.last_cmd > timedelta(minutes=WATCHDOG_MIN) and self.angles.any():
+            self._open_all()                          # fail-safe: no controller, so let the light in
         alt, az = sun_position(t, self.room.lat, self.room.lon)
         self.c.create(f"{self.run}env/sun", f"C{self.run}env",
                       {"t": t.isoformat(), "alt": round(alt, 2), "az": round(az, 2),
@@ -116,7 +120,15 @@ class Zone:
         self.c.create(f"{self.run}env/desks", f"C{self.run}env",
                       {"cmd": f"t{int(t.timestamp())}", "lux": [round(float(v), 1) for v in lux]})
 
+    def _open_all(self):
+        self.watchdog_opens += 1
+        for i in np.flatnonzero(self.angles):
+            self.moves += self.angles[i] > MOVE_DEG
+            self.angles[i] = 0.0
+            self.c.put(f"{self.run}p{i}/state", f"C{self.run}p{i}", {"cod:opeLl": {"opeLl": 100}})
+
     def _on_command(self, path, con):
+        self.last_cmd = self.t
         i = int(path[1:])
         new = float(con["angles"][i])
         if abs(new - self.angles[i]) > 0.05:         # state only changes when the cell moves

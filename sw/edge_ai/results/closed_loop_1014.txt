@@ -1,0 +1,14 @@
+# 2026-10-14, WSL Ubuntu-24.04, tinyIoT IN + fresh MN. Safety layer: night mode + cell watchdog + controller heartbeat.
+# python3 -m polagrid.closed_loop --controller online --real-turn 8 --step 5   (12 cells, 2026-11-05, assumption-based physics model)
+[setup] 12 cells on TinyIoT-mn001, run r68308
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        17.17       211          103
+direct physics             0.00        17.67       203          107
+[latency] 95 commands to 12 cells: command -> desk reading p50=25ms p95=36ms max=40ms
+
+# Night mode on/off, direct physics, online AI (1), real window turned +8 deg, mean of 3 days (2026-11-05, 06-21, 12-21 cloud 0.3):
+no night mode  glare_h 0.00  dark_h 18.58  mean_lux 233.6  moves 59
+night mode     glare_h 0.00  dark_h 18.58  mean_lux 233.6  moves 83
+# Tests: 25 passed (incl. test_cells_open_themselves_when_commands_stop, test_night_mode_closes_everything_only_when_dark).

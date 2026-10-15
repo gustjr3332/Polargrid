@@ -2,15 +2,15 @@
     POLAGRID_CSE=http://127.0.0.1:3001/TinyIoT-mn001 python3 -m pytest tests/test_closed_loop.py
 """
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
 
-from polagrid.onem2m import Client
+from polagrid.onem2m import Client, _headers
 from polagrid.physics import KST, Room, simulate
 from polagrid.closed_loop import check_acp
-from polagrid.zone import Controller, Zone
+from polagrid.zone import WATCHDOG_MIN, Controller, Zone
 
 CSE = os.environ.get("POLAGRID_CSE")
 pytestmark = pytest.mark.skipif(not CSE, reason="POLAGRID_CSE not set")
@@ -53,3 +53,16 @@ def test_controller_reads_desk_lux_without_commanding(loop):
     ctl.command(np.zeros(room.n_cells))
     zone.set_environment(t)
     assert np.allclose(ctl.desks(), simulate(room, t, zone.angles)["desk_lux"], atol=0.1)
+
+
+def test_cells_open_themselves_when_commands_stop(loop):
+    room, zone, ctl = loop
+    t = datetime(2026, 11, 5, 13, tzinfo=KST)
+    zone.set_environment(t)
+    ctl.command(np.full(room.n_cells, 90.0))
+    zone.set_environment(t + timedelta(minutes=WATCHDOG_MIN - 5))      # heartbeat still fresh: stay closed
+    assert np.all(zone.angles == 90) and zone.watchdog_opens == 0
+    zone.set_environment(t + timedelta(minutes=WATCHDOG_MIN + 5))      # silent too long: open
+    assert np.all(zone.angles == 0) and zone.watchdog_opens == 1
+    state = zone.c._session().get(f"{zone.c.host}/{zone.c.cse}/{zone.run}p0/state", headers=_headers(f"C{zone.run}p0")).json()
+    assert state["cod:opeLl"]["opeLl"] == 100

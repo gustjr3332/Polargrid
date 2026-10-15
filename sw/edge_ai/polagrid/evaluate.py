@@ -15,6 +15,7 @@ from .physics import (DESK_MIN_LUX, GLARE_LUX, KST, Room, light_matrices, simula
 
 STEP_MIN = 5
 SUN_ON_WINDOW_LUX = 20_000  # blind baseline closes when outdoor light on the window is above this
+NIGHT_LUX = 400             # outdoor light below this (about civil twilight) means night
 GLARE_MARGIN_LUX = 1_000    # AI (2) aims this far below GLARE_LUX, because the sun moves between probes
 
 
@@ -115,6 +116,11 @@ def teacher_log(room, day, cloud=0.0):
         log.append((ai.features(t, alt, az, outdoor), angles.copy()))
         t += timedelta(minutes=STEP_MIN)
     return log
+
+
+def night_closed(controller):
+    """Privacy mode: when it is darker outside than in the lit room, close every cell."""
+    return lambda ctx: np.full_like(ctx["angles"], 90.0) if ctx["outdoor"] < NIGHT_LUX else controller(ctx)
 
 
 def polagrid_predict(model):

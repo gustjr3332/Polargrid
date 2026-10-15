@@ -67,3 +67,11 @@ def test_preference_learns_a_morning_boost():
     morning = preferred_min_lux(model, x[0])
     afternoon = preferred_min_lux(model, x[-1])
     assert morning > DESK_MIN_LUX + 100 and morning > afternoon
+
+
+def test_night_mode_closes_everything_only_when_dark():
+    from polagrid.evaluate import NIGHT_LUX, night_closed
+    control = night_closed(lambda ctx: np.zeros_like(ctx["angles"]))
+    angles = np.zeros(4)
+    assert np.all(control({"outdoor": NIGHT_LUX - 1, "angles": angles}) == 90)
+    assert np.all(control({"outdoor": NIGHT_LUX + 1, "angles": angles}) == 0)
