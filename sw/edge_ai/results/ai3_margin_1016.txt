@@ -1,0 +1,11 @@
+# AI (3) improvement experiments, 2026-10-16. 20 test days (evaluate.days(2026-01-04, 20, 18, seed=2)), nominal room, 2 desks,
+# 60 training days (evaluate.days(2026-01-01, 60, 6, seed=1)), per-day averages, desk-hours summed over desks. One run each.
+# Reference (results/baseline_compare.csv): AI (3) trained on probe logs 0.24 h glare; AI (1)+(2) 0.06 h; fixed open 2.26 h; schedule 0.34 h.
+method                    glare h  under-lit h  mean lux  moves
+V1 teacher 60d (margin 1000)  0.30      16.38        391    112
+V2 jitter 120d (virtual.train) 0.99     16.48        513    143
+V3 V2 + sensor guard m1000    0.27      16.57        345   1532
+V4 V2 + sensor guard m2000    0.27      18.86        245   7784
+teacher margin 2500           0.19      17.41        318    124
+teacher margin 4000           0.19      17.41        318    124   (same as 2500)
+teacher margin 6000           0.19      17.41        318    124   (same as 2500)

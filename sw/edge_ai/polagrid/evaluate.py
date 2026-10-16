@@ -3,8 +3,10 @@
 Metrics come from the true physics (no sensor noise), per desk, summed over desks:
 glare hours, under-lit hours (desk < DESK_MIN_LUX while the sun is up), mean desk lux, servo moves.
 
-    python -m polagrid.evaluate
+    python -m polagrid.evaluate [--csv results/baseline_compare.csv]
 """
+import csv
+import sys
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -97,11 +99,14 @@ def polagrid_probe(n_cells, probe_every_min=15):
     return controller
 
 
-def teacher_log(room, day, cloud=0.0):
+def teacher_log(room, day, cloud=0.0, margin=None):
     """Training data for AI (3) without probing: AI (2) decisions from the exact contribution matrix.
 
     Same (features, angles) rows as run_day's log, but one light_matrices call per step instead of n + 1 probes.
+    A wider margin (lux below GLARE_LUX) teaches AI (3) to stay clear of the glare limit, because it cannot
+    re-measure: 2,500 gave 0.19 h glare instead of 0.30 h on 20 test days (results/ai3_margin_1016.txt).
     """
+    margin = GLARE_MARGIN_LUX if margin is None else margin
     angles = np.zeros(room.n_cells)
     log = []
     t = datetime(day.year, day.month, day.day, 7, tzinfo=KST)
@@ -110,7 +115,7 @@ def teacher_log(room, day, cloud=0.0):
         outdoor = window_lux(room, t, cloud)
         if outdoor > SUN_ON_WINDOW_LUX:
             direct, diffuse = light_matrices(room, t, cloud)
-            angles = ai.decide_angles(direct + diffuse, angles, glare_lux=GLARE_LUX - GLARE_MARGIN_LUX)
+            angles = ai.decide_angles(direct + diffuse, angles, glare_lux=GLARE_LUX - margin)
         else:
             angles = np.zeros(room.n_cells)
         log.append((ai.features(t, alt, az, outdoor), angles.copy()))
@@ -183,6 +188,13 @@ def main():
     print(f"{'method':<24}{'glare h':>9}{'under-lit h':>13}{'mean lux':>10}{'servo moves':>13}")
     for name, r in rows.items():
         print(f"{name:<24}{r['glare_h']:>9.2f}{r['dark_h']:>13.2f}{r['mean_lux']:>10.0f}{r['moves']:>13.0f}")
+    if "--csv" in sys.argv:
+        with open(sys.argv[sys.argv.index("--csv") + 1], "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["method", "glare_h", "under_lit_h", "mean_desk_lux", "servo_moves", "test_days", "train_days"])
+            for name, r in rows.items():
+                w.writerow([name, f"{r['glare_h']:.2f}", f"{r['dark_h']:.2f}", f"{r['mean_lux']:.0f}", f"{r['moves']:.0f}",
+                            len(test), len(train)])
 
 
 if __name__ == "__main__":

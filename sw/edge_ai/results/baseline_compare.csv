@@ -1,0 +1,7 @@
+method,glare_h,under_lit_h,mean_desk_lux,servo_moves,test_days,train_days
+B0 fixed open,2.26,16.27,1100,0,20,60
+B1 blind,0.00,21.24,93,24,20,60
+B2 schedule,0.34,19.64,246,24,20,60
+Stats lookup table,0.56,16.42,417,59,20,60
+PolaGrid AI (1)+(2),0.06,16.71,346,851,20,60
+PolaGrid AI (3) predict,0.24,16.47,379,136,20,60

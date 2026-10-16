@@ -21,6 +21,7 @@ from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
 AZIMUTH_JITTER_DEG, DESK_JITTER_M, OUTDOOR_NOISE = 10.0, 0.25, 0.05
+AI3_MARGIN_LUX = 2_500  # AI (3) cannot re-measure, so its teacher keeps further from the glare limit
 
 
 def model_path(room):
@@ -46,7 +47,7 @@ def training_set(room, n_days, jitter=True, seed=1):
                  for i in range(n_days)]
     x, angles = [], []
     for day, cloud in picks:
-        for xi, ai_ in evaluate.teacher_log(jitter_room(room, rng) if jitter else room, day, cloud):
+        for xi, ai_ in evaluate.teacher_log(jitter_room(room, rng) if jitter else room, day, cloud, margin=AI3_MARGIN_LUX):
             x.append(xi)
             angles.append(ai_)
     x = np.array(x)
