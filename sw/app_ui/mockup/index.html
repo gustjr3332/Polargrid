@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PolaGrid app mockup</title>
+<style>
+:root{--bg:#0f1216;--surf:#181d23;--surf2:#222932;--line:#2d3640;--tx:#e8edf2;--mut:#8b97a4;--acc:#ffc247;--accd:#3a2e12;--warn:#ff8a5c;--ok:#5ad19a}
+*{box-sizing:border-box;margin:0}
+body{background:#05070a;color:var(--tx);font:14px/1.4 Roboto,system-ui,sans-serif;display:flex;gap:28px;flex-wrap:wrap;justify-content:center;padding:24px}
+.phone{width:360px;height:760px;background:var(--bg);border-radius:34px;border:8px solid #000;outline:1px solid #2a2f36;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.status{height:28px;display:flex;justify-content:space-between;padding:6px 20px 0;font-size:12px;color:var(--mut)}
+.top{padding:10px 20px 6px}
+.top h1{font-size:22px;font-weight:500}
+.top p{color:var(--mut);font-size:12px;margin-top:2px}
+.body{flex:1;overflow:hidden;padding:6px 16px}
+.nav{height:64px;background:var(--surf);display:flex;border-top:1px solid var(--line)}
+.nav button{flex:1;background:none;border:0;color:var(--mut);font-size:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+.nav button i{font-style:normal;font-size:17px;width:52px;height:26px;line-height:26px;border-radius:13px}
+.nav button.on{color:var(--tx)}.nav button.on i{background:var(--accd);color:var(--acc)}
+.card{background:var(--surf);border-radius:16px;padding:14px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.chip{display:inline-block;padding:4px 10px;border-radius:12px;background:var(--surf2);font-size:12px;color:var(--mut)}
+.chip.acc{background:var(--accd);color:var(--acc)}.chip.ok{color:var(--ok)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.cell{aspect-ratio:1.45;border-radius:12px;background:var(--surf2);position:relative;overflow:hidden;border:1px solid var(--line)}
+.cell b{position:absolute;left:0;right:0;bottom:0;background:var(--acc);opacity:.9}
+.cell.glare{box-shadow:0 0 0 2px var(--warn)}
+.cell span{position:absolute;top:6px;left:8px;font-size:11px;color:#000;font-weight:600;mix-blend-mode:normal;text-shadow:0 0 3px #fff8}
+.desk{display:flex;gap:10px}.desk div{flex:1;background:var(--surf2);border-radius:12px;padding:10px}
+.desk small{color:var(--mut);display:block;font-size:11px}.desk strong{font-size:20px;font-weight:500}
+.seg{display:flex;border:1px solid var(--line);border-radius:20px;overflow:hidden;margin:8px 0}
+.seg div{flex:1;text-align:center;padding:9px 0;font-size:12px;color:var(--mut);border-right:1px solid var(--line)}
+.seg div:last-child{border:0}.seg .on{background:var(--accd);color:var(--acc)}
+.opt{display:flex;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.opt:last-child{border:0}.opt .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--mut)}
+.opt.on .dot{border-color:var(--acc);background:radial-gradient(var(--acc) 45%,transparent 50%)}
+.opt small{display:block;color:var(--mut);font-size:12px}
+.slider{height:6px;border-radius:3px;background:var(--surf2);margin:22px 4px 10px;position:relative}
+.slider b{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--acc)}
+.slider i{position:absolute;top:-8px;width:22px;height:22px;border-radius:50%;background:var(--acc);margin-left:-11px}
+.btns{display:flex;gap:10px}.btn{flex:1;text-align:center;padding:16px 0;border-radius:16px;background:var(--surf2);font-size:15px}
+.btn.p{background:var(--acc);color:#1b1500;font-weight:600}
+.met{display:grid;grid-template-columns:1fr 1fr;gap:10px}.met div{background:var(--surf2);border-radius:14px;padding:12px}
+.met strong{font-size:24px;font-weight:500;display:block}.met small{color:var(--mut);font-size:11px}
+.demo{position:absolute;bottom:72px;right:12px;background:#000a;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:10px;color:var(--mut)}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden}.screen.show{display:flex}
+.lab{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin:6px 2px}
+a.hint{position:fixed;top:4px;right:10px;color:var(--mut);font-size:11px}
+</style>
+</head>
+<body>
+<a class="hint" href="?view=all">?view=all shows 5 screens</a>
+<div id="root"></div>
+<script>
+// Static mockup, no network. All numbers are made-up demo values (labelled DEMO DATA on screen).
+const LEVELS = [100,100,100, 100,62,100, 38,35,70, 100,45,100];   // open level 0-100, 12 cells (3 x 4)
+const GLARE = new Set([5,6,7]);                                   // cells with a warm outline
+const NAV = [["Window","▦"],["Comfort","☀"],["Mode","◐"],["Today","▤"],["Settings","⚙"]];
+
+const cells = () => `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
+const seg = (items,on) => `<div class="seg">${items.map((s,i)=>`<div class="${i===on?'on':''}">${s}</div>`).join('')}</div>`;
+const opt = (t,s,on) => `<div class="opt ${on?'on':''}"><span class="dot"></span><div>${t}<small>${s}</small></div></div>`;
+
+const SCREENS = {
+Window:{sub:"Study room · south window",html:`
+  <div class="card"><div class="row"><span class="chip acc">Auto · Reduce desk glare</span><span class="chip ok">● Connected</span></div>
+  ${cells()}
+  <div class="row"><span class="chip">Open level (%)</span><span class="chip" style="color:var(--warn)">▢ glare cells</span></div></div>
+  <div class="lab">Desk light</div>
+  <div class="desk"><div><small>Desk A</small><strong>412 lux</strong><small>target ≥ 300</small></div><div><small>Desk B</small><strong>388 lux</strong><small>target ≥ 300</small></div></div>`},
+Comfort:{sub:"Tell the AI how it feels",html:`
+  <div class="card"><div class="lab">How much?</div>
+  <div class="slider"><b style="width:40%"></b><i style="left:40%"></i></div>
+  <div class="row" style="color:var(--mut);font-size:12px"><span>100 lux</span><span style="color:var(--tx);font-size:16px">+200 lux</span><span>500 lux</span></div></div>
+  <div class="btns"><div class="btn">Too dark</div><div class="btn p">Too bright</div></div>
+  <div class="card" style="margin-top:12px"><div class="lab">Last corrections</div>
+  <div class="row" style="padding:6px 0"><span>14:05 · Too bright</span><span class="chip">−200 lux</span></div>
+  <div class="row" style="padding:6px 0"><span>11:40 · Too dark</span><span class="chip">+100 lux</span></div></div>
+  <p style="color:var(--mut);font-size:12px;padding:4px">Each press is also a training sample for the AI preference model.</p>`},
+Mode:{sub:"How should the window behave?",html:`
+  ${seg(["Auto","Manual","Privacy","Away"],0)}
+  <div class="card"><div class="lab">Goal (Auto)</div>
+  ${opt("Reduce desk glare","Close only the cells that throw glare on desks",true)}
+  ${opt("Reduce screen reflection","Keep monitor surfaces clear of reflections",false)}
+  ${opt("Brightest","Open as much as possible, glare allowed",false)}</div>
+  <div class="card"><div class="row"><div>Night privacy<small style="display:block;color:var(--mut);font-size:12px">Close all cells when it is darker outside</small></div><span class="chip acc">On</span></div></div>`},
+Today:{sub:"Measured on this window",html:`
+  <div class="met"><div><strong>0.1 h</strong><small>Glare time</small></div><div><strong>96%</strong><small>Desk at target</small></div>
+  <div><strong>3</strong><small>Your corrections</small></div><div><strong>103</strong><small>Servo moves</small></div></div>
+  <div class="card" style="margin-top:12px"><div class="lab">Compared with</div>
+  <div class="row" style="padding:6px 0"><span>Fixed open</span><span class="chip">2.3 h glare</span></div>
+  <div class="row" style="padding:6px 0"><span>Blind</span><span class="chip">dark desk</span></div>
+  <div class="row" style="padding:6px 0"><span>Timer</span><span class="chip">0.3 h glare</span></div></div>`},
+Settings:{sub:"Connection and safety",html:`
+  <div class="card"><div class="lab">oneM2M CSE</div><div class="row"><span>polagrid-in.local:3000</span><span class="chip ok">● OK</span></div>
+  <div class="row" style="padding-top:8px"><span style="color:var(--mut)">Originator</span><span>Capp</span></div></div>
+  <div class="card"><div class="lab">Safe state</div><p style="color:var(--mut)">If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.</p></div>
+  <div class="btns"><div class="btn">Open all</div><div class="btn">Close all</div></div>`}
+};
+
+const phone = (name, idx) => `<div class="phone" data-i="${idx}">
+  <div class="status"><span>9:41</span><span>▂▄▆ 5G ▮</span></div>
+  <div class="top"><h1>${name}</h1><p>${SCREENS[name].sub}</p></div>
+  <div class="body">${SCREENS[name].html}</div>
+  <div class="demo">DEMO DATA</div>
+  <div class="nav">${NAV.map(([n,ic])=>`<button class="${n===name?'on':''}"><i>${ic}</i>${n}</button>`).join('')}</div></div>`;
+
+const all = new URLSearchParams(location.search).get("view") === "all";
+const names = Object.keys(SCREENS);
+const root = document.getElementById("root");
+root.style.cssText = "display:flex;gap:28px;flex-wrap:wrap;justify-content:center";
+const draw = i => { root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); };
+if (all) root.innerHTML = names.map(phone).join(""); else draw(+(new URLSearchParams(location.search).get("s")||0));
+</script>
+</body>
+</html>

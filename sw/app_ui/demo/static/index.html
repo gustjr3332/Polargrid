@@ -35,7 +35,7 @@ footer b{color:var(--fg)}
 </head>
 <body>
 <div id="app">
-  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells, one real panel</span></header>
+  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells</span></header>
   <div id="stage"><canvas id="cv"></canvas></div>
   <aside>
     <section><h2>Desk illuminance</h2>
@@ -62,9 +62,7 @@ footer b{color:var(--fg)}
   <footer>
     <span>Connection: <span id="mode">Replay</span></span>
     <span>Cells: <b id="nc">1000</b></span>
-    <span>Run: <b id="run-id">demo-0</b></span>
-    <span>Real cell index: <b id="rl">-</b></span>
-  </footer>
+    <span>Run: <b id="run-id">demo-0</b></span>  </footer>
 </div>
 <script>
 "use strict";
@@ -83,9 +81,7 @@ function onFrame(f) {
   $("gl").textContent = f.glare_h.toFixed(1);
   $("p50").textContent = f.lat_ms.p50; $("p95").textContent = f.lat_ms.p95;
   $("mv").textContent = f.moves;
-  $("nc").textContent = f.cells.length;
-  $("rl").textContent = f.real.join(", ");
-}
+  $("nc").textContent = f.cells.length;}
 
 function draw(f) {
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
@@ -98,13 +94,6 @@ function draw(f) {
     const v = f.cells[i] / 100, x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
     g.fillStyle = `hsl(205,${30 + 60 * v}%,${9 + 66 * v}%)`; // one hue, dark to bright
     g.fillRect(x + 1, y + 1, s - 2, s - 2);
-  }
-  g.strokeStyle = "#fff"; g.lineWidth = 3; g.fillStyle = "#fff";
-  g.font = `700 ${Math.max(9, s * .3)}px system-ui`; g.textAlign = "center"; g.textBaseline = "middle";
-  for (const i of f.real) {
-    const x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
-    g.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
-    if (s >= 24) { g.fillStyle = "#000"; g.fillRect(x + 3, y + s / 2 - s * .17, s - 6, s * .34); g.fillStyle = "#fff"; g.fillText("REAL", x + s / 2, y + s / 2); }
   }
 }
 
@@ -135,7 +124,7 @@ function makeFrame(dtSim) {
   const p50 = Math.round(24 + Math.random() * 3 + moved / 40);
   const hh = String(Math.floor(h)).padStart(2, "0"), mm = String(Math.floor(sim.min % 60)).padStart(2, "0");
   return {
-    t: `2026-11-04T${hh}:${mm}`, cells: sim.cells.map(Math.round), real: [17], desks: lux,
+    t: `2026-11-04T${hh}:${mm}`, cells: sim.cells.map(Math.round), desks: lux,
     sun: { elev: Math.round(elev * 70), lux: Math.round(100000 * sunI) }, glare_h: +sim.glare.toFixed(2),
     lat_ms: { p50, p95: Math.round(p50 * 1.45 + Math.random() * 3) }, moves: sim.moves
   };

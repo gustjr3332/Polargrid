@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PolaGrid Flow Viewer</title>
+<style>
+:root{--bg:#0f1318;--panel:#171d25;--line:#2a3441;--fg:#d8e0ea;--dim:#8493a5;--blue:#4aa3ff;--green:#4ade80;--amber:#fbbf24;--red:#f87171;--violet:#c084fc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.4 system-ui,Segoe UI,sans-serif;display:flex;flex-direction:column;height:100vh}
+header{display:flex;gap:18px;align-items:center;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:15px;margin:0}
+.mode{padding:2px 8px;border-radius:10px;background:#24303e;color:var(--dim)}
+.mode.live{background:#12351f;color:var(--green)}
+.cnt b{font-size:16px;font-variant-numeric:tabular-nums}.cnt small{color:var(--dim);margin-left:4px}
+main{flex:1;display:flex;min-height:0}
+#left{flex:1;min-width:0;position:relative}
+canvas{width:100%;height:100%;display:block}
+#right{width:min(560px,42vw);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+#steps{padding:10px 12px;border-bottom:1px solid var(--line)}
+#steps h2,#logh h2{font-size:12px;margin:0 0 6px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+.step{display:flex;gap:8px;padding:4px 6px;border-radius:6px;opacity:.45;border-left:3px solid transparent}
+.step.on{opacity:1;background:#1c2634;border-left-color:var(--blue)}
+.step i{font-style:normal;width:18px;height:18px;border-radius:9px;background:#2a3441;text-align:center;flex:none;font-size:11px;line-height:18px}
+.step.on i{background:var(--blue);color:#06101c}
+.step span{flex:1}.step em{color:var(--dim);font-style:normal;font-variant-numeric:tabular-nums;white-space:nowrap}
+#note{color:var(--dim);font-size:12px;margin-top:6px}
+#logh{padding:8px 12px 4px;display:flex;gap:12px;align-items:center}
+#logh label{color:var(--dim);cursor:pointer}
+#log{flex:1;overflow:auto;font:12px/1.35 ui-monospace,Consolas,monospace;padding:0 8px 8px}
+.row{display:grid;grid-template-columns:78px 1.1fr 2fr 82px 44px;gap:6px;padding:1px 4px;border-bottom:1px solid #1d2530;white-space:nowrap;overflow:hidden}
+.row span{overflow:hidden;text-overflow:ellipsis}
+.row.hd{color:var(--dim);position:sticky;top:0;background:var(--bg)}
+.k-mqtt .op{color:var(--violet)}.k-cin .op{color:var(--green)}.k-state .op{color:var(--amber)}.k-error .op{color:var(--red)}
+#legend{position:absolute;left:10px;bottom:8px;color:var(--dim);font-size:11px;display:flex;gap:12px;flex-wrap:wrap;background:#0f1318cc;padding:4px 8px;border-radius:6px}
+#legend s{display:inline-block;width:9px;height:9px;border-radius:5px;margin-right:4px;vertical-align:-1px;text-decoration:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>PolaGrid Flow Viewer</h1>
+  <span class="mode" id="mode">connecting</span>
+  <span class="cnt"><b id="c_get">-</b><small>viewer GET/s (this page's own polling)</small></span>
+  <span class="cnt"><b id="c_mqtt">-</b><small>MQTT msg/s (broker, all topics)</small></span>
+  <span class="cnt"><b id="c_cin">0</b><small>CINs seen</small></span>
+  <span class="cnt"><b id="c_st">0</b><small>cell state updates seen</small></span>
+  <span class="cnt"><b id="c_err">0</b><small>errors</small></span>
+  <span class="cnt"><b id="c_read">-</b><small>ms to read all cells</small></span>
+</header>
+<main>
+  <div id="left"><canvas id="cv"></canvas>
+    <div id="legend">
+      <span><s style="background:var(--blue)"></s>command (controller to GRP)</span>
+      <span><s style="background:var(--amber)"></s>fan-out / cell state update</span>
+      <span><s style="background:var(--green)"></s>sensor CIN (sun, desks)</span>
+      <span><s style="background:var(--violet)"></s>IN-MN MQTT message</span>
+      <span>cell dot: bright = open, dark = closed</span>
+    </div>
+  </div>
+  <div id="right">
+    <div id="steps">
+      <h2>How one command travels (latest command, zone <span id="stz">-</span>)</h2>
+      <div class="step" id="s1"><i>1</i><span>Controller (MEC app) creates one CIN in <code>ctl/grp/fopt</code> of the zone's MN</span><em id="t1"></em></div>
+      <div class="step" id="s2"><i>2</i><span>The GRP fans it out: a command CIN appears in every cell's <code>command</code> container (we watch cell 0)</span><em id="t2"></em></div>
+      <div class="step" id="s3"><i>3</i><span>Each cell AE reads its angle and updates its <code>state</code> FlexContainer (<code>opeLl</code>, 0 closed .. 100 open)</span><em id="t3"></em></div>
+      <div class="step" id="s4"><i>4</i><span>Desk sensors report new lux in <code>env/desks</code> with the same command id: the window moved, the desk light changed</span><em id="t4"></em></div>
+      <div id="note">Step 1 is inferred from step 2 (we cannot see the request itself, only its result). Times are when this page first saw each step (CINs polled every 1 s, other cells' states every few seconds), so they are coarse and are not latency measurements. In this setup the controller calls the MN directly over HTTP; the IN holds the registration of each MN (MQTT lines between IN and MNs).</div>
+    </div>
+    <div id="logh"><h2 style="margin:0">Event log</h2>
+      <label><input type="checkbox" id="f_mqtt" checked> MQTT</label>
+      <label><input type="checkbox" id="f_cin" checked> CIN</label>
+      <label><input type="checkbox" id="f_state" checked> state</label>
+    </div>
+    <div id="log"><div class="row hd"><span>time</span><span>source</span><span>resource</span><span>op</span><span>rsc</span></div></div>
+  </div>
+</main>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const cv = $("cv"), cx = cv.getContext("2d");
+let W = 0, H = 0, dpr = 1;
+let topo = {mns: []}, levels = [];
+const flash = {};            // node id -> time of last activity
+const cellFlash = {};        // "k:i" -> time
+const parts = [];            // moving dots
+const latest = {};           // mn k -> {cmd, t1..t4}
+let lastCmdMn = null;
+
+// ---- layout ----
+function layout() {
+  const n = Math.max(1, topo.mns.length), colW = W / n;
+  const nodes = {};
+  nodes.IN = {x: W / 2, y: 46, label: "IN-CSE (tinyIoT, :3000)", w: 150};
+  nodes.CTL = {x: Math.min(110, colW * 0.8), y: 46, label: "Controller (MEC app)", w: 150};
+  nodes.ENV = {x: W - Math.min(110, colW * 0.8), y: 46, label: "Env sensors", w: 110};
+  topo.mns.forEach((m, i) => {
+    const x = colW * (i + 0.5), k = m.k;
+    nodes["MN" + k] = {x, y: 130, label: "MN" + k, sub: m.cse, w: Math.min(100, colW - 8)};
+    nodes["GRP" + k] = {x, y: 200, label: "ctl/grp", w: Math.min(90, colW - 12)};
+    nodes["SUN" + k] = {x, y: 245, label: "env/sun", w: Math.min(90, colW - 12)};
+    nodes["DESK" + k] = {x, y: 290, label: "env/desks", w: Math.min(90, colW - 12)};
+    nodes["CELLS" + k] = {x, y: 335, label: m.n_cells + " cells", w: Math.min(100, colW - 6), cells: true, k, n: m.n_cells};
+  });
+  return nodes;
+}
+let nodes = {};
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  W = r.width; H = r.height;
+  cv.width = W * dpr; cv.height = H * dpr;
+  cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  nodes = layout();
+}
+window.addEventListener("resize", resize);
+
+// ---- particles ----
+function send(a, b, color, dur = 700) {
+  if (!nodes[a] || !nodes[b]) return;
+  parts.push({a, b, color, t0: performance.now(), dur});
+  flash[a] = flash[b] = performance.now();
+}
+
+// ---- drawing ----
+const levelColor = v => { const t = Math.max(0, Math.min(1, v / 100)); return `rgb(${40 + 215 * t | 0},${45 + 170 * t | 0},${55 + 20 * t | 0})`; };
+function box(n, id, color) {
+  const age = performance.now() - (flash[id] || 0), glow = age < 900 ? 1 - age / 900 : 0;
+  const h = n.cells ? 0 : 30, w = n.w;
+  cx.fillStyle = "#171d25"; cx.strokeStyle = glow > 0 ? `rgba(251,191,36,${0.4 + glow * 0.6})` : "#2f3b4b"; cx.lineWidth = 1 + glow * 1.5;
+  if (!n.cells) { cx.beginPath(); cx.roundRect(n.x - w / 2, n.y - h / 2, w, h, 6); cx.fill(); cx.stroke(); }
+  cx.fillStyle = color || "#d8e0ea"; cx.font = "12px system-ui"; cx.textAlign = "center";
+  if (n.cells) { cx.fillStyle = "#8493a5"; cx.fillText(n.label, n.x, n.y - 24); }
+  else if (n.sub) { cx.fillText(n.label, n.x, n.y - 2); cx.fillStyle = "#8493a5"; cx.font = "10px system-ui"; cx.fillText(n.sub, n.x, n.y + 10); }
+  else cx.fillText(n.label, n.x, n.y + 4);
+}
+function edge(a, b, color = "#222c39", dash) {
+  const p = nodes[a], q = nodes[b]; if (!p || !q) return;
+  cx.strokeStyle = color; cx.lineWidth = 1; cx.setLineDash(dash || []); cx.beginPath(); cx.moveTo(p.x, p.y); cx.lineTo(q.x, q.y); cx.stroke(); cx.setLineDash([]);
+}
+function draw(now) {
+  cx.clearRect(0, 0, W, H);
+  for (const m of topo.mns) {
+    const k = m.k;
+    edge("IN", "MN" + k, "#3a2d52");
+    edge("CTL", "GRP" + k, "#1d2a3a"); edge("ENV", "SUN" + k, "#1d3326"); edge("ENV", "DESK" + k, "#1d3326");
+    edge("MN" + k, "GRP" + k); edge("MN" + k, "SUN" + k); edge("MN" + k, "DESK" + k); edge("MN" + k, "CELLS" + k);
+    edge("GRP" + k, "CELLS" + k, "#4a3a14", [3, 3]);
+  }
+  for (const id in nodes) box(nodes[id], id);
+  // cell dots
+  let off = 0;
+  for (const m of topo.mns) {
+    const n = nodes["CELLS" + m.k], side = Math.ceil(Math.sqrt(m.n_cells)), s = Math.min(9, (n.w - 4) / side);
+    for (let i = 0; i < m.n_cells; i++) {
+      const r = Math.floor(i / side), c = i % side;
+      const x = n.x - side * s / 2 + c * s, y = n.y - 14 + r * s;
+      cx.fillStyle = levelColor(levels[off + i] ?? 0); cx.fillRect(x, y, s - 1, s - 1);
+      const f = cellFlash[m.k + ":" + i];
+      if (f && now - f < 1200) { cx.strokeStyle = `rgba(251,191,36,${1 - (now - f) / 1200})`; cx.strokeRect(x - 1, y - 1, s + 1, s + 1); }
+    }
+    off += m.n_cells;
+  }
+  // particles
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i], t = (now - p.t0) / p.dur;
+    if (t >= 1) { parts.splice(i, 1); continue; }
+    const a = nodes[p.a], b = nodes[p.b]; if (!a || !b) continue;
+    cx.fillStyle = p.color; cx.beginPath(); cx.arc(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, 4, 0, 7); cx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+
+// ---- steps ----
+function stepUI() {
+  const r = latest[lastCmdMn];
+  $("stz").textContent = r ? "MN" + lastCmdMn + " (cmd " + (r.cmd || "?") + ")" : "-";
+  ["t1", "t2", "t3", "t4"].forEach((t, i) => {
+    $(t).textContent = r && r[t] ? "+" + ((r[t] - r.t1) / 1000).toFixed(1) + " s" : "";
+    $("s" + (i + 1)).classList.toggle("on", !!(r && r[t]));
+  });
+}
+function onCommand(e) {
+  latest[e.mn] = {cmd: e.cmd, t1: e.ts * 1000, t2: e.ts * 1000};
+  lastCmdMn = e.mn;
+  send("CTL", "GRP" + e.mn, "#4aa3ff", 600);
+  setTimeout(() => { send("MN" + e.mn, "GRP" + e.mn, "#4aa3ff", 300); }, 0);
+  setTimeout(() => { send("GRP" + e.mn, "CELLS" + e.mn, "#fbbf24", 700); }, 600);
+}
+
+// ---- log ----
+const logEl = $("log");
+const pad = (n, w = 2) => String(n).padStart(w, "0");
+function addLog(e) {
+  if (!$("f_" + (e.kind === "p0state" ? "state" : e.kind))?.checked) return;
+  const d = new Date(e.ts * 1000);
+  const row = document.createElement("div");
+  row.className = "row k-" + (e.kind === "p0state" ? "state" : e.kind);
+  const res = e.n && e.n > 1 ? `${e.path}  x${e.n}` : e.path;
+  const cells = [`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`, e.src || "", res, e.op || "", e.rsc ?? ""];
+  cells.forEach((t, i) => { const s = document.createElement("span"); s.textContent = t; if (i === 3) s.className = "op"; if (i === 2 && e.note) s.title = e.note; row.appendChild(s); });
+  const stick = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 30;
+  logEl.appendChild(row);
+  while (logEl.children.length > 301) logEl.removeChild(logEl.children[1]);
+  if (stick) logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ---- events from the server ----
+function onEvent(e) {
+  addLog(e);
+  if (e.kind === "cin") {
+    if (e.name === "command") onCommand(e);
+    else if (e.name === "desks") {
+      send("ENV", "DESK" + e.mn, "#4ade80", 600);
+      const r = latest[e.mn];
+      if (r && e.cmd === r.cmd && !r.t4) { r.t4 = e.ts * 1000; stepUI(); }
+    } else send("ENV", "SUN" + e.mn, "#4ade80", 600);
+  } else if (e.kind === "p0state") {
+    const r = latest[e.mn];
+    if (r && !r.t3 && e.ts * 1000 >= r.t1) { r.t3 = e.ts * 1000; stepUI(); }
+    cellFlash[e.mn + ":0"] = performance.now(); flash["CELLS" + e.mn] = performance.now();
+    send("CELLS" + e.mn, "MN" + e.mn, "#fbbf24", 500);
+  } else if (e.kind === "state") {
+    flash["CELLS" + e.mn] = performance.now();
+    (e.cells || []).forEach(i => cellFlash[e.mn + ":" + i] = performance.now());
+    send("CELLS" + e.mn, "MN" + e.mn, "#fbbf24", 500);
+  } else if (e.kind === "mqtt") {
+    const t = (e.note || "").split("/");                    // /oneM2M/req/<from>/<to>/json
+    const fromMn = (t[3] || "").startsWith("id-mn"), k = e.mn;
+    if (k && nodes["MN" + k]) fromMn ? send("MN" + k, "IN", "#c084fc", 500) : send("IN", "MN" + k, "#c084fc", 500);
+    else if (nodes.IN) flash.IN = performance.now();
+  }
+  stepUI();
+}
+
+let prev = null;
+function onStats(s) {
+  if (s.replay) { $("mode").textContent = "Replay (no live CSE feed)"; return; }
+  if (prev) {
+    const dt = s.now - prev.now || 1;
+    $("c_get").textContent = ((s.gets - prev.gets) / dt).toFixed(0);
+    $("c_mqtt").textContent = ((s.mqtt_msgs - prev.mqtt_msgs) / dt).toFixed(1);
+  }
+  prev = s;
+  $("c_cin").textContent = s.cin_seen; $("c_st").textContent = s.state_changes;
+  $("c_err").textContent = s.get_err + s.mqtt_err; $("c_read").textContent = s.last_read_ms ?? "-";
+}
+
+async function loadTopo() {
+  try {
+    const t = await (await fetch("/api/topology")).json();
+    const changed = JSON.stringify(t.mns.map(m => [m.k, m.n_cells])) !== JSON.stringify(topo.mns.map(m => [m.k, m.n_cells]));
+    topo = t;
+    if (changed) nodes = layout();
+    $("mode").textContent = t.mode === "live" ? "Live" : "Replay"; $("mode").className = "mode " + t.mode;
+  } catch (e) { $("mode").textContent = "server unreachable"; }
+}
+function connect() {
+  const fs = new EventSource("/api/flow");
+  fs.onmessage = m => onEvent(JSON.parse(m.data));
+  fs.addEventListener("stats", m => onStats(JSON.parse(m.data)));
+  const es = new EventSource("/api/events");
+  es.onmessage = m => { const f = JSON.parse(m.data); levels = f.cells; $("c_read").textContent = f.read_ms ?? "-"; };
+}
+resize(); loadTopo().then(() => { nodes = layout(); connect(); requestAnimationFrame(draw); });
+setInterval(loadTopo, 5000);
+</script>
+</body>
+</html>

@@ -53,9 +53,17 @@ cells. Cell fill encodes open level; do not use color alone (add the number on t
 - Whether the demo phone reaches the CSE directly (same Wi-Fi, port forward) or through the IN.
 - Does the app write the correction as an absolute offset in lux or as a +/- step.
 
+## Screen mockup (for the 11/4 slide)
+
+`mockup/index.html` is a static HTML mockup of the five screens in a phone frame, with made-up numbers labelled "DEMO DATA".
+It is only captured for one slide, so the app does not have to run on Android and no Android Studio is needed. Open it in
+Chrome: `?s=0..4` shows one screen (0 Window, 1 Comfort, 2 Mode, 3 Today, 4 Settings), `?view=all` shows all five. The Mode
+screen puts the three goals from the proposal (reduce desk glare, reduce screen reflection, brightest) under Auto.
+A real Kotlin/Compose app is after 11/4.
+
 ## Demo page (for the 11/4 maker contest)
 
-A separate web page shows 1,000 virtual cells and one real panel on one screen. It is a viewer, so like the app it reads
+A separate web page shows 1,000 virtual cells (the real 4-cell panel is demonstrated separately, not on this page). It is a viewer, so like the app it reads
 the CSE only. Plan and phases: `docs/PolaGrid_시연페이지_계획.md` (Korean, local only).
 
 Status 2026-10-15: phase P0 is done. `demo/static/index.html` is one file with no libraries and draws a 25 x 40 grid on a
@@ -65,8 +73,7 @@ canvas from generated frames, so the numbers on it are fake and the page says "D
 - Every frame goes through `onFrame(frame)`. The frame format is the one in the plan (cells, real, desks, sun, glare_h,
   lat_ms, moves). A live source only has to call that function.
 - `?t=12` in the address starts the clock at 12:00 for rehearsal.
-- Next (P1): a FastAPI server that reads the cell states, desk and sun containers from the CSE and serves frames. Reading
-  1,000 cells has not been timed yet.
+- P1 (2026-10-16): `demo/server.py` (FastAPI, read-only) serves `/api/frame`, `/api/events`, and a flow viewer at `/flow`. Reading 1,000 cells took p50 1.3-1.6 s (7 reads, one PC); see the plan, section 5. Usage: `demo/README.md`. The page `static/index.html` is not yet wired to the live frames.
 - Latency to expect: a one-day closed loop on 1,000 cells (10 MNs x 100 cells) finished without errors, but p95 was 4.4 to
   6.7 s when all ten zones ran at once and 1.8 to 2.9 s when run as two batches of five (`sw/edge_ai/results/`). The page
   therefore plays a recording by default and treats live mode as the extra.

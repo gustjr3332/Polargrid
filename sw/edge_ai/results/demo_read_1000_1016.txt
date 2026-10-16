@@ -1,0 +1,87 @@
+# 2026-10-16 WSL Ubuntu-24.04, one machine (client, IN, MNs on the same host), tinyIoT IN + MNs with serialize patch, viewer-role GETs
+# method: sw/app_ui/demo/server.py --bench 7: each read = GET state of every cell (parallel thread pool) + sun/la + desks/la per zone; discovery (fu=1&ty=28&lbl) excluded; nothing else running on the CSEs during the reads
+# rcn variants tried on discovery as viewer (12-cell zone): fu=1&rcn=4/8 -> 400 not supported; fu=1&rcn=6 -> references only, no attributes; fu=2 -> 403 for the viewer (CAdmin gets only the base resource back)
+# NEW tinyIoT crash: GET <MN>?fu=1&ty=28 with an originator that is not a registered AE ('Cview') -> 'stack smashing detected', MN exits, on a zone with 100 cells (12 cells: 200). With the zone's own viewer originator: 200 (3204 B).
+## stage 12 cells (1 MN)
+[setup] 12 cells on TinyIoT-mn001, run r34468
+[latency] 48 commands to 12 cells: command -> desk reading p50=15ms p95=26ms max=27ms
+discovered: [('TinyIoT-mn001', 'r34468', 12)]
+# 1 MN: 12 cells on 1 MN(s), workers=32, 7 full reads (cells + sun/desks per zone)
+read 1: 18 ms, 12 cells, get errors so far 0
+read 2: 15 ms, 12 cells, get errors so far 0
+read 3: 14 ms, 12 cells, get errors so far 0
+read 4: 13 ms, 12 cells, get errors so far 0
+read 5: 15 ms, 12 cells, get errors so far 0
+read 6: 16 ms, 12 cells, get errors so far 0
+read 7: 14 ms, 12 cells, get errors so far 0
+# 1 MN: n=7 p50=15 ms p95=18 ms max=18 ms min=13 ms
+## stage 100 cells (1 MN)
+[setup] 100 cells on TinyIoT-mn001, run r34478
+[latency] 48 commands to 100 cells: command -> desk reading p50=321ms p95=551ms max=589ms
+discovered: [('TinyIoT-mn001', 'r34478', 100)]
+# 1 MN: 100 cells on 1 MN(s), workers=32, 7 full reads (cells + sun/desks per zone)
+read 1: 126 ms, 100 cells, get errors so far 0
+read 2: 105 ms, 100 cells, get errors so far 0
+read 3: 106 ms, 100 cells, get errors so far 0
+read 4: 107 ms, 100 cells, get errors so far 0
+read 5: 104 ms, 100 cells, get errors so far 0
+read 6: 137 ms, 100 cells, get errors so far 0
+read 7: 120 ms, 100 cells, get errors so far 0
+# 1 MN: n=7 p50=107 ms p95=137 ms max=137 ms min=104 ms
+## stage 1000 cells (10 MN x 100)
+[setup] 100 cells on TinyIoT-mn001, run r34509
+[latency] 48 commands to 100 cells: command -> desk reading p50=1397ms p95=3749ms max=5224ms
+[setup] 100 cells on TinyIoT-mn002, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1373ms p95=3580ms max=5219ms
+[setup] 100 cells on TinyIoT-mn003, run r34509
+[latency] 48 commands to 100 cells: command -> desk reading p50=1457ms p95=3609ms max=5074ms
+[setup] 100 cells on TinyIoT-mn004, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1321ms p95=3750ms max=5385ms
+[setup] 100 cells on TinyIoT-mn005, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1363ms p95=3679ms max=5274ms
+[setup] 100 cells on TinyIoT-mn006, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1402ms p95=3659ms max=5408ms
+[setup] 100 cells on TinyIoT-mn007, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1394ms p95=3954ms max=5755ms
+[setup] 100 cells on TinyIoT-mn008, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1340ms p95=3636ms max=5716ms
+[setup] 100 cells on TinyIoT-mn009, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1324ms p95=3547ms max=5538ms
+[setup] 100 cells on TinyIoT-mn010, run r34510
+[latency] 48 commands to 100 cells: command -> desk reading p50=1378ms p95=3773ms max=6118ms
+running: 10  total RSS: 365 MB
+### workers=32
+discovered: [('TinyIoT-mn001', 'r34509', 100), ('TinyIoT-mn002', 'r34510', 100), ('TinyIoT-mn003', 'r34509', 100), ('TinyIoT-mn004', 'r34510', 100), ('TinyIoT-mn005', 'r34510', 100), ('TinyIoT-mn006', 'r34510', 100), ('TinyIoT-mn007', 'r34510', 100), ('TinyIoT-mn008', 'r34510', 100), ('TinyIoT-mn009', 'r34510', 100), ('TinyIoT-mn010', 'r34510', 100)]
+# 10 MN: 1000 cells on 10 MN(s), workers=32, 7 full reads (cells + sun/desks per zone)
+read 1: 5417 ms, 1000 cells, get errors so far 0
+read 2: 2666 ms, 1000 cells, get errors so far 0
+read 3: 2420 ms, 1000 cells, get errors so far 0
+read 4: 1466 ms, 1000 cells, get errors so far 0
+read 5: 1562 ms, 1000 cells, get errors so far 0
+read 6: 1455 ms, 1000 cells, get errors so far 0
+read 7: 1309 ms, 1000 cells, get errors so far 0
+# 10 MN: n=7 p50=1562 ms p95=5417 ms max=5417 ms min=1309 ms
+### workers=10
+discovered: [('TinyIoT-mn001', 'r34509', 100), ('TinyIoT-mn002', 'r34510', 100), ('TinyIoT-mn003', 'r34509', 100), ('TinyIoT-mn004', 'r34510', 100), ('TinyIoT-mn005', 'r34510', 100), ('TinyIoT-mn006', 'r34510', 100), ('TinyIoT-mn007', 'r34510', 100), ('TinyIoT-mn008', 'r34510', 100), ('TinyIoT-mn009', 'r34510', 100), ('TinyIoT-mn010', 'r34510', 100)]
+# 10 MN: 1000 cells on 10 MN(s), workers=10, 7 full reads (cells + sun/desks per zone)
+read 1: 1649 ms, 1000 cells, get errors so far 0
+read 2: 1289 ms, 1000 cells, get errors so far 0
+read 3: 1597 ms, 1000 cells, get errors so far 0
+read 4: 1303 ms, 1000 cells, get errors so far 0
+read 5: 1287 ms, 1000 cells, get errors so far 0
+read 6: 1390 ms, 1000 cells, get errors so far 0
+read 7: 1272 ms, 1000 cells, get errors so far 0
+# 10 MN: n=7 p50=1303 ms p95=1649 ms max=1649 ms min=1272 ms
+### workers=100
+discovered: [('TinyIoT-mn001', 'r34509', 100), ('TinyIoT-mn002', 'r34510', 100), ('TinyIoT-mn003', 'r34509', 100), ('TinyIoT-mn004', 'r34510', 100), ('TinyIoT-mn005', 'r34510', 100), ('TinyIoT-mn006', 'r34510', 100), ('TinyIoT-mn007', 'r34510', 100), ('TinyIoT-mn008', 'r34510', 100), ('TinyIoT-mn009', 'r34510', 100), ('TinyIoT-mn010', 'r34510', 100)]
+# 10 MN: 1000 cells on 10 MN(s), workers=100, 7 full reads (cells + sun/desks per zone)
+read 1: 1413 ms, 1000 cells, get errors so far 0
+read 2: 1385 ms, 1000 cells, get errors so far 0
+read 3: 1493 ms, 1000 cells, get errors so far 0
+read 4: 1416 ms, 1000 cells, get errors so far 0
+read 5: 1495 ms, 1000 cells, get errors so far 0
+read 6: 1338 ms, 1000 cells, get errors so far 0
+read 7: 1418 ms, 1000 cells, get errors so far 0
+# 10 MN: n=7 p50=1416 ms p95=1495 ms max=1495 ms min=1338 ms
+running: 10  total RSS: 388 MB
+done

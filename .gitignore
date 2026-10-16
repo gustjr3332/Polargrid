@@ -4,6 +4,7 @@ docs/
 !hw/README.md
 !sw/actuator/README.md
 !sw/app_ui/README.md
+!sw/app_ui/demo/README.md
 
 __pycache__/
 .pytest_cache/
