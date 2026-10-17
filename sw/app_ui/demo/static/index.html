@@ -75,11 +75,11 @@ let last = null;
 function onFrame(f) {
   last = f;
   draw(f);
-  $("clock").textContent = f.t.slice(11);
+  $("clock").textContent = (f.t || "").slice(11) || "--:--";
   $("d0").textContent = f.desks[0]; $("d1").textContent = f.desks[1];
   [0, 1].forEach(i => $("b" + i).style.width = Math.min(100, f.desks[i] / (TARGET * 2) * 100) + "%");
-  $("gl").textContent = f.glare_h.toFixed(1);
-  $("p50").textContent = f.lat_ms.p50; $("p95").textContent = f.lat_ms.p95;
+  $("gl").textContent = f.glare_h == null ? "-" : f.glare_h.toFixed(1);   // live viewer cannot see glare or command latency
+  $("p50").textContent = f.lat_ms ? f.lat_ms.p50 : "-"; $("p95").textContent = f.lat_ms ? f.lat_ms.p95 : "-";
   $("mv").textContent = f.moves;
   $("nc").textContent = f.cells.length;}
 
@@ -90,7 +90,7 @@ function draw(f) {
   const pad = 16, s = Math.floor(Math.min((r.width - 2 * pad) / COLS, (r.height - 2 * pad) / ROWS));
   const ox = Math.round((r.width - s * COLS) / 2), oy = Math.round((r.height - s * ROWS) / 2);
   g.clearRect(0, 0, r.width, r.height);
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < Math.min(N, f.cells.length); i++) {
     const v = f.cells[i] / 100, x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
     g.fillStyle = `hsl(205,${30 + 60 * v}%,${9 + 66 * v}%)`; // one hue, dark to bright
     g.fillRect(x + 1, y + 1, s - 2, s - 2);
@@ -149,8 +149,22 @@ $("run-id").textContent = RUN_ID;
 sim.cells.fill(15);
 const t0 = +new URLSearchParams(location.search).get("t"); if (t0) sim.min = t0 * 60; // ?t=12 starts at 12:00 (rehearsal)
 addEventListener("resize", () => last && draw(last));
-setInterval(tick, TICK_MS);
+const fake = setInterval(tick, TICK_MS);
 tick();
+
+// Live/replay from demo/server.py (SSE). The fake generator keeps running until the first real frame arrives.
+if (location.protocol.startsWith("http") && !new URLSearchParams(location.search).has("fake")) {
+  const es = new EventSource("/api/events");
+  es.onmessage = e => {
+    const f = JSON.parse(e.data);
+    clearInterval(fake);
+    document.querySelector(".badge").style.display = "none";
+    document.querySelector("#ctl").style.display = "none";   // start/stop/events are not wired to the server yet
+    $("mode").textContent = f.mode === "live" ? "Live" : "Replay";
+    $("run-id").textContent = f.mode;
+    onFrame(f);
+  };
+}
 </script>
 </body>
 </html>
