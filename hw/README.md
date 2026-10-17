@@ -42,9 +42,13 @@ servo sits behind the plate under the pinion. No hub or gear touches the window.
 - A gear instead of a rubber roller means no slip, so the angle does not drift and no homing run is needed.
 - Layer order: L1, L2 (a 0.3 mm air gap behind it), L3 film on the carrier gear. The pinion is as thick as the gear, so it
   never touches the film.
-- Frame: each cell needs about 33 mm from its centre to the outer edge on the pinion side, and 34.4 mm between the centres
-  of neighbouring cells (bores 32.4 mm plus a 2 mm wall). The 2 x 2 panel is about 100 x 100 mm. Put the pinions on the
-  outer sides (left column left, right column right, top row top, bottom row bottom) so no pinion sits between two cells.
+- Frame: put each pinion in the outer diagonal corner of its cell (cell 0 top left, 1 top right, 2 bottom left, 3 bottom
+  right). The corner of the square window lies outside the 30 mm disc and is kept dark by L2 anyway, so a pinion there
+  hides no open area and no pinion sits between two cells. The pinion centre is 22.5 mm from the cell centre along the
+  diagonal (about 15.9 mm in each axis). Neighbouring cell centres are 34.4 mm apart (bores 32.4 mm plus a 2 mm wall).
+  From a cell centre to the outer edge is about 15.9 + 8.5 (pinion tip) + 2 = 26.4 mm, so the 2 x 2 panel is about
+  87 x 87 mm (calculated, check on the drawing). The servo body sits behind the pinion and may overhang the frame, so
+  make the back plate about 10 mm larger than the front plate.
 - The windows are 4.4 mm apart (opaque wall). This is the price of option B.
 - Laser cutting: the gear teeth need the kerf (about 0.1 to 0.2 mm) added to the drawing. Cut a test pair and check the
   backlash before cutting four.

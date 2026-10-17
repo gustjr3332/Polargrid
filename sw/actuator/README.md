@@ -4,7 +4,7 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer of each 
 ## Prototype (4 cells, ESP32, Wokwi)
 - `src/cell_logic.h`: angle to servo mapping, serial command parser, watchdog. No hardware calls, tested on the PC:
   `g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic && ./test_logic` (passes, 2026-10-16).
-- `src/main.cpp`: 4 servos on GPIO 13, 12, 14, 27. Serial 115200: `A <cell> <deg>`, `ALL <deg>`, `OPEN`.
+- `src/main.cpp`: 4 servos on GPIO 13, 26, 14, 27. Serial 115200: `A <cell> <deg>`, `ALL <deg>`, `OPEN`.
   Angles follow polagrid (0 = open, 90 = closed). Servo = 180 - 2 x disc angle (2:1 gear, `hw/README.md`).
 - Watchdog: no command for `WATCHDOG_MS` opens all cells (30 min by default, 10 s in `platformio.ini` for the simulator).
 - Simulator: `diagram.json` + `wokwi.toml` (Wokwi for VS Code or wokwi.com). Build first with PlatformIO

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PolaGrid 4-cell panel wiring v0.1",
+    "quality_profile": "showcase",
+    "viewBox": [1120, 640]
+  },
+  "components": [
+    { "id": "button", "type": "external", "label": "Open-all button", "sublabel": "Manual override", "pos": [40, 100], "size": [168, 72] },
+    { "id": "mn", "type": "cloud", "label": "tinyIoT MN-CSE", "sublabel": "oneM2M zone edge", "pos": [640, 100], "size": [168, 72] },
+    { "id": "psu", "type": "security", "label": "5 V 3 A adapter", "sublabel": "1000 uF on servo rail", "pos": [40, 300], "size": [168, 72] },
+    { "id": "esp32", "type": "backend", "label": "ESP32 DevKit", "sublabel": "Servo PWM, I2C, Wi-Fi", "pos": [340, 300], "size": [168, 72] },
+    { "id": "mux", "type": "messagebus", "label": "TCA9548A", "sublabel": "I2C mux, addr 0x70", "pos": [640, 300], "size": [168, 72] },
+    { "id": "cellsens", "type": "database", "label": "4 cell sensors", "sublabel": "BH1750, behind each cell", "pos": [900, 200], "size": [168, 72] },
+    { "id": "desksens", "type": "database", "label": "2 desk sensors", "sublabel": "BH1750, desk model", "pos": [900, 400], "size": [168, 72] },
+    { "id": "servos", "type": "frontend", "label": "4 servos", "sublabel": "SG90, 2:1 gear to disc", "pos": [340, 500], "size": [168, 72] }
+  ],
+  "connections": [
+    { "id": "psu-esp", "from": "psu", "to": "esp32", "label": "5 V (VIN)" },
+    { "id": "psu-servo", "from": "psu", "to": "servos", "label": "5 V servo rail", "variant": "emphasis", "fromSide": "bottom", "toSide": "left" },
+    { "id": "esp-servo", "from": "esp32", "to": "servos", "label": "PWM GPIO 13/26/14/27", "labelDy": 24, "fromSide": "bottom", "toSide": "top" },
+    { "id": "esp-mux", "from": "esp32", "to": "mux", "label": "I2C GPIO 21/22" },
+    { "id": "mux-cell", "from": "mux", "to": "cellsens", "label": "ch 0-3" },
+    { "id": "mux-desk", "from": "mux", "to": "desksens", "label": "ch 4-5" },
+    { "id": "btn-esp", "from": "button", "to": "esp32", "label": "GPIO 25", "fromSide": "right", "toSide": "top" },
+    { "id": "esp-mn", "from": "esp32", "to": "mn", "label": "Wi-Fi MQTT (planned)", "variant": "dashed", "fromSide": "top", "toSide": "left" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "One I2C bus, six sensors", "items": ["All BH1750 share address 0x23", "Each sits on its own mux channel"] },
+    { "dot": "amber", "title": "Servos on their own rail", "items": ["Servo current never passes the ESP32 board", "Common ground at the adapter"] }
+  ]
+}

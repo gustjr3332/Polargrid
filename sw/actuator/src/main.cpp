@@ -4,7 +4,7 @@
 #include <ESP32Servo.h>
 #include "cell_logic.h"
 
-const int SERVO_PINS[N_CELLS] = {13, 12, 14, 27};
+const int SERVO_PINS[N_CELLS] = {13, 26, 14, 27};
 Servo servos[N_CELLS];
 Cells cells;
 float shown[N_CELLS] = {-1, -1, -1, -1};

@@ -9,7 +9,7 @@
   ],
   "connections": [
     ["esp:TX", "$serialMonitor:RX", ""], ["esp:RX", "$serialMonitor:TX", ""],
-    ["servo0:PWM", "esp:13", "green"], ["servo1:PWM", "esp:12", "green"],
+    ["servo0:PWM", "esp:13", "green"], ["servo1:PWM", "esp:26", "green"],
     ["servo2:PWM", "esp:14", "green"], ["servo3:PWM", "esp:27", "green"],
     ["servo0:V+", "esp:5V", "red"], ["servo1:V+", "esp:5V", "red"],
     ["servo2:V+", "esp:5V", "red"], ["servo3:V+", "esp:5V", "red"],
