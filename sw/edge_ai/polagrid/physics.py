@@ -3,7 +3,7 @@
 Model (all assumptions, to be replaced by measured values once hardware exists):
 - Sun position: NOAA low-precision formulas (about 0.5 deg error).
 - Outdoor light, clear sky: direct normal = 125,000 lx * 0.7**(AM**0.678) (Meinel, x ~93 lm/W),
-  diffuse horizontal = 15,000 lx * sin(alt)**0.5. `cloud` (0..1) moves light from direct to diffuse.
+  diffuse horizontal = 15,000 lx * sin(alt)**0.5. `cloud` (0..1, or a function of time) moves light from direct to diffuse.
 - Window: vertical plane y = 0, room interior is y > 0, z is up. Cells form a rows x cols grid.
 - Cell transmission: T(theta) = T_OPEN * cos^2(theta) + T_LEAK (Malus's law), theta in 0..90 deg.
 - Desk illuminance is linear in T: desk_lux = (direct + diffuse) @ T(angles).
@@ -38,6 +38,10 @@ class Room:
     desks: list = field(default_factory=lambda: [(-0.3, 1.0, 0.8, 0.5, 0.75),
                                                  (0.6, 2.0, 0.8, 0.5, 0.75)])
     samples: int = 5               # sample points per desk side
+    glass: float = 1.0             # glass transmittance on light reaching the desks (1 = no loss); not in window_lux
+    # Floor-level PROXY, not a validated floor model: elevation of the obstruction across the street (deg).
+    # Sun below it gives no direct beam; diffuse sky on the window shrinks by (1 - sin h) (long uniform obstruction).
+    horizon: float = 0.0
 
     @property
     def n_cells(self):
@@ -86,6 +90,16 @@ def outdoor_light(alt: float, cloud: float = 0.0):
     return direct * (1 - cloud), diffuse + direct * s * cloud * 0.5
 
 
+def window_light(room: Room, t: datetime, cloud=0.0):
+    """(alt, az, direct normal lux, diffuse horizontal lux) reaching the window, with the horizon proxy (no glass)."""
+    cloud = cloud(t) if callable(cloud) else cloud   # callable: hourly real sky (weather.py)
+    alt, az = sun_position(t, room.lat, room.lon)
+    e_dn, e_dh = outdoor_light(alt, cloud)
+    if alt < room.horizon:
+        e_dn = 0.0
+    return alt, az, e_dn, e_dh * (1 - math.sin(math.radians(room.horizon)))
+
+
 def transmission(angles):
     """Light share through a cell for angle(s) in degrees (0 = open, 90 = closed)."""
     return T_OPEN * np.cos(np.radians(angles)) ** 2 + T_LEAK
@@ -93,8 +107,8 @@ def transmission(angles):
 
 def light_matrices(room: Room, t: datetime, cloud: float = 0.0):
     """direct[M, N] and diffuse[M, N]: desk lux from each cell when its transmission is 1."""
-    alt, az = sun_position(t, room.lat, room.lon)
-    e_dn, e_dh = outdoor_light(alt, cloud)
+    alt, az, e_dn, e_dh = window_light(room, t, cloud)
+    e_dn, e_dh = e_dn * room.glass, e_dh * room.glass
     cells = room.cell_bounds()
     n, m_count = room.n_cells, len(room.desks)
     direct, diffuse = np.zeros((m_count, n)), np.zeros((m_count, n))
@@ -119,9 +133,8 @@ def light_matrices(room: Room, t: datetime, cloud: float = 0.0):
 
 
 def window_lux(room: Room, t: datetime, cloud: float = 0.0):
-    """Outdoor light falling on the window plane (lux), before the polarizers."""
-    alt, az = sun_position(t, room.lat, room.lon)
-    e_dn, e_dh = outdoor_light(alt, cloud)
+    """Outdoor light falling on the window plane (lux), before glass and polarizers; the outdoor sensor reads this."""
+    alt, az, e_dn, e_dh = window_light(room, t, cloud)
     rel = math.radians(az - room.window_azimuth)
     return e_dn * max(0.0, math.cos(math.radians(alt)) * math.cos(rel)) + e_dh / 2
 

@@ -1,0 +1,79 @@
+# AI (3), real skies, 2026-10-17. kt = hourly GHI / Haurwitz clear sky, cloud = 1 - kt, sun >= 5 deg.
+# KMA: ASOS icsr (MJ/m2 per hour, x 277.8 = W/m2), Seoul 108, Sejong 239. Open-Meteo: ERA5 GHI (W/m2).
+# 12 cells, 2 desks, south window, margin 2500 lux. Per-day values, desk-hours summed over 2 desks.
+# n = runs (3 disjoint 20-day test sets x seeds). sd = population std over runs. Virtual physics only.
+
+## Reference, Seoul, test sky = kma
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+fixed open                                    3   2.14 +- 0.20 [1.90-2.39]   15.23 +- 0.41   1052      0 +-   0
+AI (1)+(2) probe                              3   0.04 +- 0.01 [0.03-0.06]   15.52 +- 0.39    374    823 +-  39
+
+## Reference, Seoul, test sky = openmeteo
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+fixed open                                    3   2.19 +- 0.17 [2.05-2.43]   14.83 +- 0.05   1064      0 +-   0
+AI (1)+(2) probe                              3   0.05 +- 0.01 [0.04-0.07]   15.09 +- 0.11    370    818 +-  26
+
+## Seoul: train sky kma, test sky kma
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+real 60d RF base                              9   0.02 +- 0.01 [0.00-0.04]   16.09 +- 0.28    335     92 +-   8
+real 60d RF +kt,kt-1h                         9   0.12 +- 0.10 [0.03-0.37]   15.81 +- 0.36    349     86 +-   9
+real 60d GBR base                             9   0.06 +- 0.04 [0.00-0.14]   16.22 +- 0.24    341    162 +-   4
+real 60d GBR +kt,kt-1h                        9   0.09 +- 0.05 [0.03-0.18]   16.00 +- 0.25    343    144 +-   6
+real 180d RF base                             9   0.02 +- 0.02 [0.00-0.05]   16.13 +- 0.25    324     91 +-   6
+real 180d RF +kt,kt-1h                        9   0.05 +- 0.01 [0.02-0.06]   15.89 +- 0.31    329     77 +-   8
+real 180d GBR base                            3   0.02 +- 0.02 [0.00-0.05]   16.23 +- 0.15    334    146 +-   3
+real 180d GBR +kt,kt-1h                       3   0.02 +- 0.03 [0.00-0.07]   16.01 +- 0.25    331    136 +-   7
+synthetic 60d HGB base (old AI (3) data)      9   0.12 +- 0.06 [0.02-0.23]   16.17 +- 0.23    360    116 +-   5
+synthetic 60d RF base (old AI (3) data)       9   0.08 +- 0.05 [0.00-0.16]   15.94 +- 0.28    358     83 +-   7
+
+## Seoul: train sky openmeteo, test sky kma
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+real 60d RF base                              9   0.04 +- 0.04 [0.00-0.12]   15.98 +- 0.34    342     89 +-   9
+real 60d RF +kt,kt-1h                         9   0.16 +- 0.08 [0.04-0.29]   15.80 +- 0.32    352     91 +-   7
+real 60d GBR base                             9   0.04 +- 0.04 [0.00-0.10]   16.15 +- 0.22    341    156 +-   5
+real 60d GBR +kt,kt-1h                        9   0.06 +- 0.07 [0.00-0.22]   16.00 +- 0.27    342    145 +-   5
+real 180d RF base                             9   0.01 +- 0.01 [0.00-0.02]   16.05 +- 0.22    324     84 +-   5
+real 180d RF +kt,kt-1h                        9   0.03 +- 0.02 [0.00-0.05]   15.90 +- 0.26    327     78 +-   7
+real 180d GBR base                            3   0.00 +- 0.00 [0.00-0.01]   16.15 +- 0.11    332    141 +-   5
+real 180d GBR +kt,kt-1h                       3   0.00 +- 0.00 [0.00-0.00]   16.05 +- 0.20    327    136 +-   6
+
+## Seoul: train sky openmeteo, test sky openmeteo
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+real 60d RF base                              9   0.06 +- 0.06 [0.00-0.20]   15.76 +- 0.30    334     89 +-   9
+real 60d RF +kt,kt-1h                         9   0.16 +- 0.06 [0.08-0.25]   15.41 +- 0.18    349     88 +-   4
+real 60d GBR base                             9   0.03 +- 0.05 [0.00-0.15]   15.88 +- 0.31    329    157 +-   6
+real 60d GBR +kt,kt-1h                        9   0.06 +- 0.06 [0.00-0.16]   15.59 +- 0.20    338    139 +-   5
+real 180d RF base                             9   0.01 +- 0.01 [0.00-0.02]   15.69 +- 0.25    316     83 +-   1
+real 180d RF +kt,kt-1h                        9   0.08 +- 0.06 [0.00-0.15]   15.50 +- 0.26    330     75 +-   4
+real 180d GBR base                            3   0.00 +- 0.01 [0.00-0.01]   15.94 +- 0.32    320    141 +-   4
+real 180d GBR +kt,kt-1h                       3   0.02 +- 0.03 [0.00-0.05]   15.69 +- 0.26    323    129 +-   4
+
+## Location transfer: test Sejong (KMA 239), train sky kma
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+fixed open                                    3   2.01 +- 0.27 [1.77-2.38]   15.46 +- 0.22   1025      0 +-   0
+AI (1)+(2) probe                              3   0.05 +- 0.00 [0.05-0.06]   15.70 +- 0.19    366    779 +-  26
+Seoul 60d RF base                             9   0.02 +- 0.02 [0.00-0.04]   16.42 +- 0.19    322     86 +-   7
+Seoul 180d RF base                            9   0.00 +- 0.00 [0.00-0.00]   16.46 +- 0.12    308     88 +-   1
+Sejong 30d RF base                            9   0.10 +- 0.10 [0.00-0.27]   16.16 +- 0.24    350     87 +-   7
+Sejong 60d RF base                            9   0.07 +- 0.09 [0.00-0.26]   16.20 +- 0.18    337     83 +-   5
+Sejong 180d RF base                           9   0.04 +- 0.06 [0.00-0.13]   16.28 +- 0.17    325     76 +-   4
+Seoul 180d + Sejong 30d RF base               9   0.00 +- 0.00 [0.00-0.00]   16.48 +- 0.17    309     87 +-   3
+Seoul 180d + Sejong 60d RF base               9   0.00 +- 0.01 [0.00-0.02]   16.40 +- 0.14    310     87 +-   3
+reverse: Seoul test, Sejong 180d RF base      9   0.09 +- 0.09 [0.00-0.23]   16.00 +- 0.27    347     88 +-   2
+Seoul 60d RF +kt,kt-1h                        9   0.09 +- 0.06 [0.00-0.19]   16.03 +- 0.23    333     78 +-   7
+Seoul 180d RF +kt,kt-1h                       9   0.00 +- 0.00 [0.00-0.00]   16.09 +- 0.22    313     69 +-   3
+Sejong 30d RF +kt,kt-1h                       9   0.20 +- 0.13 [0.00-0.41]   15.88 +- 0.19    359     91 +-  14
+Sejong 60d RF +kt,kt-1h                       9   0.15 +- 0.13 [0.00-0.38]   15.93 +- 0.16    344     80 +-   5
+Sejong 180d RF +kt,kt-1h                      9   0.07 +- 0.10 [0.00-0.23]   16.05 +- 0.22    324     68 +-   7
+Seoul 180d + Sejong 30d RF +kt,kt-1h          9   0.01 +- 0.01 [0.00-0.05]   16.10 +- 0.23    313     68 +-   4
+Seoul 180d + Sejong 60d RF +kt,kt-1h          9   0.01 +- 0.01 [0.00-0.03]   16.05 +- 0.21    313     68 +-   4
+reverse: Seoul test, Sejong 180d RF +kt,kt-1h  9   0.13 +- 0.11 [0.04-0.29]   15.82 +- 0.31    346     79 +-   6
+
+## Sensor noise on the outdoor-lux feature, Seoul, real 180d RF base, kma
+method                                        n  glare h mean +- sd [min-max]  under-lit h       lux        moves
+noise 5%                                      9   0.02 +- 0.01 [0.00-0.05]   16.18 +- 0.24    325    144 +-   5
+noise 20%                                     9   0.04 +- 0.01 [0.02-0.07]   16.20 +- 0.31    335    241 +-   5
+
+# best KMA-trained cell: real 60d RF base, glare 0.02 h vs synthetic HGB 0.12 h
+# saved predictor_3x4_kma_seoul.joblib
+# total 4145 s

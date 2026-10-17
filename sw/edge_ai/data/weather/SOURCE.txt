@@ -1,0 +1,4 @@
+Weather data by Open-Meteo.com (https://open-meteo.com/), licensed CC BY 4.0.
+Historical Weather API (ERA5 reanalysis), hourly 2025, timezone Asia/Seoul. Radiation values are the mean of the
+preceding hour in W/m2, rounded to integers; cloud_cover in %. Free API use is for non-commercial purposes only.
+Fetched 2026-10-17 by `python -m polagrid.weather fetch` (seoul 37.5503,127.0731; sejong 36.48,127.29; jeju 33.51,126.53).

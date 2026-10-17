@@ -11,3 +11,6 @@ __pycache__/
 
 # Pre-trained models are rebuilt by python -m polagrid.virtual train
 models/
+
+# Raw KMA ASOS downloads (redistribution terms unchecked), fetched with python -m polagrid.weather fetch-kma
+sw/edge_ai/data/weather/kma_*.csv

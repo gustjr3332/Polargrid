@@ -1,0 +1,34 @@
+# AI (3) with real skies, 2026-10-17. Weather: Open-Meteo archive 2025 (ERA5, CC BY 4.0), kt = GHI / Haurwitz
+# clear-sky GHI, cloud = 1 - kt per hour. 12 cells, 2 desks, south window. Test: 20 real days of the test site
+# (2025-01-04 + 18k), train dates 2025-01-01 + 6k (60 d) or + 2k (180 d), never a test date. Per-day averages,
+# desk-hours summed over desks. Margin = AI (3) teacher distance below the glare limit (lux). One run each.
+
+## Reference on the Seoul real test days (evaluate.run_day, 2% sensor noise)
+method                                         glare h  under-lit h  mean lux   moves
+fixed open                                        2.43        14.85      1159       0
+AI (1)+(2) probe                                  0.07        15.19       372     851
+
+## Seoul test: training data x model x features (margin 2500)
+method                                         glare h  under-lit h  mean lux   moves
+synthetic 60d HGB base                            0.20        16.35       344     124
+synthetic 60d RF base                             0.07        15.75       337      88
+synthetic 60d GBR base                            0.06        16.11       331     153
+synthetic 60d HGB +kt (constant per day)          0.22        16.03       349     118
+synthetic 60d RF +kt (constant per day)           0.10        15.51       342      82
+synthetic 60d GBR +kt (constant per day)          0.05        15.69       337     150
+real 60d HGB base                                 0.12        15.82       344     127
+real 60d RF base                                  0.03        15.51       341      88
+real 60d GBR base                                 0.08        15.98       335     162
+real 60d HGB +kt,kt-1h                            0.21        15.86       350     127
+real 60d RF +kt,kt-1h                             0.12        15.55       346      92
+real 60d GBR +kt,kt-1h                            0.16        15.84       340     137
+real 180d HGB base                                0.01        16.06       315     106
+real 180d RF base                                 0.01        15.93       309      81
+real 180d HGB +kt,kt-1h                           0.02        15.94       312      87
+real 180d RF +kt,kt-1h                            0.08        15.80       319      79
+
+## Seoul test: margin sweep, real 60d, RF +kt,kt-1h
+method                                         glare h  under-lit h  mean lux   moves
+margin 1000                                       0.40        14.99       437      96
+margin 2500                                       0.12        15.55       346      92
+margin 4000                                       0.12        15.55       346      92
