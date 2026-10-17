@@ -14,3 +14,6 @@ models/
 
 # Raw KMA ASOS downloads (redistribution terms unchecked), fetched with python -m polagrid.weather fetch-kma
 sw/edge_ai/data/weather/kma_*.csv
+
+# Personal part photos
+hw/archaive/
