@@ -10,8 +10,12 @@ Run inside WSL, where the CSE and its notification callbacks live (IN and mn001 
 """
 import argparse
 import dataclasses
+import json
 import statistics
+import threading
+import time
 from datetime import date, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import numpy as np
 
@@ -23,7 +27,32 @@ from .zone import WATCHDOG_MIN, Controller, Zone, roles
 HEARTBEAT_MIN = WATCHDOG_MIN // 3   # resend the table at least this often, or the cells' watchdog opens them
 
 
-def run_day(zone, ctl, day, controller, cloud, step_min):
+class Control:
+    """Demo page controls (POST /ctl on the control port): start/stop, speed, cloud, window turn, reset."""
+    STEP_WALL_S = 2.0                    # wall seconds per control step at 1x
+
+    def __init__(self, cloud, azimuth):
+        self.running, self.speed, self.cloud, self.turn, self.reset = False, 1.0, cloud, 0.0, False
+        self.base_cloud, self.azimuth = cloud, azimuth
+
+    def serve(self, port):
+        ctl = self
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if "running" in body: ctl.running = bool(body["running"])
+                if "speed" in body: ctl.speed = max(0.1, float(body["speed"]))
+                if "cloud" in body: ctl.cloud = float(body["cloud"]) if body["cloud"] else ctl.base_cloud
+                if "turn" in body: ctl.turn = float(body["turn"])
+                if body.get("reset"): ctl.reset = True
+                self.send_response(200); self.end_headers(); self.wfile.write(b"{}")
+
+            def log_message(self, *a): pass
+        threading.Thread(target=ThreadingHTTPServer(("0.0.0.0", port), H).serve_forever, daemon=True).start()
+
+
+def run_day(zone, ctl, day, controller, cloud, step_min, ctrl=None):
     """Same loop and metrics as evaluate.run_day, but sun and desk readings come through the CSE."""
     room = zone.room
     angles = np.zeros(room.n_cells)
@@ -32,6 +61,15 @@ def run_day(zone, ctl, day, controller, cloud, step_min):
     steps = 12 * 60 // step_min
     sent, timeouts = t, 0
     for _ in range(steps):
+        if ctrl:
+            t0 = time.time()
+            while not ctrl.running and not ctrl.reset:
+                time.sleep(0.1)
+            if ctrl.reset:
+                return None
+            cloud = ctrl.cloud
+            zone.room = dataclasses.replace(zone.room, window_azimuth=ctrl.azimuth + ctrl.turn)   # turned window
+            room = zone.room
         zone.set_environment(t, cloud)
         sun = ctl.sun()
         ctx = {"t": t, "outdoor": sun["outdoor"], "angles": angles, "measure": ctl.command, "desk_lux": ctl.desks(),
@@ -49,6 +87,8 @@ def run_day(zone, ctl, day, controller, cloud, step_min):
             dark_h += step_min / 60 * np.sum(truth["desk_lux"] < DESK_MIN_LUX)
         lux_sum += truth["desk_lux"].mean()
         t += timedelta(minutes=step_min)
+        if ctrl:
+            time.sleep(max(0.0, Control.STEP_WALL_S / ctrl.speed - (time.time() - t0)))
     return {"glare_h": glare_h, "dark_h": dark_h, "mean_lux": lux_sum / steps, "moves": int(zone.moves),
             "timeouts": timeouts, "watchdog_opens": zone.watchdog_opens}
 
@@ -91,6 +131,8 @@ def main():
     ap.add_argument("--real-turn", type=float, default=0.0,
                     help="degrees the physical window is turned away from the model room (online controller)")
     ap.add_argument("--port", type=int, default=9500)
+    ap.add_argument("--serve", action="store_true",
+                    help="demo mode: wait for Start on the control port (port+2) and repeat the day after Reset")
     a = ap.parse_args()
 
     room, day = Room(rows=a.rows, cols=a.cols), date.fromisoformat(a.day)
@@ -119,6 +161,17 @@ def main():
         print(f"[train] {len(train)} days, {len(logs)} samples")
     base = make
     make = lambda: evaluate.night_closed(base())
+    if a.serve:
+        ctrl = Control(a.cloud, real.window_azimuth)
+        ctrl.serve(a.port + 2)
+        while True:
+            ctrl.reset = ctrl.running = False
+            ctrl.turn, ctrl.cloud = 0.0, a.cloud
+            zone.set_environment(datetime(day.year, day.month, day.day, 7, tzinfo=KST), a.cloud)   # clock back to 07:00
+            if run_day(zone, ctl, day, make(), a.cloud, a.step, ctrl) is not None:
+                ctrl.running = False
+                while not ctrl.reset:                      # day finished: hold the last frame until Reset
+                    time.sleep(0.2)
     over_cse = run_day(zone, ctl, day, make(), a.cloud, a.step)
     direct, _ = evaluate.run_day(real, day, make(), a.cloud)
     print(f"[safety] night mode on; over CSE: {over_cse['timeouts']} command timeouts, "

@@ -290,6 +290,20 @@ def build_app(hub, replay):
                 await asyncio.sleep(0.25)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
+    @app.post("/api/ctl")
+    def ctl(body: dict):
+        """Forward a page control (running, speed, cloud, turn, reset) to every zone started with --serve."""
+        if not hub:
+            return JSONResponse({"error": "replay mode has no controls"}, 409)
+        ok = 0
+        for m in hub.mns:
+            try:
+                requests.post(f"http://127.0.0.1:{9502 + 10 * m['k']}/ctl", json=body, timeout=2).raise_for_status()
+                ok += 1
+            except requests.RequestException:
+                pass
+        return {"zones_ok": ok, "zones": len(hub.mns)}
+
     @app.get("/api/topology")
     def topology():
         if not hub:

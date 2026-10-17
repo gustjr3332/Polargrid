@@ -137,11 +137,16 @@ function tick() {
 }
 
 function evNote() { $("evs").textContent = "Events: " + (sim.evs.length ? sim.evs.join(", ") : "none"); }
-$("run").onclick = () => { sim.running = !sim.running; $("run").textContent = sim.running ? "Stop" : "Start"; };
-$("spd").onchange = e => sim.speed = +e.target.value;
-$("ev-cloud").onclick = () => { sim.cloud = true; if (!sim.evs.includes("Cloud")) sim.evs.push("Cloud"); evNote(); };
-$("ev-turn").onclick = () => { sim.turn += 10; sim.evs.push("Turn window"); evNote(); };
-$("ev-reset").onclick = () => { Object.assign(sim, { min: 6 * 60, cloud: false, turn: 0, moves: 0, glare: 0, evs: [] }); sim.com.fill(15); evNote(); };
+let live = false;   // true once frames come from a live server: the buttons then drive the zones through POST /api/ctl
+const ctl = body => live && fetch("/api/ctl", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+$("run").onclick = () => { sim.running = !sim.running; $("run").textContent = sim.running ? "Stop" : "Start"; ctl({ running: sim.running }); };
+$("spd").onchange = e => { sim.speed = +e.target.value; ctl({ speed: sim.speed }); };
+$("ev-cloud").onclick = () => { sim.cloud = true; if (!sim.evs.includes("Cloud")) sim.evs.push("Cloud"); evNote(); ctl({ cloud: 0.8 }); };
+$("ev-turn").onclick = () => { sim.turn += 10; sim.evs.push("Turn window"); evNote(); ctl({ turn: sim.turn }); };
+$("ev-reset").onclick = () => {
+  Object.assign(sim, { min: 6 * 60, cloud: false, turn: 0, moves: 0, glare: 0, evs: [], running: false }); sim.com.fill(15);
+  $("run").textContent = "Start"; evNote(); ctl({ reset: true });
+};
 
 $("tg").textContent = TARGET + " lux";
 $("t0").style.left = $("t1").style.left = "50%"; // bar spans 0..2x target, so target sits at 50%
@@ -159,7 +164,8 @@ if (location.protocol.startsWith("http") && !new URLSearchParams(location.search
     const f = JSON.parse(e.data);
     clearInterval(fake);
     document.querySelector(".badge").style.display = "none";
-    document.querySelector("#ctl").style.display = "none";   // start/stop/events are not wired to the server yet
+    live = f.mode === "live";
+    document.querySelector("#ctl").style.display = live ? "" : "none";   // a recording cannot react to buttons
     $("mode").textContent = f.mode === "live" ? "Live" : "Replay";
     $("run-id").textContent = f.mode;
     onFrame(f);
