@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import numpy as np
 
-from . import ai, evaluate, online, virtual
+from . import ai, evaluate, online, virtual, weather
 from .onem2m import Client
 from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
 from .zone import WATCHDOG_MIN, Controller, Zone, roles
@@ -122,7 +122,10 @@ def main():
     ap.add_argument("--rows", type=int, default=3)
     ap.add_argument("--cols", type=int, default=4)
     ap.add_argument("--day", default="2026-11-05")
-    ap.add_argument("--cloud", type=float, default=0.0)
+    ap.add_argument("--cloud", type=float, default=0.0, help="constant cloud 0..1 (also the fallback of --sky)")
+    ap.add_argument("--sky", choices=["const", "kma", "openmeteo", "forecast"], default="const",
+                    help="hourly sky from polagrid.weather: cached 2025 archive (--day in 2025) or live Open-Meteo forecast")
+    ap.add_argument("--site", choices=list(weather.SITES), default="seoul", help="room location and weather site")
     ap.add_argument("--step", type=int, default=5, help="simulated minutes per control step")
     ap.add_argument("--controller", choices=["probe", "online", "predict"], default="probe")
     ap.add_argument("--probe", type=int, default=15, help="simulated minutes between AI (1) probes")
@@ -135,7 +138,9 @@ def main():
                     help="demo mode: wait for Start on the control port (port+2) and repeat the day after Reset")
     a = ap.parse_args()
 
-    room, day = Room(rows=a.rows, cols=a.cols), date.fromisoformat(a.day)
+    lat, lon = weather.SITES[a.site]
+    room, day = Room(rows=a.rows, cols=a.cols, lat=lat, lon=lon), date.fromisoformat(a.day)
+    a.cloud = weather.sky(a.site, day, a.sky, a.cloud)       # constant or hourly real/forecast sky (kt)
     real = dataclasses.replace(room, window_azimuth=room.window_azimuth + a.real_turn)   # what the cells really see
     run = f"r{int(datetime.now().timestamp()) % 100000}"
     client = Client(a.host, a.cse)
@@ -154,11 +159,9 @@ def main():
         make = lambda: evaluate.polagrid_predict(model)
         print(f"[model] loaded {a.model}")
     else:
-        train = evaluate.days(date(2026, 1, 1), a.train_days, 365 // a.train_days, seed=1)
-        logs = [row for d, cloud in train for row in evaluate.teacher_log(room, d, cloud)]
-        model = ai.fit_predictor([x for x, _ in logs], [ang for _, ang in logs])
+        model = virtual.train(room, a.train_days, jitter=False)   # same teacher and margin as a saved model
         make = lambda: evaluate.polagrid_predict(model)
-        print(f"[train] {len(train)} days, {len(logs)} samples")
+        print(f"[train] {a.train_days} days")
     base = make
     make = lambda: evaluate.night_closed(base())
     if a.serve:

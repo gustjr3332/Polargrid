@@ -1,0 +1,455 @@
+# 2026-10-18 AI (3) predict over the CSE. WSL Ubuntu-24.04, tinyIoT IN + 1 MN (mn001, fresh DB before each run via
+# tools/fresh_mn.sh 1), one zone, --step 5, cloud 0 unless --sky. OMP/OPENBLAS/MKL_NUM_THREADS=1. One run each.
+# OLD = git HEAD code (44c0009, same edge_ai as ae5805f) copied to /tmp/pg_head; NEW = working tree of 10-18
+# (ai.CellModel shared by all cells + close 3 / open 30 deg hysteresis, --sky from polagrid.weather).
+# Models (all trained in WSL; Windows-trained joblib files do not load under WSL numpy 1.26):
+#   /tmp/predictor_3x4_head.joblib          OLD: virtual train --rows 3 --cols 4 --days 120 (same settings as models/predictor_3x4.joblib, which fails to load in WSL)
+#   /tmp/predictor_10x10_jitter120_head.joblib  OLD: virtual train --rows 10 --cols 10 --days 120 --jitter (the 1015 setting)
+#   models/predictor_3x4_kma_seoul.joblib   1017 RF model (60 KMA days), regenerated 10-18 with tools/ai3_weather_kma.py functions, seed 0
+#   models/predictor_*_kma_seoul_cell.joblib NEW: virtual train --rows R --cols C --days 60 --sky kma
+#
+# summary (CSE row / direct-physics row printed by the same run; glare h, under-lit h, mean lux, servo moves; latency command->desk)
+# A1 12  online, OLD                    CSE 0.00 15.25 280 97    direct 0.00 15.17 283 104   p95 24 ms
+# A2 12  predict per-cell 120d, OLD     CSE 0.00 16.58 214 209   direct 0.00 16.58 208 214   p95 24 ms
+# A3 12  predict 1017 RF KMA, OLD hyst  CSE 0.00 16.75 192 171   direct 0.00 16.92 192 178   p95 29 ms
+# B3 12  predict 1017 RF KMA, NEW hyst  CSE 0.00 17.67 177 117   direct 0.00 17.92 176 118   p95 26 ms
+# B1 12  predict NEW shared KMA 60d     CSE 0.00 18.08 172 134   direct 0.00 17.92 169 137   p95 23 ms
+# A4 100 online, OLD                    CSE 0.00 5.92 667 510    direct 0.00 6.00 659 498    p95 821 ms
+# A5 100 predict per-cell 120d jitter   CSE 1.67 6.33 911 1574   direct 1.67 6.25 911 1579   p95 1007 ms  (1015: 4.92 h, 1569 moves)
+# B2 100 predict NEW shared KMA 60d     CSE 0.00 6.00 843 1080   direct 0.00 6.00 841 1083   p95 678 ms
+# sky = KMA Seoul 2025-11-05 (hourly kt):
+# B4 100 online                         CSE 0.00 5.92 683 504    direct 0.00 5.92 678 494    p95 636 ms
+# B5 100 predict NEW shared KMA 60d     CSE 0.00 5.92 861 1049   direct 0.00 5.92 859 1053   p95 706 ms
+# B6 12  online                         CSE 0.00 15.25 283 97    direct 0.00 15.17 287 104   p95 26 ms
+# B7 12  predict NEW shared KMA 60d     CSE 0.00 18.08 176 130   direct 0.00 17.83 174 134   p95 27 ms
+# sky = live Open-Meteo forecast:
+# B8 100 predict NEW, forecast 2026-10-18 (overcast)  CSE 0.00 2.08 1331 780  direct same   p95 781 ms
+# B9 12  predict NEW, forecast for 2030-01-01 (out of range -> HTTPError -> falls back to cloud 0, loop runs)  CSE 0.00 13.58 244 174
+#
+# raw log (setup/acp lines and the failed first attempts are kept; first B-runs failed to load Windows-trained models)
+saved /tmp/predictor_10x10_jitter120_head.joblib (120 days, jitter=True)
+train_s=111.02
+== A1 (old HEAD) --controller online
+[setup] 12 cells on TinyIoT-mn001, run r4224
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       280           97
+direct physics             0.00        15.17       283          104
+[latency] 97 commands to 12 cells: command -> desk reading p50=14ms p95=24ms max=34ms
+rc=0 wall_s=4
+== A2 (old HEAD) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4232
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/tmp/pg_head/sw/edge_ai/polagrid/closed_loop.py", line 188, in <module>
+    main()
+  File "/tmp/pg_head/sw/edge_ai/polagrid/closed_loop.py", line 153, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pg_head/sw/edge_ai/polagrid/virtual.py", line 73, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=0
+== A3 (old HEAD) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4237
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        16.75       192          171
+direct physics             0.00        16.92       192          178
+[latency] 91 commands to 12 cells: command -> desk reading p50=16ms p95=29ms max=61ms
+rc=0 wall_s=15
+== A4 (old HEAD) --rows 10 --cols 10 --controller online
+[setup] 100 cells on TinyIoT-mn001, run r4260
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       667          510
+direct physics             0.00         6.00       659          498
+[latency] 115 commands to 100 cells: command -> desk reading p50=465ms p95=821ms max=954ms
+rc=0 wall_s=68
+== A5 (old HEAD) --rows 10 --cols 10 --controller predict --model /tmp/predictor_10x10_jitter120_head.joblib
+[setup] 100 cells on TinyIoT-mn001, run r4331
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[model] loaded /tmp/predictor_10x10_jitter120_head.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          1.67         6.33       911         1574
+direct physics             1.67         6.25       911         1579
+[latency] 129 commands to 100 cells: command -> desk reading p50=509ms p95=1007ms max=1388ms
+rc=0 wall_s=125
+== B1 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4461
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 82, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=0
+== B3 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4469
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        17.67       177          117
+direct physics             0.00        17.92       176          118
+[latency] 88 commands to 12 cells: command -> desk reading p50=19ms p95=26ms max=39ms
+rc=0 wall_s=16
+== B2 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[setup] 100 cells on TinyIoT-mn001, run r4489
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 82, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=1
+done A1 A2 A3 A4 A5 B1 B3 B2
+saved /tmp/predictor_3x4_head.joblib (120 days, jitter=False)
+train_s=21.14
+usage: virtual.py [-h] [--rows ROWS] [--cols COLS] [--days DAYS] [--jitter]
+                  [--sky {kma,openmeteo}] [--site {seoul,sejong,jeju}]
+                  [--out OUT]
+                  {train,robust}
+virtual.py: error: argument --rows: expected one argument
+Command exited with non-zero status 2
+train_s=0.65
+usage: virtual.py [-h] [--rows ROWS] [--cols COLS] [--days DAYS] [--jitter]
+                  [--sky {kma,openmeteo}] [--site {seoul,sejong,jeju}]
+                  [--out OUT]
+                  {train,robust}
+virtual.py: error: argument --rows: expected one argument
+Command exited with non-zero status 2
+train_s=0.64
+== A2 (old HEAD) --controller predict --model /tmp/predictor_3x4_head.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4549
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /tmp/predictor_3x4_head.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        16.58       214          209
+direct physics             0.00        16.58       208          214
+[latency] 102 commands to 12 cells: command -> desk reading p50=15ms p95=24ms max=29ms
+rc=0 wall_s=7
+== B1 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4561
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=0
+== B2 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[setup] 100 cells on TinyIoT-mn001, run r4566
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=2
+== B4 (new) --rows 10 --cols 10 --controller online --sky kma --day 2025-11-05
+[setup] 100 cells on TinyIoT-mn001, run r4574
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       683          504
+direct physics             0.00         5.92       678          494
+[latency] 114 commands to 100 cells: command -> desk reading p50=414ms p95=636ms max=681ms
+rc=0 wall_s=57
+== B5 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib --sky kma --day 2025-11-05
+[setup] 100 cells on TinyIoT-mn001, run r4636
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=2
+== B6 (new) --controller online --sky kma --day 2025-11-05
+[setup] 12 cells on TinyIoT-mn001, run r4644
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        15.25       283           97
+direct physics             0.00        15.17       287          104
+[latency] 98 commands to 12 cells: command -> desk reading p50=16ms p95=26ms max=28ms
+rc=0 wall_s=5
+== B7 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib --sky kma --day 2025-11-05
+[setup] 12 cells on TinyIoT-mn001, run r4653
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=1
+== B8 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib --sky forecast --day 2026-10-18
+[setup] 100 cells on TinyIoT-mn001, run r4659
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=3
+== B9 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib --sky forecast --day 2030-01-01
+[weather] forecast unavailable (HTTPError); using the constant cloud
+[weather] no forecast sky for seoul 2030-01-01; using cloud 0.0
+[setup] 12 cells on TinyIoT-mn001, run r4666
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 191, in <module>
+    main()
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/closed_loop.py", line 158, in main
+    model = virtual.load(room, a.model)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/polagrid/virtual.py", line 83, in load
+    blob = joblib.load(path or model_path(room))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 755, in load
+    obj = _unpickle(
+          ^^^^^^^^^^
+  File "/home/gustjr3332/.local/lib/python3.12/site-packages/joblib/numpy_pickle.py", line 632, in _unpickle
+    obj = unpickler.load()
+          ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/pickle.py", line 1205, in load
+    dispatch[key[0]](self)
+  File "/usr/lib/python3.12/pickle.py", line 1582, in load_reduce
+    stack[-1] = func(*args)
+                ^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/numpy/random/_pickle.py", line 34, in __bit_generator_ctor
+    raise ValueError(str(bit_generator_name) + ' is not a known '
+ValueError: <class 'numpy.random._pcg64.PCG64'> is not a known BitGenerator module.
+rc=1 wall_s=2
+done A2 B1 B2 B4 B5 B6 B7 B8 B9
+saved /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib (60 days, jitter=False, sky=kma)
+train_s=8.68
+saved /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib (60 days, jitter=False, sky=kma)
+train_s=39.84
+== B1 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[setup] 12 cells on TinyIoT-mn001, run r4738
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        18.08       172          134
+direct physics             0.00        17.92       169          137
+[latency] 95 commands to 12 cells: command -> desk reading p50=15ms p95=23ms max=33ms
+rc=0 wall_s=4
+== B2 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[setup] 100 cells on TinyIoT-mn001, run r4749
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         6.00       843         1080
+direct physics             0.00         6.00       841         1083
+[latency] 126 commands to 100 cells: command -> desk reading p50=468ms p95=678ms max=762ms
+rc=0 wall_s=70
+== B5 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib --sky kma --day 2025-11-05
+[setup] 100 cells on TinyIoT-mn001, run r4823
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         5.92       861         1049
+direct physics             0.00         5.92       859         1053
+[latency] 124 commands to 100 cells: command -> desk reading p50=466ms p95=706ms max=782ms
+rc=0 wall_s=70
+== B7 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib --sky kma --day 2025-11-05
+[setup] 12 cells on TinyIoT-mn001, run r4897
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        18.08       176          130
+direct physics             0.00        17.83       174          134
+[latency] 93 commands to 12 cells: command -> desk reading p50=16ms p95=27ms max=30ms
+rc=0 wall_s=5
+== B8 (new) --rows 10 --cols 10 --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib --sky forecast --day 2026-10-18
+[setup] 100 cells on TinyIoT-mn001, run r4906
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=100
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_10x10_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00         2.08      1331          780
+direct physics             0.00         2.08      1331          779
+[latency] 107 commands to 100 cells: command -> desk reading p50=506ms p95=781ms max=948ms
+rc=0 wall_s=66
+== B9 (new) --controller predict --model /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib --sky forecast --day 2030-01-01
+[weather] forecast unavailable (HTTPError); using the constant cloud
+[weather] no forecast sky for seoul 2030-01-01; using cloud 0.0
+[setup] 12 cells on TinyIoT-mn001, run r4976
+[acp] cell p1 -> p0/state=403, viewer -> env/desks=403, viewer reads p0/state=200, cell p0 bad openLevel=400, viewer finds states=12
+[model] loaded /mnt/c/CODES_vscode/gustjr/onem2m_ton/polargrid/sw/edge_ai/models/predictor_3x4_kma_seoul_cell.joblib
+[safety] night mode on; over CSE: 0 command timeouts, 0 watchdog opens (cells open after 30 min without a command)
+                        glare h  under-lit h  mean lux  servo moves
+over oneM2M (CSE)          0.00        13.58       244          174
+direct physics             0.00        13.58       243          170
+[latency] 97 commands to 12 cells: command -> desk reading p50=14ms p95=24ms max=27ms
+rc=0 wall_s=5
+done B1 B2 B5 B7 B8 B9

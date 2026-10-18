@@ -82,6 +82,30 @@ def test_hourly_cloud_function_matches_constant_cloud():
         assert abs(sum(kma) - sum(kt)) < 0.3 * sum(kt)   # same sky from a station and from ERA5
 
 
+def test_forecast_sky_parses_hours_and_falls_back_offline(monkeypatch):
+    import io
+    import json
+    import math
+    from datetime import date
+    from polagrid import weather
+    day = date(2026, 11, 5)
+    times = [f"2026-11-05T{h:02d}:00" for h in range(1, 24)] + ["2026-11-06T00:00"]
+    lat, lon = weather.SITES["seoul"]
+    half = [0.5 * weather.clear_ghi(sun_position(datetime(2026, 11, 5, h, 30, tzinfo=KST), lat, lon)[0])
+            for h in range(24)]                                     # half of clear sky in every hour
+    body = json.dumps({"hourly": {"time": times, "shortwave_radiation": half}}).encode()
+    monkeypatch.setattr(weather.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(body))
+    kt = weather.forecast_kt("seoul", day)
+    assert kt[12] == pytest.approx(0.5) and not any(math.isnan(k) for k in kt)
+    assert weather.sky("seoul", day, "forecast")(datetime(2026, 11, 5, 12, 10, tzinfo=KST)) == pytest.approx(0.5)
+
+    def offline(*a, **k):
+        raise OSError("no network")
+    monkeypatch.setattr(weather.urllib.request, "urlopen", offline)
+    assert weather.forecast_kt("seoul", day) is None and weather.sky("seoul", day, "forecast", 0.3) == 0.3
+    assert weather.sky("seoul", day, "const", 0.2) == 0.2
+
+
 def test_glass_scales_light_and_horizon_blocks_low_sun():
     t = datetime(2026, 12, 21, 12, 30, tzinfo=KST)                # noon sun about 29 deg up
     base = simulate(ROOM, t, np.zeros(ROOM.n_cells))

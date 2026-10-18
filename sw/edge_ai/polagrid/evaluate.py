@@ -128,11 +128,19 @@ def night_closed(controller):
     return lambda ctx: np.full_like(ctx["angles"], 90.0) if ctx["outdoor"] < NIGHT_LUX else controller(ctx)
 
 
+PREDICT_CLOSE_DEG, PREDICT_OPEN_DEG = 3, 30   # AI (3) hysteresis: close on small changes, open only on large ones
+
+
 def polagrid_predict(model):
-    """AI (3): angles straight from the learned model, no probing. Changes under 5 deg are skipped."""
+    """AI (3): angles straight from the learned model, no probing.
+
+    AI (3) cannot re-measure, so it errs to the safe side: a cell follows the model when it should close by
+    PREDICT_CLOSE_DEG or more, but opens only when the model says PREDICT_OPEN_DEG or more. On 10x10 cells the old
+    symmetric 5 deg gave about the same glare with more servo moves (results/ai3_cse_1018.txt).
+    """
     def controller(ctx):
-        new = ai.predict_angles(model, ctx["x"])
-        return np.where(np.abs(new - ctx["angles"]) < 5, ctx["angles"], new)
+        new, cur = ai.predict_angles(model, ctx["x"]), ctx["angles"]
+        return np.where((new - cur >= PREDICT_CLOSE_DEG) | (cur - new >= PREDICT_OPEN_DEG), new, cur)
     return controller
 
 
@@ -174,7 +182,7 @@ def main():
     logs = []
     for i, (day, cloud) in enumerate(train):
         logs += run_day(room, day, polagrid_probe(room.n_cells), cloud, seed=100 + i)[1]
-    model = ai.fit_predictor([x for x, _ in logs], [a for _, a in logs])
+    model = ai.fit_predictor(room, [x for x, _ in logs], [a for _, a in logs])
     table = lookup_table(logs)
     rows = compare(room, test, {
         "B0 fixed open": lambda: fixed_open,

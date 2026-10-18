@@ -1,0 +1,35 @@
+# AI (3) on the closed-loop direct path, 2026-10-18. Virtual physics only. Per-day means over 3 test sets of
+# 20 KMA Seoul 2025 days (+- = std over the 3 sets), desk-hours summed over 2 desks, night mode on.
+
+## 3x4 cells (data 48 s)
+method                                                     glare hunder-lit     lux   moves
+fixed open                                            2.14 +- 0.20    15.23    1052      15
+AI (1) online                                         0.00 +- 0.00    15.46     383      48
+random cloud 60d: per-cell, sym 5 (old)               0.06 +- 0.08    16.18     356     131
+random cloud 60d: per-cell, close 3/open 30           0.06 +- 0.09    16.78     340      73
+random cloud 60d: shared, sym 5                       0.02 +- 0.02    16.24     333     120
+random cloud 60d: shared, close 3/open 30 (new)       0.02 +- 0.02    16.75     320      80
+KMA sky 60d: per-cell, sym 5 (old)                    0.08 +- 0.04    16.17     349     148
+KMA sky 60d: per-cell, close 3/open 30                0.06 +- 0.05    16.81     331      82
+KMA sky 60d: shared, sym 5                            0.01 +- 0.01    16.15     332     143
+KMA sky 60d: shared, close 3/open 30 (new)            0.01 +- 0.01    16.83     313      89
+random cloud 120d jittered (1015 model): per-cell, sym 5 (old)  0.57 +- 0.15    16.11     431     170
+
+## 10x10 cells (data 2218 s)
+method                                                     glare hunder-lit     lux   moves
+fixed open                                            7.67 +- 0.16     2.27    4931     125
+AI (1) online                                         0.02 +- 0.01     3.33    1007     292
+random cloud 60d: per-cell, sym 5 (old)               0.57 +- 0.18     3.75    1169    1251
+random cloud 60d: per-cell, close 3/open 30           0.51 +- 0.16     4.28    1106     648
+# (run stopped here after 4 of 10x10 rows: per-cell rows take ~25 min each; rest below from --rest-10x10)
+# AI (3) on the closed-loop direct path, 2026-10-18. Virtual physics only. Per-day means over 3 test sets of
+# 20 KMA Seoul 2025 days (+- = std over the 3 sets), desk-hours summed over 2 desks, night mode on.
+
+## 10x10 cells (data 95 s)
+method                                                     glare hunder-lit     lux   moves
+random cloud 60d: shared, sym 5                       0.40 +- 0.04     3.68    1186    1282
+random cloud 60d: shared, close 3/open 30 (new)       0.29 +- 0.03     4.16    1113     866
+KMA sky 60d: shared, sym 5                            0.42 +- 0.16     3.76    1152    1266
+KMA sky 60d: shared, close 3/open 30 (new)            0.29 +- 0.11     4.24    1081     888
+
+# total 1145 s

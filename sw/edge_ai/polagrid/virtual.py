@@ -2,10 +2,13 @@
 
 The virtual days come from physics.py, so the model learns the physics model's assumptions. It is a warm start for
 the real window (use it until real data arrives, then retrain), not a measured result.
-Domain randomization: every training day uses a slightly different room (window direction, desk positions), a random
-cloud level and a noisy outdoor-light feature, so the model does not depend on one exact geometry.
+Train where the closed loop runs (WSL): a joblib file written with Windows numpy 2.x does not load under WSL numpy 1.26.
+A model only serves the cell grid it was trained for (load() checks it): a 3x4 model cannot drive a 10x10 room.
+Domain randomization (--jitter, not recommended: 3x4 glare 0.57 h for 120 jittered days vs 0.06 h for 60 plain days, results/ai3_cse_1018.txt): every
+training day uses a slightly different room (window direction, desk positions), a random cloud level and a noisy outdoor-light feature, so the model does not depend on one exact geometry.
 
-    python -m polagrid.virtual train --rows 3 --cols 4 --days 120 --jitter     # writes models/predictor_3x4.joblib
+    python -m polagrid.virtual train --rows 3 --cols 4 --days 120              # writes models/predictor_3x4.joblib
+    python -m polagrid.virtual train --rows 10 --cols 10 --days 60 --sky kma   # models/predictor_10x10_kma_seoul_cell.joblib
     python -m polagrid.virtual robust --rows 3 --cols 4 --days 60              # nominal vs randomized training
 """
 import argparse
@@ -16,7 +19,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 
-from . import ai, evaluate
+from . import ai, evaluate, weather
 from .physics import DESK_MIN_LUX, KST, Room, simulate, sun_position
 
 MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
@@ -35,10 +38,16 @@ def jitter_room(room, rng, az_deg=AZIMUTH_JITTER_DEG, desk_m=DESK_JITTER_M):
     return dataclasses.replace(room, window_azimuth=room.window_azimuth + rng.uniform(-az_deg, az_deg), desks=desks)
 
 
-def training_set(room, n_days, jitter=True, seed=1):
-    """(features, angles) rows from n_days virtual days spread over the year, decided by AI (2) with exact contributions."""
+def training_set(room, n_days, jitter=True, seed=1, sky=None, site="seoul"):
+    """(features, angles) rows from n_days virtual days spread over the year, decided by AI (2) with exact contributions.
+
+    sky "kma" or "openmeteo": the days are real 2025 days of `site` with their hourly kt (polagrid.weather) instead
+    of a random cloud level; `room` should be at that site.
+    """
     rng = np.random.default_rng(seed)
-    if jitter:
+    if sky:
+        picks = weather.real_days(site, date(weather.YEAR, 1, 1), n_days, max(1, 365 // n_days), source=sky)
+    elif jitter:
         picks = [(date(2026, 1, 1) + timedelta(days=int(d)), float(rng.uniform(0, 0.9)))
                  for d in rng.choice(365, n_days, replace=n_days > 365)]
     else:
@@ -56,15 +65,16 @@ def training_set(room, n_days, jitter=True, seed=1):
     return x, np.array(angles)
 
 
-def train(room, n_days, jitter=True, seed=1):
-    x, angles = training_set(room, n_days, jitter, seed)
-    return ai.fit_predictor(x, angles)
+def train(room, n_days, jitter=True, seed=1, sky=None, site="seoul"):
+    x, angles = training_set(room, n_days, jitter, seed, sky, site)
+    return ai.fit_predictor(room, x, angles, seed)
 
 
-def save(model, room, n_days, jitter, path=None):
+def save(model, room, n_days, jitter, path=None, sky=None):
     path = Path(path or model_path(room))
     path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"model": model, "rows": room.rows, "cols": room.cols, "days": n_days, "jitter": jitter}, path)
+    joblib.dump({"model": model, "rows": room.rows, "cols": room.cols, "days": n_days, "jitter": jitter, "sky": sky},
+                path, compress=3)
     return path
 
 
@@ -122,13 +132,17 @@ def main():
     ap.add_argument("--cols", type=int, default=4)
     ap.add_argument("--days", type=int, default=120)
     ap.add_argument("--jitter", action="store_true", help="domain randomization (train only; robust compares both)")
+    ap.add_argument("--sky", choices=["kma", "openmeteo"], help="train on real 2025 skies (cached CSV) instead of random cloud")
+    ap.add_argument("--site", choices=list(weather.SITES), default="seoul")
     ap.add_argument("--out", help="model file (default models/predictor_<rows>x<cols>.joblib)")
     a = ap.parse_args()
-    room = Room(rows=a.rows, cols=a.cols)
+    lat, lon = weather.SITES[a.site]
+    room = Room(rows=a.rows, cols=a.cols, lat=lat, lon=lon)
     if a.cmd == "robust":
         return robust(room, a.days)
-    path = save(train(room, a.days, a.jitter), room, a.days, a.jitter, a.out)
-    print(f"saved {path} ({a.days} days, jitter={a.jitter})")
+    out = a.out or (MODEL_DIR / f"predictor_{a.rows}x{a.cols}_{a.sky}_{a.site}_cell.joblib" if a.sky else None)
+    path = save(train(room, a.days, a.jitter, sky=a.sky, site=a.site), room, a.days, a.jitter, out, a.sky)
+    print(f"saved {path} ({a.days} days, jitter={a.jitter}, sky={a.sky or 'random cloud'})")
 
 
 if __name__ == "__main__":

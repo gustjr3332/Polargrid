@@ -13,7 +13,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor, HistGradientBoostingRegressor, RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -51,8 +51,8 @@ def dataset(room, days, margin, extra):
 
 
 def make(kind, seed=0):
-    if kind == "HGB":
-        return None                                   # ai.fit_predictor, the current model
+    if kind == "HGB":                                 # per-cell model ai.fit_predictor used until 10-18 (1017 results)
+        return MultiOutputRegressor(HistGradientBoostingRegressor(max_iter=200))
     if kind == "RF":
         return RandomForestRegressor(n_estimators=200, min_samples_leaf=3, n_jobs=-1, random_state=seed)
     if kind == "GBR":
@@ -62,7 +62,7 @@ def make(kind, seed=0):
 
 def fit(kind, x, angles, seed=0):
     m = make(kind, seed)
-    return ai.fit_predictor(x, angles) if m is None else m.fit(x, transmission(angles))
+    return m.fit(x, transmission(angles))
 
 
 def score(model, room, test_days, extra, noise=0.0, seed=0):

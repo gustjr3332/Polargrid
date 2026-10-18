@@ -110,19 +110,21 @@ def load_kt(site, year=YEAR, source="openmeteo"):
     source "openmeteo" (ERA5 GHI, W/m2) or "kma" (ASOS icsr, MJ/m2 per hour). Both label a value with the end of
     its hour; checked 2025 Seoul/Sejong: best hourly match at zero shift, sum ratio Open-Meteo/KMA 283 and 281.
     """
-    lat, lon = SITES[site]
     p, tcol, vcol, scale = ((DATA_DIR / f"kma_{site}_{year}.csv", "tm_kst", "icsr_mj", MJ_H_TO_WM2) if source == "kma"
                             else (path(site, year), "time_kst", "ghi_wm2", 1.0))
-    days = {}
     with open(p, encoding="utf-8") as f:
-        for r in csv.DictReader(f):
-            end = datetime.fromisoformat(r[tcol]).replace(tzinfo=KST)
-            start = end - timedelta(hours=1)
-            alt = sun_position(start + timedelta(minutes=30), lat, lon)[0]
-            kt = None
-            if alt >= MIN_ALT and r[vcol] != "":
-                kt = min(1.2, float(r[vcol]) * scale / clear_ghi(alt))
-            days.setdefault(start.date(), [None] * 24)[start.hour] = kt
+        return kt_days(site, ((r[tcol], None if r[vcol] == "" else float(r[vcol]) * scale) for r in csv.DictReader(f)))
+
+
+def kt_days(site, hours):
+    """{date: [24 kt]} from (end-of-hour KST time string, mean W/m2 of that hour or None) pairs."""
+    lat, lon = SITES[site]
+    days = {}
+    for end, wm2 in hours:
+        start = datetime.fromisoformat(end).replace(tzinfo=KST) - timedelta(hours=1)
+        alt = sun_position(start + timedelta(minutes=30), lat, lon)[0]
+        kt = min(1.2, wm2 / clear_ghi(alt)) if alt >= MIN_ALT and wm2 is not None else None
+        days.setdefault(start.date(), [None] * 24)[start.hour] = kt
     out = {}
     for d, kts in days.items():
         valid = [i for i, k in enumerate(kts) if k is not None]
@@ -138,6 +140,41 @@ def cloud_of(kts):
     Open-Meteo direct/diffuse if the beam share matters.
     """
     return lambda t: min(1.0, max(0.0, 1.0 - kts[t.hour]))
+
+
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+def forecast_kt(site, day, timeout=10):
+    """24 hourly kt of `day` from the Open-Meteo forecast (no key), or None when offline or out of range.
+
+    shortwave_radiation is the mean of the preceding hour, the same convention as the archive.
+    """
+    lat, lon = SITES[site]
+    q = urllib.parse.urlencode({"latitude": lat, "longitude": lon, "hourly": "shortwave_radiation",
+                                "timezone": "Asia/Seoul", "start_date": day, "end_date": day + timedelta(days=1)})
+    try:
+        with urllib.request.urlopen(f"{FORECAST_URL}?{q}", timeout=timeout) as r:
+            h = json.load(r)["hourly"]
+        return kt_days(site, zip(h["time"], h["shortwave_radiation"])).get(day)
+    except Exception as e:                       # the loop must keep running without a forecast
+        print(f"[weather] forecast unavailable ({type(e).__name__}); using the constant cloud", file=sys.stderr)
+        return None
+
+
+def sky(site, day, source, cloud=0.0):
+    """Physics cloud input for one closed-loop day: a constant, or the hourly kt of a real or forecast sky.
+
+    source: "const", "kma"/"openmeteo" (cached 2025 archive, `day` must be in it), "forecast" (live).
+    Falls back to the constant when the day has no data.
+    """
+    if source == "const":
+        return cloud
+    kts = forecast_kt(site, day) if source == "forecast" else load_kt(site, day.year, source).get(day)
+    if kts is None:
+        print(f"[weather] no {source} sky for {site} {day}; using cloud {cloud}", file=sys.stderr)
+        return cloud
+    return cloud_of(kts)
 
 
 def real_days(site, start, count, every, year=YEAR, source="openmeteo"):

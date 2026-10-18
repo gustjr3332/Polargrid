@@ -75,3 +75,33 @@ def test_night_mode_closes_everything_only_when_dark():
     angles = np.zeros(4)
     assert np.all(control({"outdoor": NIGHT_LUX - 1, "angles": angles}) == 90)
     assert np.all(control({"outdoor": NIGHT_LUX + 1, "angles": angles}) == 0)
+
+
+def test_cell_features_land_the_sun_ray_on_the_desk_it_lights():
+    from polagrid.ai import cell_features
+    from polagrid.physics import sun_position
+    alt, az = sun_position(NOON, ROOM.lat, ROOM.lon)
+    rows = cell_features(ROOM, [features(NOON, alt, az, 50_000)])
+    assert rows.shape == (ROOM.n_cells, 10)
+    direct, _ = light_matrices(ROOM, NOON)
+    for m, (cx, cy, w, d, _) in enumerate(ROOM.desks):
+        for i in np.flatnonzero(direct[m] > 0.5 * direct[m].max()):     # cells that mostly light desk m
+            assert abs(rows[i, 8] - cx) < w / 2 + 0.3 and abs(rows[i, 9] - cy) < d / 2 + 0.3
+    night = cell_features(ROOM, [features(NOON, -10, az, 0)])
+    assert (night[:, 8:] == 99).all()
+
+
+def test_shared_predictor_learns_a_table_and_predict_errs_to_closing():
+    from polagrid.ai import fit_predictor, predict_angles
+    from polagrid.evaluate import PREDICT_OPEN_DEG, polagrid_predict
+    room = Room(rows=2, cols=2)
+    x = [features(NOON, 30 + h / 10, 180, 50_000) for h in range(100)]
+    target = np.array([[90.0, 0.0, 90.0, 0.0]] * 100)
+    model = fit_predictor(room, x, target)
+    assert model.predict(x).shape == (100, 4)
+    assert np.allclose(predict_angles(model, x[0]), target[0], atol=10)
+    cur = np.array([70.0, 20.0, 90.0, 60.0])           # model wants 90, 0, 90, 0 (left column closed)
+    out = polagrid_predict(model)({"x": x[0], "angles": cur})
+    assert out[0] > 80                       # closing by 20 deg: follows the model
+    assert out[1] == 20.0                    # opening by 20 deg: under PREDICT_OPEN_DEG, stays put
+    assert out[3] < 10 and 60 >= PREDICT_OPEN_DEG   # opening by 60 deg: follows
