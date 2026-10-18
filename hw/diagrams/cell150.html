@@ -1,34 +1,38 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PolaGrid 150 mm cell</title>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PolaGrid 150 mm 셀</title>
 <style>
-:root{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#5d6b7a;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
-@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#93a1b1;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}}
-:root[data-theme=light]{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#5d6b7a;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
-:root[data-theme=dark]{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#93a1b1;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}
+:root{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#3a4656;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#c3cdd9;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}}
+:root[data-theme=light]{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#3a4656;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
+:root[data-theme=dark]{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#c3cdd9;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}
 *{box-sizing:border-box;margin:0}
-body{background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;padding:24px 16px}
+body{background:var(--bg);color:var(--tx);font:16px/1.55 system-ui,"Malgun Gothic","Apple SD Gothic Neo",Segoe UI,Roboto,sans-serif;padding:24px 16px}
 main{max-width:1240px;margin:0 auto}
-h1{font-size:22px;font-weight:600;margin-bottom:4px} p.sub{color:var(--mut);margin-bottom:16px}
+h1{font-size:26px;font-weight:700;margin-bottom:4px} p.sub{color:var(--mut);margin-bottom:16px;font-size:16px}
+.bar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#lang{font:600 15px system-ui,"Malgun Gothic",sans-serif;color:var(--tx);background:var(--panel);border:2px solid var(--acc);border-radius:8px;padding:6px 14px;cursor:pointer;white-space:nowrap}
+html[lang=en] .ko,html[lang=ko] .en{display:none}
 .wrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
 svg{width:100%;height:auto;display:block}
-text{fill:var(--tx);font-size:13px} .m,.g{fill:var(--mut)} .g{font-size:12px} .t{font-size:15px;font-weight:600}
+text{fill:var(--tx);font-size:16px} .m,.g{fill:var(--mut)} .g{font-size:15px} .t{font-size:19px;font-weight:700}
 .ln{stroke:var(--line);fill:none} .dash{stroke:var(--mut);fill:none;stroke-dasharray:5 4}
 .f1{fill:var(--film);opacity:.85} .f2{fill:var(--film2);opacity:.85} .plate{fill:var(--dark)} .glass{fill:var(--gl)} .disc{fill:var(--gl);stroke:var(--mut)}
 .gear{fill:none;stroke:var(--acc);stroke-width:1.5} .slot{fill:none;stroke:var(--warn);stroke-width:7;opacity:.35} .tick{stroke:var(--acc);stroke-width:1.2;fill:none}
 .pin{fill:none;stroke:var(--warn);stroke-width:2} .srv{fill:none;stroke:var(--mut);stroke-width:1.5;stroke-dasharray:4 3}
 .sen{fill:var(--ok)} .dim{stroke:var(--mut);fill:none}
 .note{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
-.note div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px} .note b{display:block;margin-bottom:4px}
+.note div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px} .note{word-break:keep-all}
+.note b{display:block;margin-bottom:4px;font-size:17px}
 </style></head><body><main>
-<h1>PolaGrid 150 mm cell module (v0.3)</h1>
-<p class="sub">Front view to scale, stack section with exaggerated thickness. All sizes are calculated, nothing is measured yet.</p>
-<div class="wrap"><svg viewBox="0 0 1240 900" role="img" aria-label="Front view of the 150 mm cell with a rim-toothed disc, a corner pinion and a stack section">
+<div class="bar"><div><h1><span class="ko">PolaGrid 150 mm 셀 모듈 (v0.3)</span><span class="en">PolaGrid 150 mm cell module (v0.3)</span></h1>
+<p class="sub"><span class="ko">정면도는 실제 비율, 단면은 두께를 과장했다. 모든 치수는 계산값이고 아직 실측한 것은 없다.</span><span class="en">Front view to scale, stack section with exaggerated thickness. All sizes are calculated, nothing is measured yet.</span></p></div><button id="lang" type="button" aria-label="Language">EN</button></div>
+<div class="wrap"><svg viewBox="0 0 1240 900" role="img" aria-label="150 mm 셀의 정면도: 테두리에 톱니가 있는 disc, 모서리 pinion, 적층 단면">
 
-  <text class="t" x="40" y="44">Front view, 150 x 150 mm cell (to scale)</text>
-  <text class="m" x="40" y="64">Dashed = behind the front plate. The crossed corner film blocks light in the four corners.</text>
+  <text class="t" x="40" y="44"><tspan class="ko">정면도, 150 x 150 mm 셀 (실제 비율)</tspan><tspan class="en">Front view, 150 x 150 mm cell (to scale)</tspan></text>
+  <text class="m" x="40" y="64"><tspan class="ko">점선 = 앞판 뒤에 있는 부품. 엇갈린 모서리 필름이 네 모서리의 빛을 막는다.</tspan><tspan class="en">Dashed = behind the front plate. The crossed corner film blocks light in the four corners.</tspan></text>
   <rect x="36.0" y="96.0" width="688.0" height="688.0" class="dash"/>
-  <text class="g" x="724.0" y="802.0" text-anchor="end">back plate 172 x 172 mm</text>
+  <text class="g" x="724.0" y="802.0" text-anchor="end"><tspan class="ko">back plate 172 x 172 mm</tspan><tspan class="en">back plate 172 x 172 mm</tspan></text>
   <rect x="80.0" y="140.0" width="600.0" height="600.0" class="ln" stroke-width="2"/>
   <circle cx="380.0" cy="440.0" r="300.0" class="f1"/>
   <path d="M80.0,140.0 h600.0 v600.0 h-600.0 Z M680.0,440.0 A300.0,300.0 0 1 0 80.0,440.0 A300.0,300.0 0 1 0 680.0,440.0 Z" fill-rule="evenodd" class="f2"/>
@@ -36,24 +40,24 @@ text{fill:var(--tx);font-size:13px} .m,.g{fill:var(--mut)} .g{font-size:12px} .t
   <path d="M606.0,250.4 L612.9,244.6 M597.8,241.1 L604.5,235.0 M589.3,232.1 L595.7,225.8 M580.4,223.5 L586.6,216.9 M571.2,215.3 L577.0,208.5 M561.6,207.5 L567.2,200.4 M551.7,200.1 L557.0,192.8 M541.5,193.2 L546.5,185.6 M531.1,186.6 L535.7,178.9 M520.3,180.5 L524.6,172.6 M509.3,174.9 L513.3,166.8 M498.1,169.7 L501.7,161.4 M486.7,165.0 L489.9,156.6 M475.1,160.7 L478.0,152.2 M463.3,157.0 L465.8,148.4 M451.4,153.8 L453.5,145.0 M439.3,151.0 L441.1,142.2 M427.2,148.8 L428.6,139.9 M414.9,147.1 L416.0,138.1 M402.6,145.9 L403.3,136.9 M390.3,145.2 L390.6,136.2 M377.9,145.0 L377.9,136.0 M365.6,145.4 L365.1,136.4 M353.3,146.2 L352.4,137.3 M341.0,147.6 L339.8,138.7 M328.8,149.5 L327.2,140.6 M316.7,151.9 L314.7,143.1 M304.6,154.8 L302.3,146.1 M292.8,158.2 L290.1,149.6 M281.0,162.1 L278.0,153.6 M269.5,166.5 L266.1,158.1 M258.1,171.3 L254.4,163.2 M247.0,176.7 L242.9,168.7 M236.1,182.5 L231.7,174.6 M225.4,188.7 L220.7,181.1 M215.0,195.4 L210.0,188.0 M204.9,202.6 L199.6,195.3 M195.2,210.1 L189.5,203.1 M185.7,218.0 L179.8,211.3 M176.6,226.4 L170.4,219.9 M167.8,235.1 L161.3,228.8 M159.4,244.1 L152.7,238.2 M151.4,253.6 L144.4,247.9" class="tick"/>
   <path d="M172.1,639.3 L180.4,647.6 L189.0,655.6 L197.9,663.2 L207.2,670.4 L216.7,677.2 L226.4,683.7 L236.5,689.7 L246.7,695.3 L257.2,700.5 L267.9,705.3 L278.8,709.6 L289.9,713.5 L301.1,717.0 L312.4,719.9 L323.8,722.5 L335.3,724.5 L346.9,726.1 L358.6,727.2 L370.3,727.8 L382.0,728.0 L393.7,727.7 L405.4,726.9 L417.0,725.6 L428.6,723.9 L440.1,721.7 L451.5,719.0 L462.8,715.8 L474.0,712.2 L484.9,708.2 L495.8,703.7 L506.4,698.8 L516.8,693.4 L527.0,687.7 L536.9,681.5 L546.6,674.9 L556.0,667.9 L565.2,660.6 L574.0,652.9 L582.5,644.8 L590.6,636.4" class="slot"/>
   <rect x="170.4" y="637.6" width="12.0" height="12.0" class="pin"/>
-  <text class="g" x="190.4" y="647.6">stop slot in the disc, pin on the back plate</text>
-  <text class="g" x="270.0" y="126.0" text-anchor="middle">teeth on a 100 deg arc, 42 teeth</text>
+  <text class="g" x="190.4" y="647.6"><tspan class="ko">disc의 stop slot, pin은 back plate에 고정</tspan><tspan class="en">stop slot in the disc, pin on the back plate</tspan></text>
+  <text class="g" x="270.0" y="126.0" text-anchor="middle"><tspan class="ko">100 deg 호에 teeth 42개</tspan><tspan class="en">teeth on a 100 deg arc, 42 teeth</tspan></text>
   <path d="M669.0,194.0 L668.9,190.9 L677.7,188.8 L677.3,185.6 L668.2,185.9 L667.5,182.9 L666.6,179.9 L674.6,175.6 L673.4,172.6 L664.7,175.3 L663.2,172.5 L661.6,169.8 L668.2,163.7 L666.2,161.1 L658.6,165.9 L656.4,163.6 L654.1,161.4 L658.9,153.8 L656.3,151.8 L650.2,158.4 L647.5,156.8 L644.7,155.3 L647.4,146.6 L644.4,145.4 L640.1,153.4 L637.1,152.5 L634.1,151.8 L634.4,142.7 L631.2,142.3 L629.1,151.1 L626.0,151.0 L622.9,151.1 L620.8,142.3 L617.6,142.7 L617.9,151.8 L614.9,152.5 L611.9,153.4 L607.6,145.4 L604.6,146.6 L607.3,155.3 L604.5,156.8 L601.8,158.4 L595.7,151.8 L593.1,153.8 L597.9,161.4 L595.6,163.6 L593.4,165.9 L585.8,161.1 L583.8,163.7 L590.4,169.8 L588.8,172.5 L587.3,175.3 L578.6,172.6 L577.4,175.6 L585.4,179.9 L584.5,182.9 L583.8,185.9 L574.7,185.6 L574.3,188.8 L583.1,190.9 L583.0,194.0 L583.1,197.1 L574.3,199.2 L574.7,202.4 L583.8,202.1 L584.5,205.1 L585.4,208.1 L577.4,212.4 L578.6,215.4 L587.3,212.7 L588.8,215.5 L590.4,218.2 L583.8,224.3 L585.8,226.9 L593.4,222.1 L595.6,224.4 L597.9,226.6 L593.1,234.2 L595.7,236.2 L601.8,229.6 L604.5,231.2 L607.3,232.7 L604.6,241.4 L607.6,242.6 L611.9,234.6 L614.9,235.5 L617.9,236.2 L617.6,245.3 L620.8,245.7 L622.9,236.9 L626.0,237.0 L629.1,236.9 L631.2,245.7 L634.4,245.3 L634.1,236.2 L637.1,235.5 L640.1,234.6 L644.4,242.6 L647.4,241.4 L644.7,232.7 L647.5,231.2 L650.2,229.6 L656.3,236.2 L658.9,234.2 L654.1,226.6 L656.4,224.4 L658.6,222.1 L666.2,226.9 L668.2,224.3 L661.6,218.2 L663.2,215.5 L664.7,212.7 L673.4,215.4 L674.6,212.4 L666.6,208.1 L667.5,205.1 L668.2,202.1 L677.3,202.4 L677.7,199.2 L668.9,197.1Z" class="pin"/>
   <circle cx="626.0" cy="194.0" r="10.0" class="pin"/>
   <circle cx="658.0" cy="194.0" r="56.0" class="srv"/>
-  <text class="g" x="724.0" y="88.0" text-anchor="end">28BYJ-48 body (behind the plate)</text>
+  <text class="g" x="724.0" y="88.0" text-anchor="end"><tspan class="ko">28BYJ-48 본체 (plate 뒤쪽)</tspan><tspan class="en">28BYJ-48 body (behind the plate)</tspan></text>
   <text class="g" x="694.0" y="272.0" text-anchor="middle">Z24</text>
-  <text class="g" x="694.0" y="286.0" text-anchor="middle">pinion</text>
+  <text class="g" x="694.0" y="286.0" text-anchor="middle"><tspan class="ko">pinion</tspan><tspan class="en">pinion</tspan></text>
   <circle cx="131.5" cy="688.5" r="51.5" class="dash"/>
-  <text class="g" x="131.5" y="692.5" text-anchor="middle">free circle</text>
+  <text class="g" x="131.5" y="692.5" text-anchor="middle"><tspan class="ko">free circle</tspan><tspan class="en">free circle</tspan></text>
   <text class="g" x="131.5" y="708.5" text-anchor="middle">d 25.7 mm</text>
   <rect x="320.0" y="148.0" width="58.4" height="74.0" class="sen"/>
   <text class="g" x="349.2" y="189.0" text-anchor="middle" style="fill:#fff">BH1750</text>
   <path d="M80.0,766.0 h600.0 M80.0,758.0 v16 M680.0,758.0 v16" class="dim"/>
-  <text x="300.0" y="802.0" text-anchor="middle">150 mm window = disc diameter</text>
+  <text x="300.0" y="802.0" text-anchor="middle"><tspan class="ko">150 mm window = disc 지름</tspan><tspan class="en">150 mm window = disc diameter</tspan></text>
 
-  <text class="t" x="800.0" y="44">Section through the centre and one corner</text>
-  <text class="m" x="800.0" y="64">Outdoor on the left. Thickness exaggerated.</text>
+  <text class="t" x="800.0" y="44"><tspan class="ko">중심과 한 모서리를 지나는 단면</tspan><tspan class="en">Section through the centre and one corner</tspan></text>
+  <text class="m" x="800.0" y="64"><tspan class="ko">왼쪽이 바깥(outdoor). 두께는 과장해서 그렸다.</tspan><tspan class="en">Outdoor on the left. Thickness exaggerated.</tspan></text>
   <rect x="860.0" y="220.0" width="24.0" height="440.0" class="glass"/>
   <rect x="884.0" y="290.0" width="3.2" height="300.0" class="f1"/>
   <rect x="887.2" y="290.0" width="3.2" height="300.0" class="f2"/>
@@ -64,22 +68,28 @@ text{fill:var(--tx);font-size:13px} .m,.g{fill:var(--mut)} .g{font-size:12px} .t
   <rect x="894.4" y="290.0" width="16.0" height="300.0" class="disc"/>
   <rect x="910.4" y="290.0" width="3.2" height="300.0" class="f1"/>
   <rect x="930.4" y="220.0" width="152.0" height="56" class="srv"/>
-  <text class="g" x="940.4" y="252.0">28BYJ-48, 19 mm deep</text>
+  <text class="g" x="940.4" y="210.0"><tspan class="ko">28BYJ-48, 깊이 19 mm</tspan><tspan class="en">28BYJ-48, 19 mm deep</tspan></text>
   <rect x="893.6" y="230.0" width="14.4" height="24" class="pin"/>
-  <text class="g" x="882.4" y="246.0" text-anchor="end">pinion in the corner</text>
+  <text class="g" x="874.4" y="246.0" text-anchor="end"><tspan class="ko">모서리의 pinion</tspan><tspan class="en">pinion in the corner</tspan></text>
   <rect x="936.4" y="432.0" width="10" height="16" class="sen"/>
-  <text class="g" x="954.4" y="444.0">cell sensor on the ring lip</text>
-  <text class="g" x="800.0" y="690.0">1. frame glass, L1 film on its back</text>
-  <text class="g" x="800.0" y="710.0">2. L2: four corner offcuts, flipped</text>
-  <text class="g" x="800.0" y="730.0">3. groove plate, hole 153 mm</text>
-  <text class="g" x="800.0" y="750.0">4. disc 2 mm acrylic + L3 film, rim in the groove</text>
-  <text class="g" x="800.0" y="770.0">5. back ring plate, opening 140 mm</text>
+  <text class="g" x="954.4" y="444.0"><tspan class="ko">back plate 테두리 위의 cell sensor</tspan><tspan class="en">cell sensor on the ring lip</tspan></text>
+  <text class="g" x="800.0" y="690.0">1. <tspan class="ko">frame glass, 뒷면에 L1 film</tspan><tspan class="en">frame glass, L1 film on its back</tspan></text>
+  <text class="g" x="800.0" y="714.0">2. <tspan class="ko">L2: 모서리 자투리 4장, 뒤집어 붙임</tspan><tspan class="en">L2: four corner offcuts, flipped</tspan></text>
+  <text class="g" x="800.0" y="738.0">3. <tspan class="ko">groove plate, 구멍 153 mm</tspan><tspan class="en">groove plate, hole 153 mm</tspan></text>
+  <text class="g" x="800.0" y="762.0">4. <tspan class="ko">disc: 2 mm acrylic + L3 film, 테두리가 groove에 들어감</tspan><tspan class="en">disc 2 mm acrylic + L3 film, rim in the groove</tspan></text>
+  <text class="g" x="800.0" y="786.0">5. <tspan class="ko">back ring plate, 개구부 140 mm</tspan><tspan class="en">back ring plate, opening 140 mm</tspan></text>
 </svg></div>
 <div class="note">
-  <div><b>Corner space</b>The disc takes 78.5 % of the 150 x 150 mm window. Each corner keeps 1207 mm2 (21.5 % in total). The largest free circle is 25.7 mm across and the largest square 22 mm. Corner film is dark at every angle.</div>
-  <div><b>Drive</b>The disc rim has 42 teeth on a 100 deg arc (module 1, Z150). A Z24 pinion sits in one corner, so the ratio is 6.25. A servo turns 180 deg, which gives the disc 28.8 deg, not 90. A 28BYJ-48 stepper needs 1.56 pinion turns for 90 deg and can do it.</div>
-  <div><b>Motor space</b>The 28BYJ-48 body (d 28) is bigger than the free circle, so it sits behind the back plate with its body just outside the window edge. Only the pinion and its shaft are in the corner.</div>
-  <div><b>Not measured yet</b>Backlash, friction of the disc in the groove, light lost in the 2 mm acrylic disc, and the real size of the frame border behind the 150 mm window.</div>
+  <div><b><span class="ko">모서리 공간</span><span class="en">Corner space</span></b><span class="ko">disc가 150 x 150 mm window의 78.5 %를 차지한다. 모서리 하나에 1207 mm2가 남고(네 개 합쳐 21.5 %), 들어가는 가장 큰 free circle은 지름 25.7 mm, 가장 큰 정사각형은 22 mm다. 모서리 필름은 어떤 각도에서도 어둡다.</span><span class="en">The disc takes 78.5 % of the 150 x 150 mm window. Each corner keeps 1207 mm2 (21.5 % in total). The largest free circle is 25.7 mm across and the largest square 22 mm. Corner film is dark at every angle.</span></div>
+  <div><b><span class="ko">구동</span><span class="en">Drive</span></b><span class="ko">disc 테두리에 100 deg 호로 teeth 42개(module 1, Z150)가 있다. 한쪽 모서리의 Z24 pinion이 돌리므로 감속비는 6.25다. servo는 180 deg를 돌려도 disc는 28.8 deg뿐이라 90 deg에 못 미친다. 28BYJ-48 stepper는 90 deg에 pinion 1.56바퀴면 되므로 가능하다.</span><span class="en">The disc rim has 42 teeth on a 100 deg arc (module 1, Z150). A Z24 pinion sits in one corner, so the ratio is 6.25. A servo turns 180 deg, which gives the disc 28.8 deg, not 90. A 28BYJ-48 stepper needs 1.56 pinion turns for 90 deg and can do it.</span></div>
+  <div><b><span class="ko">모터 공간</span><span class="en">Motor space</span></b><span class="ko">28BYJ-48 본체(d 28)는 free circle보다 커서 back plate 뒤에 두고, 본체를 window 가장자리 바로 바깥으로 뺀다. 모서리 안에는 pinion과 shaft만 들어간다.</span><span class="en">The 28BYJ-48 body (d 28) is bigger than the free circle, so it sits behind the back plate with its body just outside the window edge. Only the pinion and its shaft are in the corner.</span></div>
+  <div><b><span class="ko">아직 실측 전</span><span class="en">Not measured yet</span></b><span class="ko">backlash, groove 안에서 disc의 마찰, 2 mm acrylic disc에서 잃는 빛, 150 mm window 뒤 frame 테두리의 실제 크기.</span><span class="en">Backlash, friction of the disc in the groove, light lost in the 2 mm acrylic disc, and the real size of the frame border behind the 150 mm window.</span></div>
 </div>
 </main>
-<script>const t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.dataset.theme=t;</script></body></html>
+<script>const d=document.documentElement,TT={ko:"PolaGrid 150 mm 셀",en:"PolaGrid 150 mm cell"};
+let l=new URLSearchParams(location.search).get('lang');
+if(l!='ko'&&l!='en'){l='ko';try{l=localStorage.getItem('lang')==='en'?'en':'ko'}catch(e){}}
+function set(x,save){l=x;d.lang=x;document.title=TT[x];document.getElementById('lang').textContent=x=='ko'?'EN':'한국어';
+if(save)try{localStorage.setItem('lang',x)}catch(e){}}
+set(l,false);document.getElementById('lang').onclick=()=>set(l=='ko'?'en':'ko',true);
+const t=new URLSearchParams(location.search).get('theme');if(t)d.dataset.theme=t;</script></body></html>

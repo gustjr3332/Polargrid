@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PolaGrid 150 mm 셀 배선 v0.3",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1120,
+      640
+    ]
+  },
+  "components": [
+    {
+      "id": "button",
+      "type": "external",
+      "label": "전체 열기 버튼",
+      "sublabel": "수동 override",
+      "pos": [
+        40,
+        100
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "mn",
+      "type": "cloud",
+      "label": "tinyIoT MN-CSE",
+      "sublabel": "oneM2M zone edge",
+      "pos": [
+        640,
+        100
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "psu",
+      "type": "security",
+      "label": "USB 5 V 충전기",
+      "sublabel": "ESP32와 모터 드라이버에 전원",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "esp32",
+      "type": "backend",
+      "label": "중앙 모듈 (ESP32)",
+      "sublabel": "모터 IN1-4, I2C, Wi-Fi",
+      "pos": [
+        340,
+        300
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "cellsens",
+      "type": "database",
+      "label": "셀 센서",
+      "sublabel": "BH1750 0x23, 셀 뒤쪽",
+      "pos": [
+        900,
+        200
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "desksens",
+      "type": "database",
+      "label": "책상 센서",
+      "sublabel": "BH1750 0x5C, 책상 모형",
+      "pos": [
+        900,
+        400
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "stepper",
+      "type": "frontend",
+      "label": "28BYJ-48 stepper",
+      "sublabel": "Z24 pinion, disc 테두리와 6.25:1",
+      "pos": [
+        340,
+        500
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "uln",
+      "type": "messagebus",
+      "label": "ULN2003 드라이버",
+      "sublabel": "모터까지 4상",
+      "pos": [
+        40,
+        500
+      ],
+      "size": [
+        168,
+        72
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "btn-esp",
+      "from": "button",
+      "to": "esp32",
+      "label": "GPIO 25",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "esp-mn",
+      "from": "esp32",
+      "to": "mn",
+      "label": "Wi-Fi MQTT (예정)",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "esp-cell",
+      "from": "esp32",
+      "to": "cellsens",
+      "label": "I2C GPIO 21/22 (케이블)",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "esp-desk",
+      "from": "esp32",
+      "to": "desksens",
+      "label": "I2C, 같은 bus",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "psu-esp",
+      "from": "psu",
+      "to": "esp32",
+      "label": "5 V (VIN)"
+    },
+    {
+      "id": "psu-uln",
+      "from": "psu",
+      "to": "uln",
+      "label": "모터용 5 V",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "esp-uln",
+      "from": "esp32",
+      "to": "uln",
+      "label": "IN1-4 GPIO 13/26/14/27",
+      "labelDy": 24,
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "uln-step",
+      "from": "uln",
+      "to": "stepper",
+      "label": "5선 케이블",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "bus 하나, 주소 둘",
+      "items": [
+        "셀 센서는 ADDR을 GND에 연결하면 0x23",
+        "책상 센서는 ADDR을 3V3에 연결하면 0x5C"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "servo 전원선 없음",
+      "items": [
+        "stepper는 약 0.25 A를 쓴다 (typical 값, 실측 아님)",
+        "부팅할 때 disc를 stop에 닿을 때까지 돌려 home을 잡는다"
+      ]
+    }
+  ]
+}

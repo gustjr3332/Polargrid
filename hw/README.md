@@ -10,6 +10,8 @@ module, built into a 15 x 15 cm picture frame that stands in for the window (the
 Drawing: `diagrams/cell150.html` (front view to scale, stack section). Numbers: `diagrams/cell150_calc.py`. Everything
 below is calculated, nothing is measured.
 
+Korean versions (for the 11/4 school demo): `diagrams/cell150.html` has a KO/EN toggle button (default Korean, `?lang=en` for English), and the wiring diagram is `diagrams/wiring.ko.html` (source `wiring.architecture.ko.json`); the English `wiring.html` is unchanged.
+
 A rotating polarizer disc of 150 mm diameter sits in a 150 x 150 mm window. The four corners left over (1,207 mm2 each,
 21.5 % of the window in total) are covered by fixed film crossed with the front film, so they stay dark at every angle.
 

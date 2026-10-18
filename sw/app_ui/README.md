@@ -39,7 +39,7 @@ create on `ctl/app` only. The existing viewer role (read and discover only) is t
 ## Stack
 
 Kotlin, Jetpack Compose, OkHttp for the oneM2M HTTP binding, kotlinx.serialization. v0 polls; the MQTT binding is a
-later step (it also serves the protocol-diversity item of the contest rubric). UI text is English only.
+later step (it also serves the protocol-diversity item of the contest rubric). UI text is Korean or English (see "Language toggle").
 
 ## Design (Figma)
 
@@ -77,3 +77,11 @@ canvas from generated frames, so the numbers on it are fake and the page says "D
 - Latency to expect: a one-day closed loop on 1,000 cells (10 MNs x 100 cells) finished without errors, but p95 was 4.4 to
   6.7 s when all ten zones ran at once and 1.8 to 2.9 s when run as two batches of five (`sw/edge_ai/results/`). The page
   therefore plays a recording by default and treats live mode as the extra.
+
+## Language toggle (2026-10-18)
+
+The demo page and the mockup start in Korean (technical terms such as glare, lux, servo, AI stay English) and switch to English
+live with the "한 / EN" button, no reload. `?lang=en` or `?lang=ko` in the address overrides; the button choice is kept in
+`localStorage` (try/catch, so the page still works when storage is blocked). Each page has one `KO` table that maps the English
+string to its Korean text; strings not in the table, such as the method names in `compare.json`, show unchanged. For the
+international contest (11/20) use `?lang=en`. Screenshots: `mockup/screens/*_ko.png` and `*_en.png` (the unsuffixed PNGs are the older English set).

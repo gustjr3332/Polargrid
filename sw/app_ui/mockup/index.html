@@ -6,7 +6,7 @@
 <title>PolaGrid app mockup</title>
 <style>
 :root{--bg:#0f1216;--surf:#181d23;--surf2:#222932;--line:#2d3640;--tx:#e8edf2;--mut:#b9c3cd;--acc:#ffc247;--accd:#3a2e12;--warn:#ff8a5c;--ok:#5ad19a}
-*{box-sizing:border-box;margin:0}
+*{box-sizing:border-box;margin:0;word-break:keep-all}
 body{background:#05070a;color:var(--tx);font:15px/1.4 Roboto,system-ui,sans-serif;display:flex;gap:28px;flex-wrap:wrap;justify-content:center;padding:24px}
 .phone{width:380px;height:800px;background:var(--bg);border-radius:34px;border:8px solid #000;outline:1px solid #2a2f36;position:relative;overflow:hidden;display:flex;flex-direction:column}
 .status{height:28px;display:flex;justify-content:space-between;padding:6px 20px 0;font-size:13px;color:var(--mut)}
@@ -46,77 +46,113 @@ body{background:#05070a;color:var(--tx);font:15px/1.4 Roboto,system-ui,sans-seri
 .demo{position:absolute;bottom:72px;right:12px;background:#000a;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;color:var(--mut)}
 .screen{display:none;flex:1;flex-direction:column;overflow:hidden}.screen.show{display:flex}
 .lab{font-size:12.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin:6px 2px}
-body.bare{padding:0;display:block}body.bare .phone{width:412px;height:892px;border:0;border-radius:0;outline:0}body.bare #root{justify-content:flex-start!important}body.bare a.hint{display:none}
-a.hint{position:fixed;top:4px;right:10px;color:var(--mut);font-size:11px}
+body.bare{padding:0;display:block}body.bare .phone{width:412px;height:892px;border:0;border-radius:0;outline:0}body.bare #root{justify-content:flex-start!important}body.bare a.hint,body.bare #lang{display:none}
+a.hint{position:fixed;top:4px;left:10px;color:var(--mut);font-size:13px}
+#lang{position:fixed;top:4px;right:10px;z-index:9;background:#222932;color:var(--tx);border:2px solid var(--acc);border-radius:16px;padding:4px 12px;font:600 15px system-ui;cursor:pointer}#lang b{color:var(--acc)}
 </style>
 </head>
-<body>
-<a class="hint" href="?view=all">?view=all shows 5 screens</a>
+<a class="hint" href="?view=all" data-i18n="?view=all shows 5 screens"></a>
+<button id="lang" title="Language / 언어"></button>
 <div id="root"></div>
 <script>
 // Static mockup, no network. All numbers are made-up demo values (labelled DEMO DATA on screen).
+// Language: Korean by default, English with ?lang=en. KO maps each English string to its Korean text; technical terms stay English.
+const KO = {
+"?view=all shows 5 screens":"?view=all 로 화면 5개 보기","DEMO DATA":"데모 데이터",
+"Window":"창문","Comfort":"쾌적도","Mode":"모드","Today":"오늘","Settings":"설정",
+"Study room · south window":"서재 · 남향 창문","Auto · Reduce desk glare":"자동 · 책상 glare 줄이기","● Connected":"● 연결됨",
+"Open level (%)":"열림 정도 (%)","▢ glare cells":"▢ glare 셀","Desk light":"책상 밝기","Desk A":"책상 A","Desk B":"책상 B","target ≥ 300":"목표 300 이상",
+"Brightness":"밝기","Dim":"어둡게","Brightest possible":"최대한 밝게",
+"Tell the AI how it feels":"AI에게 지금 느낌을 알려 주세요","How much?":"얼마나?","Too dark":"너무 어두워요","Too bright":"너무 밝아요","Last corrections":"최근 보정",
+"14:05 · Too bright":"14:05 · 너무 밝음","11:40 · Too dark":"11:40 · 너무 어두움",
+"Each press is also a training sample for the AI preference model.":"버튼을 누를 때마다 AI 취향 모델의 학습 데이터로도 쓰입니다.",
+"How should the window behave?":"창문을 어떻게 움직일까요?","Auto":"자동","Manual":"수동","Privacy":"프라이버시","Away":"외출","Goal (Auto)":"목표 (자동)",
+"Reduce desk glare":"책상 glare 줄이기","Close only the cells that throw glare on desks":"책상에 glare를 만드는 셀만 닫아요",
+"Reduce screen reflection":"화면 반사 줄이기","Keep monitor surfaces clear of reflections":"모니터에 빛이 비치지 않게 해요",
+"Open as much as possible, glare allowed":"glare가 생겨도 최대한 열어요",
+"Night privacy":"야간 프라이버시","Close all cells when it is darker outside":"밖이 더 어두울 때 모든 셀을 닫아요","On":"켜짐",
+"Measured on this window":"이 창문에서 측정한 값","Glare time":"glare 시간","Desk at target":"목표 달성 책상","Your corrections":"내 보정 횟수","Servo moves":"servo 동작 횟수",
+"Compared with":"비교 대상","Fixed open":"항상 열림","Blind":"블라인드","Timer":"타이머","2.3 h glare":"glare 2.3 h","dark desk":"책상이 어두움","0.3 h glare":"glare 0.3 h",
+"Connection and safety":"연결 및 안전","Safe state":"안전 상태",
+"If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.":"연결이 끊기거나 AI가 이상하게 동작하면 모든 셀이 스스로 열립니다. 여기서 언제든 셀을 직접 움직일 수도 있어요.",
+"Open all":"모두 열기","Close all":"모두 닫기"};
+let LANG = "ko";
+{ const q = new URLSearchParams(location.search).get("lang"); let s = null;
+  try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
+  LANG = q === "en" || q === "ko" ? q : s === "en" ? "en" : "ko"; }
+const T = s => LANG === "ko" ? (KO[s] || s) : s;
+
 const LEVELS = [100,100,100, 100,62,100, 38,35,70, 100,45,100];   // open level 0-100, 12 cells (3 x 4)
 const GLARE = new Set([5,6,7]);                                   // cells with a warm outline
 const NAV = [["Window","▦"],["Comfort","☀"],["Mode","◐"],["Today","▤"],["Settings","⚙"]];
 
 const cells = () => `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
-const seg = (items,on) => `<div class="seg">${items.map((s,i)=>`<div class="${i===on?'on':''}">${s}</div>`).join('')}</div>`;
-const opt = (t,s,on) => `<div class="opt ${on?'on':''}"><span class="dot"></span><div>${t}<small>${s}</small></div></div>`;
+const seg = (items,on) => `<div class="seg">${items.map((s,i)=>`<div class="${i===on?'on':''}">${T(s)}</div>`).join('')}</div>`;
+const opt = (t,s,on) => `<div class="opt ${on?'on':''}"><span class="dot"></span><div>${T(t)}<small>${T(s)}</small></div></div>`;
 
-const SCREENS = {
+const SCREENS = () => ({
 Window:{sub:"Study room · south window",html:`
-  <div class="card"><div class="row"><span class="chip acc">Auto · Reduce desk glare</span><span class="chip ok">● Connected</span></div>
+  <div class="card"><div class="row"><span class="chip acc">${T("Auto · Reduce desk glare")}</span><span class="chip ok">${T("● Connected")}</span></div>
   ${cells()}
-  <div class="row"><span class="chip">Open level (%)</span><span class="chip" style="color:var(--warn)">▢ glare cells</span></div></div>
-  <div class="lab">Desk light</div>
-  <div class="desk"><div><small>Desk A</small><strong>412 lux</strong><small>target ≥ 300</small></div><div><small>Desk B</small><strong>388 lux</strong><small>target ≥ 300</small></div></div>
-  <div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">Brightness</span><span style="font-size:16px">70%</span></div>
+  <div class="row"><span class="chip">${T("Open level (%)")}</span><span class="chip" style="color:var(--warn)">${T("▢ glare cells")}</span></div></div>
+  <div class="lab">${T("Desk light")}</div>
+  <div class="desk"><div><small>${T("Desk A")}</small><strong>412 lux</strong><small>${T("target ≥ 300")}</small></div><div><small>${T("Desk B")}</small><strong>388 lux</strong><small>${T("target ≥ 300")}</small></div></div>
+  <div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Brightness")}</span><span style="font-size:16px">70%</span></div>
   <div class="slider"><b style="width:70%"></b><i style="left:70%"></i></div>
-  <div class="row" style="color:var(--mut);font-size:13px"><span>Dim</span><span>Brightest possible</span></div></div>`},
+  <div class="row" style="color:var(--mut);font-size:13px"><span>${T("Dim")}</span><span>${T("Brightest possible")}</span></div></div>`},
 Comfort:{sub:"Tell the AI how it feels",html:`
-  <div class="card"><div class="lab">How much?</div>
+  <div class="card"><div class="lab">${T("How much?")}</div>
   <div class="slider"><b style="width:40%"></b><i style="left:40%"></i></div>
   <div class="row" style="color:var(--mut);font-size:14px"><span>100 lux</span><span style="color:var(--tx);font-size:16px">+200 lux</span><span>500 lux</span></div></div>
-  <div class="btns"><div class="btn">Too dark</div><div class="btn p">Too bright</div></div>
-  <div class="card" style="margin-top:12px"><div class="lab">Last corrections</div>
-  <div class="row" style="padding:6px 0"><span>14:05 · Too bright</span><span class="chip">−200 lux</span></div>
-  <div class="row" style="padding:6px 0"><span>11:40 · Too dark</span><span class="chip">+100 lux</span></div></div>
-  <p style="color:var(--mut);font-size:14px;padding:4px">Each press is also a training sample for the AI preference model.</p>`},
+  <div class="btns"><div class="btn">${T("Too dark")}</div><div class="btn p">${T("Too bright")}</div></div>
+  <div class="card" style="margin-top:12px"><div class="lab">${T("Last corrections")}</div>
+  <div class="row" style="padding:6px 0"><span>${T("14:05 · Too bright")}</span><span class="chip">−200 lux</span></div>
+  <div class="row" style="padding:6px 0"><span>${T("11:40 · Too dark")}</span><span class="chip">+100 lux</span></div></div>
+  <p style="color:var(--mut);font-size:14px;padding:4px">${T("Each press is also a training sample for the AI preference model.")}</p>`},
 Mode:{sub:"How should the window behave?",html:`
   ${seg(["Auto","Manual","Privacy","Away"],0)}
-  <div class="card"><div class="lab">Goal (Auto)</div>
+  <div class="card"><div class="lab">${T("Goal (Auto)")}</div>
   ${opt("Reduce desk glare","Close only the cells that throw glare on desks",true)}
   ${opt("Reduce screen reflection","Keep monitor surfaces clear of reflections",false)}
   ${opt("Brightest possible","Open as much as possible, glare allowed",false)}</div>
-  <div class="card"><div class="row"><div>Night privacy<small style="display:block;color:var(--mut);font-size:14px">Close all cells when it is darker outside</small></div><span class="chip acc">On</span></div></div>`},
+  <div class="card"><div class="row"><div>${T("Night privacy")}<small style="display:block;color:var(--mut);font-size:14px">${T("Close all cells when it is darker outside")}</small></div><span class="chip acc">${T("On")}</span></div></div>`},
 Today:{sub:"Measured on this window",html:`
-  <div class="met"><div><strong>0.1 h</strong><small>Glare time</small></div><div><strong>96%</strong><small>Desk at target</small></div>
-  <div><strong>3</strong><small>Your corrections</small></div><div><strong>103</strong><small>Servo moves</small></div></div>
-  <div class="card" style="margin-top:12px"><div class="lab">Compared with</div>
-  <div class="row" style="padding:6px 0"><span>Fixed open</span><span class="chip">2.3 h glare</span></div>
-  <div class="row" style="padding:6px 0"><span>Blind</span><span class="chip">dark desk</span></div>
-  <div class="row" style="padding:6px 0"><span>Timer</span><span class="chip">0.3 h glare</span></div></div>`},
+  <div class="met"><div><strong>0.1 h</strong><small>${T("Glare time")}</small></div><div><strong>96%</strong><small>${T("Desk at target")}</small></div>
+  <div><strong>3</strong><small>${T("Your corrections")}</small></div><div><strong>103</strong><small>${T("Servo moves")}</small></div></div>
+  <div class="card" style="margin-top:12px"><div class="lab">${T("Compared with")}</div>
+  <div class="row" style="padding:6px 0"><span>${T("Fixed open")}</span><span class="chip">${T("2.3 h glare")}</span></div>
+  <div class="row" style="padding:6px 0"><span>${T("Blind")}</span><span class="chip">${T("dark desk")}</span></div>
+  <div class="row" style="padding:6px 0"><span>${T("Timer")}</span><span class="chip">${T("0.3 h glare")}</span></div></div>`},
 Settings:{sub:"Connection and safety",html:`
   <div class="card"><div class="lab">oneM2M CSE</div><div class="row"><span>polagrid-in.local:3000</span><span class="chip ok">● OK</span></div>
   <div class="row" style="padding-top:8px"><span style="color:var(--mut)">Originator</span><span>Capp</span></div></div>
-  <div class="card"><div class="lab">Safe state</div><p style="color:var(--mut)">If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.</p></div>
-  <div class="btns"><div class="btn">Open all</div><div class="btn">Close all</div></div>`}
-};
+  <div class="card"><div class="lab">${T("Safe state")}</div><p style="color:var(--mut)">${T("If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.")}</p></div>
+  <div class="btns"><div class="btn">${T("Open all")}</div><div class="btn">${T("Close all")}</div></div>`}
+});
 
-const phone = (name, idx) => `<div class="phone" data-i="${idx}">
+const phone = (name, idx) => { const S = SCREENS()[name]; return `<div class="phone" data-i="${idx}">
   <div class="status"><span>9:41</span><span>▂▄▆ 5G ▮</span></div>
-  <div class="top"><h1>${name}</h1><p>${SCREENS[name].sub}</p></div>
-  <div class="body">${SCREENS[name].html}</div>
-  <div class="demo">DEMO DATA</div>
-  <div class="nav">${NAV.map(([n,ic])=>`<button class="${n===name?'on':''}"><i>${ic}</i>${n}</button>`).join('')}</div></div>`;
+  <div class="top"><h1>${T(name)}</h1><p>${T(S.sub)}</p></div>
+  <div class="body">${S.html}</div>
+  <div class="demo">${T("DEMO DATA")}</div>
+  <div class="nav">${NAV.map(([n,ic])=>`<button class="${n===name?'on':''}"><i>${ic}</i>${T(n)}</button>`).join('')}</div></div>`; };
 
 const all = new URLSearchParams(location.search).get("view") === "all";
-const names = Object.keys(SCREENS);
+const names = Object.keys(SCREENS());
 const root = document.getElementById("root");
+const $lang = document.getElementById("lang");
 root.style.cssText = "display:flex;gap:28px;flex-wrap:wrap;justify-content:center";
-const draw = i => { root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); };
+let cur = +(new URLSearchParams(location.search).get("s")||0);
+const draw = i => { cur = i; root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); };
+const render = () => {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = T(e.dataset.i18n));
+  $lang.innerHTML = LANG === "ko" ? "<b>한</b> / EN" : "한 / <b>EN</b>";
+  if (all) root.innerHTML = names.map(phone).join(""); else draw(cur);
+};
+$lang.onclick = () => { LANG = LANG === "ko" ? "en" : "ko"; try { localStorage.setItem("pg-lang", LANG); } catch (e) {} render(); };
 if (new URLSearchParams(location.search).has('bare')) document.body.classList.add('bare');
-if (all) root.innerHTML = names.map(phone).join(""); else draw(+(new URLSearchParams(location.search).get("s")||0));
+render();
 </script>
 </body>
 </html>

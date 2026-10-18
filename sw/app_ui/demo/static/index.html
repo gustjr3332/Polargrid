@@ -32,6 +32,7 @@ footer{grid-column:1/3;font-size:18px;display:flex;align-items:center;gap:28px;b
 footer b{color:var(--fg)}
 #mode{background:var(--acc);color:#04202f;font-weight:700;padding:2px 10px;border-radius:3px}
 #view{margin-left:auto;font-size:18px;font-weight:700;padding:8px 20px;border-color:var(--acc)}
+#lang{font-size:18px;font-weight:700;padding:8px 16px;border:2px solid var(--acc)}#lang b{color:var(--acc)}
 #cmp{grid-column:1/3;grid-row:2;display:none;flex-direction:column;justify-content:center;gap:2.5vh;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3vh 3vw;min-height:0}
 body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
 #cmp h2{margin:0;font-size:clamp(28px,4vh,44px);color:#fff}
@@ -48,42 +49,62 @@ body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
 </head>
 <body>
 <div id="app">
-  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells</span><button id="view">Comparison table</button></header>
-  <div id="cmp"><h2>Glare and desk light: PolaGrid AI vs. common methods</h2>
+  <header><h1>PolaGrid</h1><span class="badge" data-i18n="DEMO DATA"></span><span style="color:var(--dim)" data-i18n="1,000 virtual cells"></span><button id="view"></button><button id="lang" title="Language / 언어"></button></header>
+  <div id="cmp"><h2 data-i18n="Glare and desk light: PolaGrid AI vs. common methods"></h2>
     <table><thead></thead><tbody></tbody></table>
-    <p class="lim">Simulated room, not measured on hardware.</p><p id="cmp-src"></p></div>
+    <p class="lim" data-i18n="Simulated room, not measured on hardware."></p><p id="cmp-src"></p></div>
   <div id="stage"><canvas id="cv"></canvas></div>
   <aside>
-    <section><h2>Desk illuminance</h2>
-      <div class="row"><span>Desk A</span><b id="d0">-</b><small>lux</small></div>
+    <section><h2 data-i18n="Desk illuminance"></h2>
+      <div class="row"><span data-i18n="Desk A"></span><b id="d0">-</b><small>lux</small></div>
       <div class="bar"><i id="b0"></i><u id="t0"></u></div>
-      <div class="row"><span>Desk B</span><b id="d1">-</b><small>lux</small></div>
+      <div class="row"><span data-i18n="Desk B"></span><b id="d1">-</b><small>lux</small></div>
       <div class="bar"><i id="b1"></i><u id="t1"></u></div>
-      <div class="row"><span>Glare index</span><b id="gl">-</b><small>h (cumulative)</small></div>
-      <div class="row"><small>Target line (demo setting)</small><small id="tg"></small></div>
+      <div class="row"><span data-i18n="Glare index"></span><b id="gl">-</b><small data-i18n="h (cumulative)"></small></div>
+      <div class="row"><small data-i18n="Target line (demo setting)"></small><small id="tg"></small></div>
     </section>
-    <section><h2>Command to applied</h2>
-      <div class="row"><span>Latency p50</span><b id="p50">-</b><small>ms</small></div>
-      <div class="row"><span>Latency p95</span><b id="p95">-</b><small>ms</small></div>
-      <div class="row"><span>Servo moves</span><b id="mv">-</b><small>total</small></div>
+    <section><h2 data-i18n="Command to applied"></h2>
+      <div class="row"><span data-i18n="Latency p50"></span><b id="p50">-</b><small>ms</small></div>
+      <div class="row"><span data-i18n="Latency p95"></span><b id="p95">-</b><small>ms</small></div>
+      <div class="row"><span data-i18n="Servo moves"></span><b id="mv">-</b><small data-i18n="total"></small></div>
     </section>
-    <section><h2>Simulated time</h2><div id="clock">--:--</div></section>
-    <section id="ctl"><h2>Simulation</h2>
-      <div class="btns"><button id="run">Start</button>
+    <section><h2 data-i18n="Simulated time"></h2><div id="clock">--:--</div></section>
+    <section id="ctl"><h2 data-i18n="Simulation"></h2>
+      <div class="btns"><button id="run"></button>
         <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select></div>
-      <div class="btns"><button id="ev-cloud">Cloud</button><button id="ev-turn">Turn window</button><button id="ev-reset">Reset</button></div>
-      <div style="color:var(--dim)" id="evs">Events: none</div>
+      <div class="btns"><button id="ev-cloud" data-i18n="Cloud"></button><button id="ev-turn" data-i18n="Turn window"></button><button id="ev-reset" data-i18n="Reset"></button></div>
+      <div style="color:var(--dim)" id="evs"></div>
     </section>
   </aside>
   <footer>
-    <span>Connection: <span id="mode">Replay</span></span>
-    <span>Cells: <b id="nc">1000</b></span>
-    <span>Run: <b id="run-id">demo-0</b></span>  </footer>
+    <span><span data-i18n="Connection:"></span> <span id="mode"></span></span>
+    <span><span data-i18n="Cells:"></span> <b id="nc">1000</b></span>
+    <span><span data-i18n="Run:"></span> <b id="run-id">demo-0</b></span>  </footer>
 </div>
 <script>
 "use strict";
 const ROWS = 25, COLS = 40, N = ROWS * COLS, TARGET = 500, RUN_ID = "demo-0";
 const $ = id => document.getElementById(id);
+// ---- language: Korean default, ?lang=en|ko overrides, button toggles live. Technical terms stay English inside Korean text. ----
+const KO = {
+"DEMO DATA":"데모 데이터","1,000 virtual cells":"가상 셀 1,000개","Comparison table":"비교 표","1,000 cells":"셀 1,000개 화면",
+"Glare and desk light: PolaGrid AI vs. common methods":"Glare와 책상 밝기: PolaGrid AI와 기존 방식 비교",
+"Simulated room, not measured on hardware.":"시뮬레이션 방입니다. 실물 하드웨어로 측정한 값이 아닙니다.",
+"Desk illuminance":"책상 조도","Desk A":"책상 A","Desk B":"책상 B","Glare index":"Glare 지수","h (cumulative)":"h (누적)","Target line (demo setting)":"목표선 (데모 설정)",
+"Command to applied":"명령 → 적용까지","Servo moves":"Servo 동작","total":"누적",
+"Simulated time":"시뮬레이션 시각","Simulation":"시뮬레이션","Start":"시작","Stop":"정지","Cloud":"구름","Turn window":"창문 방향 돌리기","Reset":"초기화",
+"Events:":"이벤트:","none":"없음","Connection:":"연결:","Cells:":"셀:","Run:":"실행:","Live":"실시간","Replay":"녹화 재생",
+"desk-hours per day, lower is better":"하루 desk-hours, 낮을수록 좋음","Desk too dark":"책상이 너무 어두움",
+"desk-hours per day below 500 lux, sun up":"해가 떠 있는 동안 500 lux 미만인 하루 desk-hours","Mean desk light":"책상 평균 밝기",
+"Motor moves":"모터 동작","per day":"하루 기준","Fixed open":"항상 열림","Blinds":"블라인드","Time schedule":"시간표 방식","not measured":"측정 안 함",
+"Per-day averages; desk-hours are summed over both desks.":"하루 평균이며, desk-hours는 책상 두 개를 합산한 값입니다.",
+"compare.json not found: run make_compare.py":"compare.json이 없습니다. make_compare.py를 실행하세요."};
+let LANG = "ko";
+{ const q = new URLSearchParams(location.search).get("lang"); let s = null;
+  try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
+  LANG = q === "en" || q === "ko" ? q : s === "en" ? "en" : "ko"; }
+const T = s => LANG === "ko" ? (KO[s] || s) : s;   // names not in the table (data, e.g. a new method) pass through unchanged
+let modeKey = "Replay", cmpData = null;
 const cv = $("cv"), g = cv.getContext("2d");
 let last = null;
 
@@ -152,16 +173,16 @@ function tick() {
   onFrame(makeFrame(dtSim));
 }
 
-function evNote() { $("evs").textContent = "Events: " + (sim.evs.length ? sim.evs.join(", ") : "none"); }
+function evNote() { $("evs").textContent = T("Events:") + " " + (sim.evs.length ? sim.evs.map(T).join(", ") : T("none")); }
 let live = false;   // true once frames come from a live server: the buttons then drive the zones through POST /api/ctl
 const ctl = body => live && fetch("/api/ctl", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
-$("run").onclick = () => { sim.running = !sim.running; $("run").textContent = sim.running ? "Stop" : "Start"; ctl({ running: sim.running }); };
+$("run").onclick = () => { sim.running = !sim.running; applyLang(); ctl({ running: sim.running }); };
 $("spd").onchange = e => { sim.speed = +e.target.value; ctl({ speed: sim.speed }); };
 $("ev-cloud").onclick = () => { sim.cloud = true; if (!sim.evs.includes("Cloud")) sim.evs.push("Cloud"); evNote(); ctl({ cloud: 0.8 }); };
 $("ev-turn").onclick = () => { sim.turn += 10; sim.evs.push("Turn window"); evNote(); ctl({ turn: sim.turn }); };
 $("ev-reset").onclick = () => {
   Object.assign(sim, { min: 6 * 60, cloud: false, turn: 0, moves: 0, glare: 0, evs: [], running: false }); sim.com.fill(15);
-  $("run").textContent = "Start"; evNote(); ctl({ reset: true });
+  applyLang(); ctl({ reset: true });
 };
 
 $("tg").textContent = TARGET + " lux";
@@ -174,18 +195,35 @@ addEventListener("resize", () => last && draw(last));
 // ---- comparison table (compare.json, built by make_compare.py from the measured baseline CSV) ----
 const METRICS = [["glare_h", "Glare", "desk-hours per day, lower is better", 2], ["under_lit_h", "Desk too dark", "desk-hours per day below 500 lux, sun up", 2],
   ["mean_desk_lux", "Mean desk light", "lux", 0], ["servo_moves", "Motor moves", "per day", 0]];
+const TAIL = d => d.limits.replace(/^.*?hardware\. /, "");
+const SRC = d => LANG === "ko" ? `테스트 ${d.test_days}일, AI는 ${d.train_days}일치로 학습. ${T(TAIL(d))} 출처: ${d.source}`
+  : `${d.test_days} test days, AI trained on ${d.train_days} days. ${TAIL(d)} Source: ${d.source}`;
+function showCmp() {
+  const d = cmpData, cls = m => m.startsWith("AI") ? ' class="ai"' : "";   // class from the raw (English) data name
+  if (!d) { document.querySelector("#cmp tbody").innerHTML = `<tr><td class="na">${T("compare.json not found: run make_compare.py")}</td></tr>`; return; }
+  document.querySelector("#cmp thead").innerHTML = "<tr><th></th>" + d.rows.map(r => `<th${cls(r.method)}>${T(r.method)}</th>`).join("") + "</tr>";
+  document.querySelector("#cmp tbody").innerHTML = METRICS.map(([k, name, unit, dp]) => `<tr><td>${T(name)}<small>${T(unit)}</small></td>` +
+    d.rows.map(r => `<td${cls(r.method)}>${r[k] == null ? `<span class="na">${T("not measured")}</span>` : r[k].toFixed(dp)}</td>`).join("") + "</tr>").join("");
+  $("cmp-src").textContent = SRC(d);
+}
+function applyLang() {
+  const cmp = document.body.classList.contains("cmp");
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = T(e.dataset.i18n));
+  $("view").textContent = T(cmp ? "1,000 cells" : "Comparison table");
+  $("run").textContent = T(sim.running ? "Stop" : "Start");
+  $("mode").textContent = T(modeKey);
+  $("lang").innerHTML = LANG === "ko" ? "<b>한</b> / EN" : "한 / <b>EN</b>";
+  evNote(); if (cmp) showCmp();
+}
+$("lang").onclick = () => { LANG = LANG === "ko" ? "en" : "ko"; try { localStorage.setItem("pg-lang", LANG); } catch (e) {} applyLang(); };
 $("view").onclick = () => {
   const on = document.body.classList.toggle("cmp");
-  $("view").textContent = on ? "1,000 cells" : "Comparison table";
+  applyLang();
   if (!on) { last && draw(last); return; }
-  fetch("/compare.json").then(r => r.json()).then(d => {
-    const cls = m => m.startsWith("AI") ? ' class="ai"' : "";
-    document.querySelector("#cmp thead").innerHTML = "<tr><th></th>" + d.rows.map(r => `<th${cls(r.method)}>${r.method}</th>`).join("") + "</tr>";
-    document.querySelector("#cmp tbody").innerHTML = METRICS.map(([k, name, unit, dp]) => `<tr><td>${name}<small>${unit}</small></td>` +
-      d.rows.map(r => `<td${cls(r.method)}>${r[k] == null ? '<span class="na">not measured</span>' : r[k].toFixed(dp)}</td>`).join("") + "</tr>").join("");
-    $("cmp-src").textContent = `${d.test_days} test days, AI trained on ${d.train_days} days. ${d.limits.replace(/^.*?hardware\. /, "")} Source: ${d.source}`;
-  }).catch(() => { document.querySelector("#cmp tbody").innerHTML = '<tr><td class="na">compare.json not found: run make_compare.py</td></tr>'; });
+  fetch("/compare.json").then(r => r.json()).then(d => { cmpData = d; showCmp(); }).catch(() => { cmpData = null; showCmp(); });
 };
+applyLang();
 const fake = setInterval(tick, TICK_MS);
 tick();
 
@@ -198,7 +236,7 @@ if (location.protocol.startsWith("http") && !new URLSearchParams(location.search
     document.querySelector(".badge").style.display = "none";
     live = f.mode === "live";
     document.querySelector("#ctl").style.display = live ? "" : "none";   // a recording cannot react to buttons
-    $("mode").textContent = f.mode === "live" ? "Live" : "Replay";
+    modeKey = f.mode === "live" ? "Live" : "Replay"; $("mode").textContent = T(modeKey);
     $("run-id").textContent = f.mode;
     onFrame(f);
   };
