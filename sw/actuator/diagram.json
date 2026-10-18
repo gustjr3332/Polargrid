@@ -2,19 +2,13 @@
   "version": 1, "author": "polagrid", "editor": "wokwi",
   "parts": [
     { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
-    { "type": "wokwi-servo", "id": "servo0", "top": -120, "left": 160, "attrs": {} },
-    { "type": "wokwi-servo", "id": "servo1", "top": -40, "left": 160, "attrs": {} },
-    { "type": "wokwi-servo", "id": "servo2", "top": 40, "left": 160, "attrs": {} },
-    { "type": "wokwi-servo", "id": "servo3", "top": 120, "left": 160, "attrs": {} }
+    { "type": "wokwi-servo", "id": "servo0", "top": -40, "left": 160, "attrs": {} }
   ],
   "connections": [
     ["esp:TX", "$serialMonitor:RX", ""], ["esp:RX", "$serialMonitor:TX", ""],
-    ["servo0:PWM", "esp:13", "green"], ["servo1:PWM", "esp:26", "green"],
-    ["servo2:PWM", "esp:14", "green"], ["servo3:PWM", "esp:27", "green"],
-    ["servo0:V+", "esp:5V", "red"], ["servo1:V+", "esp:5V", "red"],
-    ["servo2:V+", "esp:5V", "red"], ["servo3:V+", "esp:5V", "red"],
-    ["servo0:GND", "esp:GND.2", "black"], ["servo1:GND", "esp:GND.2", "black"],
-    ["servo2:GND", "esp:GND.2", "black"], ["servo3:GND", "esp:GND.2", "black"]
+    ["servo0:PWM", "esp:13", "green"],
+    ["servo0:V+", "esp:5V", "red"],
+    ["servo0:GND", "esp:GND.2", "black"]
   ],
   "dependencies": {}
 }

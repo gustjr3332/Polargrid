@@ -1,11 +1,11 @@
 #pragma once
-// Hardware-free logic of the 4-cell panel, so it can be tested on the PC.
+// Hardware-free logic of one control module (one cell), so it can be tested on the PC.
 // Angle convention is the one polagrid uses: disc angle vs the fixed front film, 0 = open, 90 = closed.
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
-constexpr int N_CELLS = 4;
+constexpr int N_CELLS = 1;   // one control module per central module in the prototype; raise it to drive more
 constexpr float DISC_MAX_DEG = 90.0f;
 constexpr float SERVO_OPEN_DEG = 180.0f;   // servo angle when the disc is open (calibrate on the real panel)
 constexpr float SERVO_PER_DISC = -2.0f;    // 2:1 gear, the disc turns the opposite way (hw/README.md)
@@ -22,7 +22,7 @@ inline int servoFromDisc(float disc) {
 }
 
 struct Cells {
-  float disc[N_CELLS] = {0, 0, 0, 0};
+  float disc[N_CELLS] = {};
   uint32_t lastCmdMs = 0;
 };
 

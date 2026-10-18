@@ -33,16 +33,16 @@ text{fill:var(--tx);font-size:13px}
 </head>
 <body>
 <main>
-<h1>PolaGrid 4-cell panel concept (v0.1)</h1>
-<p class="sub">Left: front view from the room side. Right: section through one cell (thickness exaggerated, not to scale).</p>
+<h1>PolaGrid control module concept (v0.2)</h1>
+<p class="sub">Left: front view of one control module from the room side. Right: section through the cell (thickness exaggerated, not to scale).</p>
 <div class="wrap">
-<svg viewBox="0 0 1120 620" role="img" aria-label="Front view of the 2 by 2 panel and a section through one cell">
+<svg viewBox="0 0 1120 620" role="img" aria-label="Front view of one control module and a section through its cell">
 
   <!-- ===== FRONT VIEW (4 px per mm) ===== -->
-  <text class="t" x="60" y="44">Front view, 2 x 2 cells</text>
+  <text class="t" x="60" y="44">Front view, one control module</text>
   <text class="m" x="60" y="64">Dashed = behind the front plate</text>
-  <rect x="60" y="120" width="349" height="349" rx="6" class="ln" stroke-width="2"/>
-  <text class="m" x="234" y="108" text-anchor="middle">about 87 x 87 mm (calculated from the frame spacing)</text>
+  <rect x="60" y="120" width="178.4" height="178.4" rx="6" class="ln" stroke-width="2"/>
+  <text class="m" x="150" y="108" text-anchor="middle">about 45 x 45 mm (calculated)</text>
   <g id="cells">
     <g>
       <rect x="105.6" y="165.6" width="120" height="120" class="ln" stroke-width="2"/>
@@ -51,42 +51,14 @@ text{fill:var(--tx);font-size:13px}
       <circle cx="165.6" cy="225.6" r="65" class="dash"/>
       <circle cx="102.0" cy="162.0" r="30" class="pin"/>
       <rect x="78.0" y="116.0" width="48" height="92" class="srv"/>
-      <text x="165.6" y="230.6" text-anchor="middle" class="t">0</text>
-    </g>
-    <g>
-      <rect x="243.2" y="165.6" width="120" height="120" class="ln" stroke-width="2"/>
-      <circle cx="303.2" cy="225.6" r="56" class="f1"/>
-      <circle cx="303.2" cy="225.6" r="60" class="gear"/>
-      <circle cx="303.2" cy="225.6" r="65" class="dash"/>
-      <circle cx="366.8" cy="162.0" r="30" class="pin"/>
-      <rect x="342.8" y="116.0" width="48" height="92" class="srv"/>
-      <text x="303.2" y="230.6" text-anchor="middle" class="t">1</text>
-    </g>
-    <g>
-      <rect x="105.6" y="303.2" width="120" height="120" class="ln" stroke-width="2"/>
-      <circle cx="165.6" cy="363.2" r="56" class="f1"/>
-      <circle cx="165.6" cy="363.2" r="60" class="gear"/>
-      <circle cx="165.6" cy="363.2" r="65" class="dash"/>
-      <circle cx="102.0" cy="426.8" r="30" class="pin"/>
-      <rect x="78.0" y="380.8" width="48" height="92" class="srv"/>
-      <text x="165.6" y="368.2" text-anchor="middle" class="t">2</text>
-    </g>
-    <g>
-      <rect x="243.2" y="303.2" width="120" height="120" class="ln" stroke-width="2"/>
-      <circle cx="303.2" cy="363.2" r="56" class="f1"/>
-      <circle cx="303.2" cy="363.2" r="60" class="gear"/>
-      <circle cx="303.2" cy="363.2" r="65" class="dash"/>
-      <circle cx="366.8" cy="426.8" r="30" class="pin"/>
-      <rect x="342.8" y="380.8" width="48" height="92" class="srv"/>
-      <text x="303.2" y="368.2" text-anchor="middle" class="t">3</text>
     </g>
   </g>
   <!-- legend for front view -->
-  <g transform="translate(60,500)">
+  <g transform="translate(60,360)">
     <rect width="14" height="14" class="ln" stroke-width="2"/><text x="22" y="12">30 x 30 mm window (fixed film L1 + corner film L2)</text>
     <circle cx="7" cy="34" r="7" class="f1"/><text x="22" y="39">28 mm open circle, rotating disc L3 behind</text>
     <circle cx="7" cy="58" r="7" class="gear"/><text x="22" y="63">Z30 carrier gear, disc turns 0 to 90 deg</text>
-    <circle cx="7" cy="82" r="7" class="pin"/><text x="22" y="87">Z15 pinion in the outer corner, on the SG90 servo (dashed box)</text>
+    <circle cx="7" cy="82" r="7" class="pin"/><text x="22" y="87">Z15 pinion in one outer corner, on the SG90 servo (dashed box)</text>
   </g>
 
   <!-- ===== SECTION (5 px per mm in height, thickness exaggerated) ===== -->
@@ -144,6 +116,7 @@ text{fill:var(--tx);font-size:13px}
 <div class="note">
   <div><b>Light path</b>L1 (fixed) then L3 (rotating) set the transmitted light by cos squared of the angle. L2 is crossed with L1 so the four corners stay dark at every angle.</div>
   <div><b>Drive</b>The 2:1 gear turns the disc half the servo angle, so a 180 deg servo covers 0 to 90 deg. No hub or gear touches the window. L2 sits 0.3 mm in front of the L3 disc.</div>
+  <div><b>Product</b>One central control module (ESP32, desk sensor, Wi-Fi) plus control modules sold one cell at a time. The user sticks as many modules on the window as needed. The demo is one central module and one control module.</div>
   <div><b>Not measured yet</b>Gear backlash, light lost in the 2 mm acrylic carrier, real transmission versus angle. All go into the 10-point test.</div>
 </div>
 </main>

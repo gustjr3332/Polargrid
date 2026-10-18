@@ -2,7 +2,9 @@
 Hardware: circuits, parts (BOM), and mechanical design for the polarizer window cells.
 
 ## Cell design v1 (corner filler)
-Demo panel: 4 cells (2 x 2), 30 x 30 mm window per cell. A square window with a rotating polarizer cannot be covered
+Product concept: one central control module plus control modules sold one cell at a time. Each control module is a
+square unit that the user sticks on the window; the user buys as many as the window needs. The 11/4 demo hardware is one
+central module and one control module (30 x 30 mm window). A square window with a rotating polarizer cannot be covered
 corner to corner by a rotating square, so the rotating film is a disc and the corners are filled with fixed film.
 
 Layers, outdoor side to room side:
@@ -20,8 +22,8 @@ Layers, outdoor side to room side:
 - The disc stays larger than the hole at every angle, so no light bypasses it.
 - Transmission is about T_single^2 x cos^2(theta) between L1 and L3 (Malus). Measure it with the 10-point test before
   trusting any number.
-- Film per cell: 3 pieces cut on a 30 mm grid. 4 cells = 12 pieces, plus about 6 spare for the angle-vs-lux test and
-  cutting mistakes. One 300 x 200 mm sheet gives 60.
+- Film per cell: 3 pieces cut on a 30 mm grid, plus about 6 spare for the angle-vs-lux test and cutting mistakes.
+  One 300 x 200 mm sheet gives 60.
 - Mark the transmission axis on the sheet before cutting, and check it by laying two pieces at 90 deg (dark) and 0 deg
   (clear).
 
@@ -34,24 +36,22 @@ servo sits behind the plate under the pinion. No hub or gear touches the window.
 | Carrier gear | clear acrylic 2 mm, module 1, 30 teeth (pitch 30 mm, tip 32 mm); L3 film disc glued on its face | 1 |
 | Pinion | module 1, 15 teeth (pitch 15 mm, tip 17 mm), fixed to the servo horn | 1 |
 | Servo | SG90 class (about 23 x 12 mm body) | 1 |
-| Gear plate | acrylic 2 mm, bore 32.4 mm for the carrier gear, slot for the pinion | shared |
-| Front plate | opaque, 30 x 30 mm opening, holds L1 and L2 | shared |
+| Gear plate | acrylic 2 mm, bore 32.4 mm for the carrier gear, slot for the pinion | 1 |
+| Front plate | opaque, 30 x 30 mm opening, holds L1 and L2 | 1 |
 
 - Centre distance 22.5 mm. Ratio 2:1, so the 180 deg servo turns the disc 90 deg (the disc turns the opposite way).
   Disc angle = servo angle / 2, up to the sign and offset found by calibration.
 - A gear instead of a rubber roller means no slip, so the angle does not drift and no homing run is needed.
 - Layer order: L1, L2 (a 0.3 mm air gap behind it), L3 film on the carrier gear. The pinion is as thick as the gear, so it
   never touches the film.
-- Frame: put each pinion in the outer diagonal corner of its cell (cell 0 top left, 1 top right, 2 bottom left, 3 bottom
-  right). The corner of the square window lies outside the 30 mm disc and is kept dark by L2 anyway, so a pinion there
-  hides no open area and no pinion sits between two cells. The pinion centre is 22.5 mm from the cell centre along the
-  diagonal (about 15.9 mm in each axis). Neighbouring cell centres are 34.4 mm apart (bores 32.4 mm plus a 2 mm wall).
-  From a cell centre to the outer edge is about 15.9 + 8.5 (pinion tip) + 2 = 26.4 mm, so the 2 x 2 panel is about
-  87 x 87 mm (calculated, check on the drawing). The servo body sits behind the pinion and may overhang the frame, so
-  make the back plate about 10 mm larger than the front plate.
-- The windows are 4.4 mm apart (opaque wall). This is the price of option B.
+- Frame: put the pinion in one outer diagonal corner of the cell. The corner of the square window lies outside the 30 mm
+  disc and is kept dark by L2 anyway, so a pinion there hides no open area. The pinion centre is 22.5 mm from the cell
+  centre along the diagonal (about 15.9 mm in each axis). From the cell centre to the pinion-side edge is about
+  15.9 + 8.5 (pinion tip) + 2 = 26.4 mm, to the other edge 16.2 (bore) + 2 = 18.2 mm, so the module is about
+  45 x 45 mm (calculated, check on the drawing). The servo body sits behind the pinion and may overhang the frame, so
+  make the back plate about 10 mm larger than the front plate. How the module sticks to the glass is not decided.
 - Laser cutting: the gear teeth need the kerf (about 0.1 to 0.2 mm) added to the drawing. Cut a test pair and check the
-  backlash before cutting four.
+  backlash before the final cut.
 
 Not measured yet: backlash and angle resolution of the gear pair (a servo with about 1 deg dead band gives about 0.5 deg
 at the disc), and the light lost in the 2 mm acrylic carrier. Both go into the 10-point test.

@@ -1,13 +1,13 @@
-// 4-cell polarizer panel prototype (ESP32, Arduino framework). Runs in Wokwi: see diagram.json.
+// One-cell polarizer control module prototype (ESP32, Arduino framework). Runs in Wokwi: see diagram.json.
 // Serial commands (115200): "A 2 45", "ALL 90", "OPEN". Replies "OK <cell> <disc deg> <servo deg>".
 #include <Arduino.h>
 #include <ESP32Servo.h>
 #include "cell_logic.h"
 
-const int SERVO_PINS[N_CELLS] = {13, 26, 14, 27};
+const int SERVO_PINS[N_CELLS] = {13};   // more modules: 26, 14, 27 (GPIO 12 is a strapping pin, avoid it)
 Servo servos[N_CELLS];
 Cells cells;
-float shown[N_CELLS] = {-1, -1, -1, -1};
+float shown[N_CELLS] = {-1};
 
 void apply() {
   for (int k = 0; k < N_CELLS; k++) {

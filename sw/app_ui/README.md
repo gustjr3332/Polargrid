@@ -63,7 +63,7 @@ A real Kotlin/Compose app is after 11/4.
 
 ## Demo page (for the 11/4 maker contest)
 
-A separate web page shows 1,000 virtual cells (the real 4-cell panel is demonstrated separately, not on this page). It is a viewer, so like the app it reads
+A separate web page shows 1,000 virtual cells (the real one-cell module is demonstrated separately, not on this page). It is a viewer, so like the app it reads
 the CSE only. Plan and phases: `docs/PolaGrid_시연페이지_계획.md` (Korean, local only).
 
 Status 2026-10-15: phase P0 is done. `demo/static/index.html` is one file with no libraries and draws a 25 x 40 grid on a
