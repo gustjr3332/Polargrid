@@ -1,0 +1,23 @@
+## zone.setup
+POST  CAdmin 1 {"m2m:acp": {"rn": "real1envacp", "pv": {"acr": [{"acor": ["Creal1env"], "acop": 63}, {"acor": ["Creal1ctl", "/tinyiot/Creal1ctl"], "acop": 51}, {"acor": ["Creal1view", "/tinyiot/Creal1view"], "acop": 50}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}}}
+POST  Creal1env 2 {"m2m:ae": {"rn": "real1env", "api": "Npolagrid", "rr": true, "srv": ["3"], "poa": ["http://127.0.0.1:9790/env"]}}
+POST real1env Creal1env 3 {"m2m:cnt": {"rn": "sun", "mni": 10, "acpi": ["RI-real1envacp"]}}
+POST real1env Creal1env 3 {"m2m:cnt": {"rn": "desks", "mni": 10, "acpi": ["RI-real1envacp"]}}
+POST  CAdmin 1 {"m2m:acp": {"rn": "real1p0acp", "pv": {"acr": [{"acor": ["Creal1p0"], "acop": 63}, {"acor": ["Creal1ctl", "/tinyiot/Creal1ctl"], "acop": 51}, {"acor": ["Creal1view", "/tinyiot/Creal1view"], "acop": 50}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}}}
+POST  Creal1p0 2 {"m2m:ae": {"rn": "real1p0", "api": "Npolagrid", "rr": true, "srv": ["3"], "poa": ["http://127.0.0.1:9790/p0"]}}
+POST real1p0 Creal1p0 3 {"m2m:cnt": {"rn": "command", "mni": 10, "acpi": ["RI-real1p0acp"], "lbl": ["polagrid/real1/command"]}}
+POST real1p0 Creal1p0 28 {"cod:opeLl": {"rn": "state", "cnd": "org.onem2m.common.moduleclass.openLevel", "opeLl": 100, "minLl": 0, "maxLl": 100, "acpi": ["RI-real1p0acp"], "lbl": ["polagrid/real1/state"]}}
+POST real1p0/command Creal1p0 23 {"m2m:sub": {"rn": "s", "nu": ["http://127.0.0.1:9790/p0"], "enc": {"net": [3]}, "nct": 1}}
+## controller.setup
+GET defaultACP CAdmin 0 
+PUT defaultACP CAdmin 0 {"m2m:acp": {"pv": {"acr": [{"acor": ["C*ctl", "C*view", "/tinyiot/C*ctl", "/tinyiot/C*view"], "acop": 32}]}}}
+POST  CAdmin 1 {"m2m:acp": {"rn": "real1ctlacp", "pv": {"acr": [{"acor": ["Creal1ctl", "/tinyiot/Creal1ctl"], "acop": 63}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}}}
+POST  Creal1ctl 2 {"m2m:ae": {"rn": "real1ctl", "api": "Npolagrid", "rr": true, "srv": ["3"], "poa": ["http://127.0.0.1:9791/ctl"]}}
+GET ?fu=1&lbl=polagrid/real1/command&ty=3 Creal1ctl 0 
+POST real1ctl Creal1ctl 9 {"m2m:grp": {"rn": "grp", "mt": 3, "mnm": 1, "acpi": ["RI-real1ctlacp"], "mid": ["TinyIoT-mn001/real1p0/command"]}}
+POST real1env/desks Creal1ctl 23 {"m2m:sub": {"rn": "ctl", "nu": ["http://127.0.0.1:9791/ctl"], "enc": {"net": [3]}, "nct": 1}}
+## controller.command
+POST real1ctl/grp/fopt Creal1ctl 4 {"m2m:cin": {"con": "{\"cmd\": \"real1c1\", \"angles\": [45.0]}"}}
+## cell applies command
+PUT real1p0/state Creal1p0 0 {"cod:opeLl": {"opeLl": 50}}
+POST real1env/desks Creal1env 4 {"m2m:cin": {"con": "{\"cmd\": \"real1c1\", \"lux\": [15.1, 2.1]}"}}
