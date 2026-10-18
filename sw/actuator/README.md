@@ -1,20 +1,14 @@
 # actuator
-Polarizer drive software: ESP32 firmware that turns the inner polarizer of each cell (servo) and reports the angle over oneM2M.
+Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of one control module with a 28BYJ-48 stepper and reports the angle over oneM2M (the oneM2M part is not written yet).
 
-> 10-18: the hardware changed to a 150 mm cell driven by a 28BYJ-48 stepper (`hw/README.md`). The firmware below still drives a servo and has to be rewritten for the stepper (4-pin half-step drive, homing against a stop, angle to steps). The angle convention, parser and watchdog stay.
+## Prototype (one control module, ESP32, 28BYJ-48 + ULN2003)
+- `src/cell_logic.h`: angle to half steps, half-step coil table, a position-keeping `Stepper` (homing first, then one half step per call), serial command parser, watchdog. No hardware calls, tested on the PC:
+  `g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic && ./test_logic` (passes, 2026-10-18).
+- `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 26, 14, 27 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it). One half step every 2 ms, the serial parser is never blocked.
+  Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`, `HOMING` at boot and `HOMED` when done.
+  Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (150 / 24) / 360, about 71.1 half steps per degree (`hw/README.md`).
+- Homing: at boot the motor drives `HOME_OVERDRIVE_DEG` = 100 deg of disc back toward the stop pin, then position 0 is set. Coils switch off when the motor is idle.
+- Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
+- Build: `pio run` (PlatformIO, ESP32 Arduino). Built 2026-10-18 (RAM 6.6 %, flash 22.7 %).
 
-## Prototype (one control module, ESP32, Wokwi)
-- `src/cell_logic.h`: angle to servo mapping, serial command parser, watchdog. No hardware calls, tested on the PC:
-  `g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic && ./test_logic` (passes, 2026-10-16).
-- `src/main.cpp`: one servo on GPIO 13 (`N_CELLS = 1`, one control module per central module; more modules would use 26, 14, 27, never the strapping pin 12). Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`.
-  Angles follow polagrid (0 = open, 90 = closed). Servo = 180 - 2 x disc angle (2:1 gear, `hw/README.md`).
-- Watchdog: no command for `WATCHDOG_MS` opens all cells (30 min by default, 10 s in `platformio.ini` for the simulator).
-- Simulator: `diagram.json` + `wokwi.toml` (Wokwi for VS Code or wokwi.com). Build first with PlatformIO
-  (`pio run`), then start the simulation.
-
-Tested 2026-10-16: `pio run` builds (RAM 6.7 %, flash 23.3 %). In Wokwi (serial over `rfc2217://localhost:4000`, set by
-`rfc2217ServerPort` in `wokwi.toml`) `A`, `ALL` and `OPEN` moved the servos as expected, bad input returned `ERR`, and
-the watchdog opened the cells after 10 s without a command. Simulation only, nothing was measured on hardware.
-That run used the earlier 4-servo build; the one-servo build (10-18) passed the PC test only, `pio run` and Wokwi were not rerun.
-
-Not done: `SERVO_OPEN_DEG` is a placeholder until the real panel is calibrated. No oneM2M or MQTT yet.
+Not done: the half steps per turn (4096), the step interval (2 ms) and the turning direction are typical values to calibrate on the real module (flip `phase` direction if the disc turns the wrong way). No oneM2M or MQTT yet. The earlier Wokwi simulation (servo) was removed with the servo hardware; the 28BYJ-48 is not simulated.

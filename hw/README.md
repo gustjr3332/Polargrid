@@ -40,6 +40,7 @@ square. The free space in a corner is a circle of 25.7 mm and a square of 22 mm.
   disc, about 0.014 deg per half step. Its body (d 28 mm) does not fit in the corner, so it sits behind the back plate
   with the body pushed outside the window edge by its 8 mm shaft offset. The frame border behind the window has to leave
   room for it (not checked).
-- Home: at power-up drive the disc against a small stop block glued on the groove plate and call that 0 deg.
+- Home: the disc has an arc slot (3.6 mm wide, about 93 deg) and a 3 x 3 mm pin glued on the back plate sits in it. At power-up the firmware drives the disc 100 deg back until the pin touches the slot end and calls that 0 deg; the other end of the slot is the 90 deg limit.
+- Laser drawings (DXF) and the script that makes them: `cutting/` (`cell150_cut.py`, preview `cut_overview.png`). Kerf and tooth backlash are defaults, not tested on the real machine.
 - Not measured yet: backlash, friction of the disc in the groove, light lost in the 2 mm acrylic disc, and whether
   the 1 mm of play between a 3 mm groove plate and a 2 mm disc needs a foam shim.

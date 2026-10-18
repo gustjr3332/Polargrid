@@ -36,6 +36,9 @@ x0, y0 = P(-R, R)
 corner_fill = (f"M{x0:.1f},{y0:.1f} h{W*S:.1f} v{W*S:.1f} h{-W*S:.1f} Z "
                f"M{cx+R*S:.1f},{cy:.1f} A{R*S:.1f},{R*S:.1f} 0 1 0 {cx-R*S:.1f},{cy:.1f} "
                f"A{R*S:.1f},{R*S:.1f} 0 1 0 {cx+R*S:.1f},{cy:.1f} Z")
+slot_pts = [P(72 * math.cos(math.radians(a)), 72 * math.sin(math.radians(a))) for a in [223.8 + (317.0 - 223.8) * i / 40 for i in range(41)]]
+slot_path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in slot_pts)
+pin_xy = P(72 * math.cos(math.radians(225)), 72 * math.sin(math.radians(225)))
 icx, icy = P(-(R - r_in), -(R - r_in))                         # free circle, bottom left corner
 bx0, by0 = P(-86, 86)
 sensx, sensy = P(-9, 71)
@@ -49,7 +52,10 @@ svg_front = f'''
   <circle cx="{cx}" cy="{cy}" r="{R*S}" class="f1"/>
   <path d="{corner_fill}" fill-rule="evenodd" class="f2"/>
   <circle cx="{cx}" cy="{cy}" r="{(R+1)*S}" class="gear"/>
-  <path d="{sector_ticks(35, 135, 42)}" class="tick"/>
+  <path d="{sector_ticks(40, 140.8, 42)}" class="tick"/>
+  <path d="{slot_path}" class="slot"/>
+  <rect x="{pin_xy[0]-1.5*S:.1f}" y="{pin_xy[1]-1.5*S:.1f}" width="{3*S:.1f}" height="{3*S:.1f}" class="pin"/>
+  <text class="g" x="{pin_xy[0]+14:.1f}" y="{pin_xy[1]+4:.1f}">stop slot in the disc, pin on the back plate</text>
   <text class="g" x="{cx-110:.1f}" y="{by0+30:.1f}" text-anchor="middle">teeth on a 100 deg arc, 42 teeth</text>
   <path d="{gear_path(pc, 24, 12)}" class="pin"/>
   <circle cx="{P(*pc)[0]:.1f}" cy="{P(*pc)[1]:.1f}" r="{2.5*S}" class="pin"/>
@@ -116,7 +122,7 @@ svg{width:100%;height:auto;display:block}
 text{fill:var(--tx);font-size:13px} .m,.g{fill:var(--mut)} .g{font-size:12px} .t{font-size:15px;font-weight:600}
 .ln{stroke:var(--line);fill:none} .dash{stroke:var(--mut);fill:none;stroke-dasharray:5 4}
 .f1{fill:var(--film);opacity:.85} .f2{fill:var(--film2);opacity:.85} .plate{fill:var(--dark)} .glass{fill:var(--gl)} .disc{fill:var(--gl);stroke:var(--mut)}
-.gear{fill:none;stroke:var(--acc);stroke-width:1.5} .tick{stroke:var(--acc);stroke-width:1.2;fill:none}
+.gear{fill:none;stroke:var(--acc);stroke-width:1.5} .slot{fill:none;stroke:var(--warn);stroke-width:7;opacity:.35} .tick{stroke:var(--acc);stroke-width:1.2;fill:none}
 .pin{fill:none;stroke:var(--warn);stroke-width:2} .srv{fill:none;stroke:var(--mut);stroke-width:1.5;stroke-dasharray:4 3}
 .sen{fill:var(--ok)} .dim{stroke:var(--mut);fill:none}
 .note{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}

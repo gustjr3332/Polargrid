@@ -7,8 +7,12 @@
 
 constexpr int N_CELLS = 1;   // one control module per central module in the prototype; raise it to drive more
 constexpr float DISC_MAX_DEG = 90.0f;
-constexpr float SERVO_OPEN_DEG = 180.0f;   // servo angle when the disc is open (calibrate on the real panel)
-constexpr float SERVO_PER_DISC = -2.0f;    // 2:1 gear, the disc turns the opposite way (hw/README.md)
+// 28BYJ-48 half-step drive, Z24 pinion on the Z150 disc rim (hw/README.md). The half steps per turn is the typical
+// datasheet value (about 4096); calibrate it on the real module with the 10-point test.
+constexpr float HALF_STEPS_PER_REV = 4096.0f;
+constexpr float GEAR_RATIO = 150.0f / 24.0f;
+constexpr float STEPS_PER_DISC_DEG = HALF_STEPS_PER_REV * GEAR_RATIO / 360.0f;   // about 71.1
+constexpr float HOME_OVERDRIVE_DEG = 100.0f;   // at boot drive this far toward the stop, so wherever the disc was it ends on it
 
 #ifndef WATCHDOG_MS
 #define WATCHDOG_MS 1800000UL              // same 30 min as polagrid/zone.py WATCHDOG_MIN
@@ -16,10 +20,31 @@ constexpr float SERVO_PER_DISC = -2.0f;    // 2:1 gear, the disc turns the oppos
 
 inline float clampDisc(float d) { return d < 0 ? 0 : (d > DISC_MAX_DEG ? DISC_MAX_DEG : d); }
 
-inline int servoFromDisc(float disc) {
-  float s = SERVO_OPEN_DEG + SERVO_PER_DISC * clampDisc(disc);
-  return (int)(s + 0.5f);
-}
+inline long stepsFromDisc(float disc) { return (long)(clampDisc(disc) * STEPS_PER_DISC_DEG + 0.5f); }
+
+// Half-step coil pattern for IN1..IN4 of the ULN2003 (bit 0 = IN1).
+constexpr uint8_t HALF_STEP[8] = {0b0001, 0b0011, 0b0010, 0b0110, 0b0100, 0b1100, 0b1000, 0b1001};
+
+// Position keeping of one stepper. pos counts half steps from the stop (0 = open). Moving up = disc angle up.
+struct Stepper {
+  long pos = 0, target = 0;
+  int phase = 0;
+  bool homed = false;
+  long homeLeft = (long)(HOME_OVERDRIVE_DEG * STEPS_PER_DISC_DEG + 0.5f);
+  // One half step toward the target (or toward the stop while homing). Returns the coil mask, or -1 when idle
+  // (coils off, the motor does not heat while it waits).
+  int step() {
+    if (!homed) {
+      if (homeLeft-- > 0) { phase = (phase + 7) % 8; return HALF_STEP[phase]; }   // toward the stop
+      homed = true; pos = 0;
+      return -1;
+    }
+    if (pos == target) return -1;
+    phase = (phase + (target > pos ? 1 : 7)) % 8;
+    pos += target > pos ? 1 : -1;
+    return HALF_STEP[phase];
+  }
+};
 
 struct Cells {
   float disc[N_CELLS] = {};
