@@ -47,10 +47,14 @@ def roles(run):
     return {"ctl": f"C{run}ctl", "view": f"C{run}view", "env": f"C{run}env"}
 
 
-def make_acp(c, rn, rules):
-    """Provision an ACP under the CSE base as CAdmin; rules = [(originators, acop)]. Returns its ri."""
+def make_acp(c, rn, rules, exist_ok=False):
+    """Provision an ACP under the CSE base as CAdmin; rules = [(originators, acop)]. Returns its ri.
+    exist_ok: if the ACP is already there, read its ri back (its rules are left as they are)."""
     r = c.post("", ADMIN, {"m2m:acp": {"rn": rn, "pv": {"acr": [{"acor": o, "acop": op} for o, op in rules]},
-                                       "pvs": {"acr": [{"acor": [ADMIN], "acop": ALL}]}}}, 1)
+                                       "pvs": {"acr": [{"acor": [ADMIN], "acop": ALL}]}}}, 1, exist_ok)
+    if r is None:
+        r = c._session().get(f"{c.host}/{c.cse}/{rn}", headers=_headers(ADMIN), timeout=30)
+        r.raise_for_status()
     return r.json()["m2m:acp"]["ri"]
 
 
@@ -157,19 +161,21 @@ class Controller:
         self._waiting = {}
         self.rx = Receiver(port, self._on_desks)
 
-    def setup(self, n_cells):
+    def setup(self, n_cells, exist_ok=False):
+        """exist_ok: resources left by an earlier run with the same run id are kept, so a restart is safe."""
         c, run = self.c, self.run
         self.rx.start()
         grant_discovery(c)
-        acp = make_acp(c, f"{run}ctlacp", [(remote(self.me), ALL)])
+        acp = make_acp(c, f"{run}ctlacp", [(remote(self.me), ALL)], exist_ok)
         c.post("", self.me, {"m2m:ae": {"rn": f"{run}ctl", "api": "Npolagrid", "rr": True, "srv": ["3"],
-                                        "poa": [self.rx.url("ctl")]}}, 2)
+                                        "poa": [self.rx.url("ctl")]}}, 2, exist_ok)
         mid = c.discover(self.me, lbl=f"polagrid/{run}/command", ty=3)   # the zone's cells, found by label
         if len(mid) != n_cells:
             raise RuntimeError(f"discovered {len(mid)} command containers, expected {n_cells}")
-        c.post(f"{run}ctl", self.me, {"m2m:grp": {"rn": "grp", "mt": 3, "mnm": n_cells, "acpi": [acp], "mid": mid}}, 9)
+        c.post(f"{run}ctl", self.me, {"m2m:grp": {"rn": "grp", "mt": 3, "mnm": n_cells, "acpi": [acp], "mid": mid}}, 9,
+               exist_ok)
         c.post(f"{run}env/desks", self.me, {"m2m:sub": {"rn": "ctl", "nu": [self.rx.url("ctl")],
-                                                        "enc": {"net": [3]}, "nct": 1}}, 23)
+                                                        "enc": {"net": [3]}, "nct": 1}}, 23, exist_ok)
 
     def sun(self):
         return self.c.latest(f"{self.run}env/sun", self.me)

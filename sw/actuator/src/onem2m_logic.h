@@ -137,7 +137,9 @@ inline bool jsonString(const std::string& js, const char* key, std::string& out)
 // Takes this cell's entry angles[i]. False on anything malformed, so a bad command is never applied.
 inline bool parseCommandCin(const std::string& body, int i, std::string& cmd, float& angle) {
   std::string con;
-  if (!jsonString(body, "con", con) || !jsonString(con, "cmd", cmd) || cmd.empty()) return false;
+  // tinyIoT returns `con` as a JSON object (not a string) for CINs read back from its DB after a restart
+  if (!jsonString(body, "con", con)) con = body;
+  if (!jsonString(con, "cmd", cmd) || cmd.empty()) return false;
   size_t p = con.find("\"angles\"");
   if (p == std::string::npos || (p = con.find('[', p)) == std::string::npos) return false;
   const char* s = con.c_str() + p + 1;

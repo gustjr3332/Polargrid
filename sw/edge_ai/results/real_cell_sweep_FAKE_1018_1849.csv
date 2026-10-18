@@ -1,0 +1,14 @@
+# FAKE DATA from tools/fake_cell.py (simulated cos^2 model), not a measurement
+# run fk1, sensor cell, 3 readings per angle, 2026-10-18T18:49:04.482493+09:00
+angle,lux,ratio
+0,822.5,1.0
+10,785.1,0.9545
+20,723.3,0.8794
+30,615.7,0.7486
+40,487.8,0.5931
+50,343.2,0.4172
+60,213.6,0.2597
+70,109.2,0.1328
+80,39.3,0.0478
+90,14.9,0.0182
+0,820.1,0.997

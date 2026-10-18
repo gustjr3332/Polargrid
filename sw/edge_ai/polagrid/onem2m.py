@@ -12,6 +12,13 @@ import requests
 _local = threading.local()
 
 
+def con(cin):
+    """Content of a CIN as a dict. tinyIoT returns `con` as a string, but as a JSON object for CINs it reloaded
+    from its database after a restart (seen 2026-10-18), so accept both."""
+    c = cin["con"]
+    return c if isinstance(c, dict) else json.loads(c)
+
+
 def _headers(origin, ty=None):
     ct = "application/json" + (f";ty={ty}" if ty else "")
     return {"X-M2M-Origin": origin, "X-M2M-RI": uuid.uuid4().hex, "X-M2M-RVI": "3",
@@ -29,9 +36,12 @@ class Client:
             _local.s = requests.Session()
         return _local.s
 
-    def post(self, path, origin, body, ty):
+    def post(self, path, origin, body, ty, exist_ok=False):
+        """exist_ok: a 409 (resource already there) returns None instead of raising."""
         r = self._session().post(f"{self.host}/{self.cse}/{path}".rstrip("/"), headers=_headers(origin, ty),
                                  data=json.dumps(body), timeout=30)
+        if exist_ok and r.status_code == 409:
+            return None
         if not 200 <= r.status_code < 300:
             raise RuntimeError(f"POST {path} ty={ty}: {r.status_code} {r.text[:200]}")
         return r
@@ -65,7 +75,7 @@ class Client:
         r = self._session().get(f"{self.host}/{self.cse}/{path}/la", headers=_headers(origin), timeout=30)
         if r.status_code != 200:
             raise RuntimeError(f"GET {path}/la: {r.status_code} {r.text[:200]}")
-        return json.loads(r.json()["m2m:cin"]["con"])
+        return con(r.json()["m2m:cin"])
 
 
 class Receiver:
@@ -82,10 +92,10 @@ class Receiver:
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 try:
-                    con = json.loads(json.loads(body)["m2m:sgn"]["nev"]["rep"]["m2m:cin"]["con"])
+                    content = con(json.loads(body)["m2m:sgn"]["nev"]["rep"]["m2m:cin"])
                 except (KeyError, ValueError):
                     return                      # subscription verification request, nothing to handle
-                handler(self.path.strip("/"), con)
+                handler(self.path.strip("/"), content)
 
             def log_message(self, *args):
                 pass
@@ -93,11 +103,15 @@ class Receiver:
         self.port = port
         self._server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
         self._server.daemon_threads = True
+        self._started = False
 
     def url(self, name):
         return f"http://127.0.0.1:{self.port}/{name}"
 
     def start(self):
+        if self._started:                   # setup() may be retried
+            return
+        self._started = True
         threading.Thread(target=self._server.serve_forever, daemon=True).start()
 
     def stop(self):

@@ -59,6 +59,7 @@ int main(int argc, char** argv) {
   float keep = a;
   assert(!parseCommandCin("{\"m2m:cin\": {\"con\": \"{\\\"cmd\\\": \\\"x\\\", \\\"angles\\\": [abc]}\"}}", 0, cmd, a) && a == keep);
   assert(!parseCommandCin("{\"m2m:cin\": {\"con\": \"{\\\"angles\\\": [1]}\"}}", 0, cmd, a));   // no cmd id
+  assert(parseCommandCin("{\"m2m:cin\": {\"con\": {\"cmd\": \"r5c1\", \"angles\": [33.5]}}}", 0, cmd, a) && cmd == "r5c1" && a == 33.5f);   // object-form con
   assert(!parseCommandCin("{\"m2m:dbg\": \"resource does not exist\"}", 0, cmd, a));
   assert(!parseCommandCin("{\"m2m:cin\": {\"con\": \"{\\\"cmd\\\": \\\"x\\\", \\\"angles\\\": [1", 0, cmd, a));   // cut off
 
