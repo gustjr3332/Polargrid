@@ -258,6 +258,8 @@ def build_app(hub, replay):
 
     async def replay_loop():
         frames = [json.loads(l) for l in Path(replay["file"]).read_text().splitlines() if l.strip()]
+        state["frame"], state["id"] = frames[0], 1
+        await state["go"].wait()        # start the day when the first page connects, not when the server starts
         while True:
             for f in frames:
                 state["frame"], state["id"] = f, state["id"] + 1
@@ -268,6 +270,7 @@ def build_app(hub, replay):
     @app.on_event("startup")
     async def _start():
         if not hub:
+            state["go"] = asyncio.Event()
             asyncio.create_task(replay_loop())
 
     @app.get("/api/frame")
@@ -280,6 +283,8 @@ def build_app(hub, replay):
 
     @app.get("/api/events")
     async def events():
+        if not hub:
+            state["go"].set()
         async def gen():
             last = -1
             while True:
@@ -331,6 +336,10 @@ def build_app(hub, replay):
                     yield "event: stats\ndata: {\"replay\": true}\n\n"
                 await asyncio.sleep(0.25)
         return StreamingResponse(gen(), media_type="text/event-stream")
+
+    @app.get("/compare.json")
+    def compare():
+        return FileResponse(HERE / "compare.json")   # built by make_compare.py from the measured baseline CSV
 
     @app.get("/flow")
     def flow_page():

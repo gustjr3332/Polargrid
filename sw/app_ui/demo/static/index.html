@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PolaGrid Demo</title>
 <style>
-:root{--bg:#0b0f16;--panel:#121923;--line:#1f2a38;--fg:#d7e2ee;--dim:#7d8da1;--acc:#6cc4f5;--warn:#f0b35a}
+:root{--bg:#0b0f16;--panel:#121923;--line:#1f2a38;--fg:#d7e2ee;--dim:#a9b8c9;--acc:#6cc4f5;--warn:#f0b35a}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font:16px/1.3 system-ui,Segoe UI,Arial,sans-serif}
 #app{display:grid;grid-template-columns:1fr 440px;grid-template-rows:56px 1fr 40px;height:100vh;gap:12px;padding:12px}
@@ -16,10 +16,10 @@ h1{font-size:22px;margin:0;letter-spacing:.04em}
 canvas{position:absolute;inset:0;width:100%;height:100%}
 aside{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto}
 section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:clamp(8px,1.4vh,14px) 16px;flex:none}
-section h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+section h2{margin:0 0 10px;font-size:15px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
 .row{display:flex;justify-content:space-between;align-items:baseline;margin:clamp(3px,.6vh,6px) 0}
 .row b{font-size:clamp(20px,3vh,30px);font-variant-numeric:tabular-nums;font-weight:600}
-.row small{color:var(--dim);font-size:14px}
+.row small{color:var(--dim);font-size:16px}
 .bar{position:relative;height:10px;background:#0b0f16;border-radius:5px;margin:4px 0 10px}
 .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:5px}
 .bar u{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--warn)}
@@ -28,14 +28,30 @@ section h2{margin:0 0 10px;font-size:13px;font-weight:600;color:var(--dim);text-
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 button,select{background:#1a2535;color:var(--fg);border:1px solid #2c3d54;border-radius:4px;padding:clamp(5px,.9vh,8px) 14px;font:inherit;cursor:pointer}
 button:hover{border-color:var(--acc)}
-footer{grid-column:1/3;display:flex;align-items:center;gap:28px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:0 16px;color:var(--dim)}
+footer{grid-column:1/3;font-size:18px;display:flex;align-items:center;gap:28px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:0 16px;color:var(--dim)}
 footer b{color:var(--fg)}
 #mode{background:var(--acc);color:#04202f;font-weight:700;padding:2px 10px;border-radius:3px}
+#view{margin-left:auto;font-size:18px;font-weight:700;padding:8px 20px;border-color:var(--acc)}
+#cmp{grid-column:1/3;grid-row:2;display:none;flex-direction:column;justify-content:center;gap:2.5vh;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:3vh 3vw;min-height:0}
+body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
+#cmp h2{margin:0;font-size:clamp(28px,4vh,44px);color:#fff}
+#cmp table{border-collapse:collapse;width:100%;font-size:clamp(22px,3.3vh,36px);color:#fff;font-variant-numeric:tabular-nums}
+#cmp th,#cmp td{padding:1.4vh 1vw;border-bottom:2px solid #2c3d54;text-align:right}
+#cmp th:first-child,#cmp td:first-child{text-align:left}
+#cmp thead th{white-space:nowrap;font-size:clamp(20px,2.8vh,30px);vertical-align:bottom}
+#cmp .ai{background:#173049}
+#cmp .na{color:var(--warn);font-size:.7em}
+#cmp td small{display:block;font-size:.62em;color:#c3cfdc}
+#cmp p{margin:0;font-size:clamp(20px,2.8vh,30px);color:#fff}
+#cmp .lim{color:var(--warn);font-weight:700}
 </style>
 </head>
 <body>
 <div id="app">
-  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells</span></header>
+  <header><h1>PolaGrid</h1><span class="badge">DEMO DATA</span><span style="color:var(--dim)">1,000 virtual cells</span><button id="view">Comparison table</button></header>
+  <div id="cmp"><h2>Glare and desk light: PolaGrid AI vs. common methods</h2>
+    <table><thead></thead><tbody></tbody></table>
+    <p class="lim">Simulated room, not measured on hardware.</p><p id="cmp-src"></p></div>
   <div id="stage"><canvas id="cv"></canvas></div>
   <aside>
     <section><h2>Desk illuminance</h2>
@@ -51,8 +67,8 @@ footer b{color:var(--fg)}
       <div class="row"><span>Latency p95</span><b id="p95">-</b><small>ms</small></div>
       <div class="row"><span>Servo moves</span><b id="mv">-</b><small>total</small></div>
     </section>
+    <section><h2>Simulated time</h2><div id="clock">--:--</div></section>
     <section id="ctl"><h2>Simulation</h2>
-      <div id="clock">--:--</div>
       <div class="btns"><button id="run">Start</button>
         <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select></div>
       <div class="btns"><button id="ev-cloud">Cloud</button><button id="ev-turn">Turn window</button><button id="ev-reset">Reset</button></div>
@@ -154,6 +170,22 @@ $("run-id").textContent = RUN_ID;
 sim.cells.fill(15);
 const t0 = +new URLSearchParams(location.search).get("t"); if (t0) sim.min = t0 * 60; // ?t=12 starts at 12:00 (rehearsal)
 addEventListener("resize", () => last && draw(last));
+
+// ---- comparison table (compare.json, built by make_compare.py from the measured baseline CSV) ----
+const METRICS = [["glare_h", "Glare", "desk-hours per day, lower is better", 2], ["under_lit_h", "Desk too dark", "desk-hours per day below 500 lux, sun up", 2],
+  ["mean_desk_lux", "Mean desk light", "lux", 0], ["servo_moves", "Motor moves", "per day", 0]];
+$("view").onclick = () => {
+  const on = document.body.classList.toggle("cmp");
+  $("view").textContent = on ? "1,000 cells" : "Comparison table";
+  if (!on) { last && draw(last); return; }
+  fetch("/compare.json").then(r => r.json()).then(d => {
+    const cls = m => m.startsWith("AI") ? ' class="ai"' : "";
+    document.querySelector("#cmp thead").innerHTML = "<tr><th></th>" + d.rows.map(r => `<th${cls(r.method)}>${r.method}</th>`).join("") + "</tr>";
+    document.querySelector("#cmp tbody").innerHTML = METRICS.map(([k, name, unit, dp]) => `<tr><td>${name}<small>${unit}</small></td>` +
+      d.rows.map(r => `<td${cls(r.method)}>${r[k] == null ? '<span class="na">not measured</span>' : r[k].toFixed(dp)}</td>`).join("") + "</tr>").join("");
+    $("cmp-src").textContent = `${d.test_days} test days, AI trained on ${d.train_days} days. ${d.limits.replace(/^.*?hardware\. /, "")} Source: ${d.source}`;
+  }).catch(() => { document.querySelector("#cmp tbody").innerHTML = '<tr><td class="na">compare.json not found: run make_compare.py</td></tr>'; });
+};
 const fake = setInterval(tick, TICK_MS);
 tick();
 

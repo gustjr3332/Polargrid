@@ -1,0 +1,44 @@
+{
+ "source": "sw/edge_ai/results/baseline_compare.csv",
+ "made_by": "python -m polagrid.evaluate --csv (re-run 2026-10-16)",
+ "test_days": 20,
+ "train_days": 60,
+ "limits": "Simulated room (12 cells, 2 desks, physics model), not measured on hardware. Per-day averages; desk-hours are summed over both desks.",
+ "rows": [
+  {
+   "method": "AI (1)+(2) probe",
+   "glare_h": 0.06,
+   "under_lit_h": 16.71,
+   "mean_desk_lux": 346.0,
+   "servo_moves": 851.0
+  },
+  {
+   "method": "AI (3) predict",
+   "glare_h": 0.24,
+   "under_lit_h": 16.47,
+   "mean_desk_lux": 379.0,
+   "servo_moves": 136.0
+  },
+  {
+   "method": "Fixed open",
+   "glare_h": 2.26,
+   "under_lit_h": 16.27,
+   "mean_desk_lux": 1100.0,
+   "servo_moves": 0.0
+  },
+  {
+   "method": "Blinds",
+   "glare_h": 0.0,
+   "under_lit_h": 21.24,
+   "mean_desk_lux": 93.0,
+   "servo_moves": 24.0
+  },
+  {
+   "method": "Time schedule",
+   "glare_h": 0.34,
+   "under_lit_h": 19.64,
+   "mean_desk_lux": 246.0,
+   "servo_moves": 24.0
+  }
+ ]
+}

@@ -17,3 +17,7 @@ python3 server.py --bench 7 --mns 10              # time 7 full reads of all cel
 - The frame has `glare_h` and `lat_ms` as `null`: a viewer cannot see them. `desks` is `[mean lux, min lux]` over all desks.
 - `/flow` shows the resource tree and the event stream. It polls the newest CIN of each zone's sun, desks and cell 0 command every
   second, cell states every frame, and relays `mosquitto_sub -t '#'` (IN-MN MQTT). Its polling adds load to the MNs.
+
+- Replay starts the recorded day when the first page connects, plays once, then stays on the last frame (`--loop` repeats it).
+- Comparison table: `python3 make_compare.py` builds `compare.json` from `sw/edge_ai/results/baseline_compare.csv`; the page shows it
+  with the "Comparison table" button. Rehearsal steps and the fallback: `REHEARSAL.md`.
