@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "PolaGrid 1-cell wiring v0.2",
+    "title": "PolaGrid 150 mm cell wiring v0.3",
     "quality_profile": "showcase",
     "viewBox": [
       1120,
@@ -41,8 +41,8 @@
     {
       "id": "psu",
       "type": "security",
-      "label": "5 V 2 A adapter",
-      "sublabel": "1000 uF on servo rail",
+      "label": "USB 5 V charger",
+      "sublabel": "Powers ESP32 and motor driver",
       "pos": [
         40,
         300
@@ -56,7 +56,7 @@
       "id": "esp32",
       "type": "backend",
       "label": "Central module (ESP32)",
-      "sublabel": "Servo PWM, I2C, Wi-Fi",
+      "sublabel": "Motor IN1-4, I2C, Wi-Fi",
       "pos": [
         340,
         300
@@ -95,12 +95,26 @@
       ]
     },
     {
-      "id": "servos",
+      "id": "stepper",
       "type": "frontend",
-      "label": "Control module servo",
-      "sublabel": "SG90, 2:1 gear to disc",
+      "label": "28BYJ-48 stepper",
+      "sublabel": "Z24 pinion, 6.25:1 to disc rim",
       "pos": [
         340,
+        500
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "uln",
+      "type": "messagebus",
+      "label": "ULN2003 driver",
+      "sublabel": "4 phases to the motor",
+      "pos": [
+        40,
         500
       ],
       "size": [
@@ -110,30 +124,6 @@
     }
   ],
   "connections": [
-    {
-      "id": "psu-esp",
-      "from": "psu",
-      "to": "esp32",
-      "label": "5 V (VIN)"
-    },
-    {
-      "id": "psu-servo",
-      "from": "psu",
-      "to": "servos",
-      "label": "5 V servo rail",
-      "variant": "emphasis",
-      "fromSide": "bottom",
-      "toSide": "left"
-    },
-    {
-      "id": "esp-servo",
-      "from": "esp32",
-      "to": "servos",
-      "label": "PWM GPIO 13",
-      "labelDy": 24,
-      "fromSide": "bottom",
-      "toSide": "top"
-    },
     {
       "id": "btn-esp",
       "from": "button",
@@ -166,6 +156,39 @@
       "label": "I2C, same bus",
       "fromSide": "right",
       "toSide": "left"
+    },
+    {
+      "id": "psu-esp",
+      "from": "psu",
+      "to": "esp32",
+      "label": "5 V (VIN)"
+    },
+    {
+      "id": "psu-uln",
+      "from": "psu",
+      "to": "uln",
+      "label": "5 V motor supply",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "esp-uln",
+      "from": "esp32",
+      "to": "uln",
+      "label": "IN1-4 GPIO 13/26/14/27",
+      "labelDy": 24,
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "uln-step",
+      "from": "uln",
+      "to": "stepper",
+      "label": "5-wire cable",
+      "fromSide": "right",
+      "toSide": "left"
     }
   ],
   "cards": [
@@ -174,15 +197,15 @@
       "title": "One bus, two addresses",
       "items": [
         "Cell sensor ADDR to GND gives 0x23",
-        "Desk sensor ADDR to 3V3 gives 0x5C, so no multiplexer"
+        "Desk sensor ADDR to 3V3 gives 0x5C"
       ]
     },
     {
       "dot": "amber",
-      "title": "Servo on its own rail",
+      "title": "No servo rail",
       "items": [
-        "Servo current never passes the ESP32 board",
-        "Common ground at the adapter"
+        "The stepper draws about a quarter amp (typical, not measured)",
+        "Home by driving the disc against a stop at boot"
       ]
     }
   ]

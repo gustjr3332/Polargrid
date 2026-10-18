@@ -1,57 +1,45 @@
 # hw
-Hardware: circuits, parts (BOM), and mechanical design for the polarizer window cells.
+Hardware: circuits, parts (BOM), and mechanical design for the polarizer window cell.
 
-## Cell design v1 (corner filler)
-Product concept: one central control module plus control modules sold one cell at a time. Each control module is a
-square unit that the user sticks on the window; the user buys as many as the window needs. The 11/4 demo hardware is one
-central module and one control module (30 x 30 mm window). A square window with a rotating polarizer cannot be covered
-corner to corner by a rotating square, so the rotating film is a disc and the corners are filled with fixed film.
+## Product concept
+One central control module plus control modules sold one cell at a time. A control module is a square cell the user sticks
+on the window; the user buys as many as the window needs. The 11/4 demo hardware is one central module and one control
+module, built into a 15 x 15 cm picture frame that stands in for the window (the 150 x 150 mm glass area is one cell).
+
+## Cell design v0.3 (150 mm cell, rim-toothed disc)
+Drawing: `diagrams/cell150.html` (front view to scale, stack section). Numbers: `diagrams/cell150_calc.py`. Everything
+below is calculated, nothing is measured.
+
+A rotating polarizer disc of 150 mm diameter sits in a 150 x 150 mm window. The four corners left over (1,207 mm2 each,
+21.5 % of the window in total) are covered by fixed film crossed with the front film, so they stay dark at every angle.
 
 Layers, outdoor side to room side:
 
 | Layer | Piece | Axis | Moves |
 |---|---|---|---|
-| L1 | 30 x 30 mm film, glued to the window plate | 0 deg (reference) | no |
-| L2 | 30 x 30 mm scrap film with a 28 mm hole punched in the middle, laminated on 0.5 mm clear acrylic | 90 deg (square piece turned 90 deg) | no |
-| L3 | 30 mm disc of film | theta, 0 to 90 deg relative to L1 | yes, servo |
+| Front | frame glass with L1 film on its back, 150 x 150 mm | 0 deg (reference) | no |
+| L2 | the four corner offcuts left when the L3 disc is cut, flipped over (flipping about the diagonal turns the axis by 90 deg) | 90 deg | no |
+| Groove plate | clear acrylic 3 mm, 153 mm hole for the disc, a pocket for the pinion in one corner | | no |
+| L3 | disc of film, 150 mm, on a 2 mm clear acrylic disc of 152 mm | theta, 0 to 90 deg relative to L1 | yes |
+| Back ring plate | clear acrylic 2 mm, 172 x 172 mm, 140 mm opening; holds the disc by its rim, carries the motor and the cell sensor | | no |
 
-- L2 is crossed with L1, so the four corners stay dark at every angle. No black mask is needed and the window looks like
-  one film.
-- The 1 mm ring left around the hole stays dark too (L2 crossed with L1), so the open area is the 28 mm circle: 616 of 900
-  mm2, 68 %.
-- The disc stays larger than the hole at every angle, so no light bypasses it.
+- Layers are glued (acrylic cement, hot glue), no bolts or nuts.
 - Transmission is about T_single^2 x cos^2(theta) between L1 and L3 (Malus). Measure it with the 10-point test before
   trusting any number.
-- Film per cell: 3 pieces cut on a 30 mm grid, plus about 6 spare for the angle-vs-lux test and cutting mistakes.
-  One 300 x 200 mm sheet gives 60.
-- Mark the transmission axis on the sheet before cutting, and check it by laying two pieces at 90 deg (dark) and 0 deg
-  (clear).
+- Mark the transmission axis on the sheet before cutting and check it by laying two pieces at 90 deg (dark) and 0 deg
+  (clear). Test the laser cutter and the adhesive on a scrap piece of film first.
 
-## Drive (option B: pinion in the frame beside the cell)
-The film disc is glued on a clear acrylic carrier gear. A small pinion in the frame next to the cell turns it, and the
-servo sits behind the plate under the pinion. No hub or gear touches the window.
+## Drive
+The disc has module 1 teeth (Z150) on a 100 deg arc of its rim, 42 teeth. A Z24 pinion sits in one corner and turns it:
+ratio 6.25:1. The pinion centre is 61.5 mm from the disc centre along each axis, and its tip stays inside the window
+square. The free space in a corner is a circle of 25.7 mm and a square of 22 mm.
 
-| Part | Spec | Per cell |
-|---|---|---|
-| Carrier gear | clear acrylic 2 mm, module 1, 30 teeth (pitch 30 mm, tip 32 mm); L3 film disc glued on its face | 1 |
-| Pinion | module 1, 15 teeth (pitch 15 mm, tip 17 mm), fixed to the servo horn | 1 |
-| Servo | SG90 class (about 23 x 12 mm body) | 1 |
-| Gear plate | acrylic 2 mm, bore 32.4 mm for the carrier gear, slot for the pinion | 1 |
-| Front plate | opaque, 30 x 30 mm opening, holds L1 and L2 | 1 |
-
-- Centre distance 22.5 mm. Ratio 2:1, so the 180 deg servo turns the disc 90 deg (the disc turns the opposite way).
-  Disc angle = servo angle / 2, up to the sign and offset found by calibration.
-- A gear instead of a rubber roller means no slip, so the angle does not drift and no homing run is needed.
-- Layer order: L1, L2 (a 0.3 mm air gap behind it), L3 film on the carrier gear. The pinion is as thick as the gear, so it
-  never touches the film.
-- Frame: put the pinion in one outer diagonal corner of the cell. The corner of the square window lies outside the 30 mm
-  disc and is kept dark by L2 anyway, so a pinion there hides no open area. The pinion centre is 22.5 mm from the cell
-  centre along the diagonal (about 15.9 mm in each axis). From the cell centre to the pinion-side edge is about
-  15.9 + 8.5 (pinion tip) + 2 = 26.4 mm, to the other edge 16.2 (bore) + 2 = 18.2 mm, so the module is about
-  45 x 45 mm (calculated, check on the drawing). The servo body sits behind the pinion and may overhang the frame, so
-  make the back plate about 10 mm larger than the front plate. How the module sticks to the glass is not decided.
-- Laser cutting: the gear teeth need the kerf (about 0.1 to 0.2 mm) added to the drawing. Cut a test pair and check the
-  backlash before the final cut.
-
-Not measured yet: backlash and angle resolution of the gear pair (a servo with about 1 deg dead band gives about 0.5 deg
-at the disc), and the light lost in the 2 mm acrylic carrier. Both go into the 10-point test.
+- A servo does not work here: 180 deg at the pinion is only 28.8 deg at the disc. A 2:1 ratio would need a 75 mm
+  pinion, which does not fit in the corner.
+- A 28BYJ-48 stepper (about 4,096 half steps per turn, typical value) turns the pinion 1.56 turns for 90 deg at the
+  disc, about 0.014 deg per half step. Its body (d 28 mm) does not fit in the corner, so it sits behind the back plate
+  with the body pushed outside the window edge by its 8 mm shaft offset. The frame border behind the window has to leave
+  room for it (not checked).
+- Home: at power-up drive the disc against a small stop block glued on the groove plate and call that 0 deg.
+- Not measured yet: backlash, friction of the disc in the groove, light lost in the 2 mm acrylic disc, and whether
+  the 1 mm of play between a 3 mm groove plate and a 2 mm disc needs a foam shim.

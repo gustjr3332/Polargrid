@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PolaGrid 150 mm cell</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#5d6b7a;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
+@media (prefers-color-scheme:dark){:root{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#93a1b1;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}}
+:root[data-theme=light]{--bg:#f6f7f9;--panel:#fff;--line:#c9d0d8;--tx:#1c2430;--mut:#5d6b7a;--acc:#0b7fb5;--warn:#c2410c;--film:#7aa6d6;--film2:#d68a7a;--dark:#2a303a;--ok:#16794c;--gl:#cfe3ee}
+:root[data-theme=dark]{--bg:#0d1117;--panel:#151b23;--line:#2d3744;--tx:#e6ebf1;--mut:#93a1b1;--acc:#4cc2ff;--warn:#ff9a62;--film:#4f82b8;--film2:#b8685a;--dark:#05070a;--ok:#5ad19a;--gl:#27414f}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;padding:24px 16px}
+main{max-width:1240px;margin:0 auto}
+h1{font-size:22px;font-weight:600;margin-bottom:4px} p.sub{color:var(--mut);margin-bottom:16px}
+.wrap{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+svg{width:100%;height:auto;display:block}
+text{fill:var(--tx);font-size:13px} .m,.g{fill:var(--mut)} .g{font-size:12px} .t{font-size:15px;font-weight:600}
+.ln{stroke:var(--line);fill:none} .dash{stroke:var(--mut);fill:none;stroke-dasharray:5 4}
+.f1{fill:var(--film);opacity:.85} .f2{fill:var(--film2);opacity:.85} .plate{fill:var(--dark)} .glass{fill:var(--gl)} .disc{fill:var(--gl);stroke:var(--mut)}
+.gear{fill:none;stroke:var(--acc);stroke-width:1.5} .tick{stroke:var(--acc);stroke-width:1.2;fill:none}
+.pin{fill:none;stroke:var(--warn);stroke-width:2} .srv{fill:none;stroke:var(--mut);stroke-width:1.5;stroke-dasharray:4 3}
+.sen{fill:var(--ok)} .dim{stroke:var(--mut);fill:none}
+.note{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}
+.note div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px} .note b{display:block;margin-bottom:4px}
+</style></head><body><main>
+<h1>PolaGrid 150 mm cell module (v0.3)</h1>
+<p class="sub">Front view to scale, stack section with exaggerated thickness. All sizes are calculated, nothing is measured yet.</p>
+<div class="wrap"><svg viewBox="0 0 1240 900" role="img" aria-label="Front view of the 150 mm cell with a rim-toothed disc, a corner pinion and a stack section">
+
+  <text class="t" x="40" y="44">Front view, 150 x 150 mm cell (to scale)</text>
+  <text class="m" x="40" y="64">Dashed = behind the front plate. The crossed corner film blocks light in the four corners.</text>
+  <rect x="36.0" y="96.0" width="688.0" height="688.0" class="dash"/>
+  <text class="g" x="724.0" y="802.0" text-anchor="end">back plate 172 x 172 mm</text>
+  <rect x="80.0" y="140.0" width="600.0" height="600.0" class="ln" stroke-width="2"/>
+  <circle cx="380.0" cy="440.0" r="300.0" class="f1"/>
+  <path d="M80.0,140.0 h600.0 v600.0 h-600.0 Z M680.0,440.0 A300.0,300.0 0 1 0 80.0,440.0 A300.0,300.0 0 1 0 680.0,440.0 Z" fill-rule="evenodd" class="f2"/>
+  <circle cx="380.0" cy="440.0" r="304.0" class="gear"/>
+  <path d="M621.6,270.8 L629.0,265.6 M614.4,260.9 L621.6,255.4 M606.8,251.3 L613.7,245.6 M598.7,242.1 L605.4,236.0 M590.3,233.1 L596.7,226.8 M581.5,224.6 L587.7,218.0 M572.4,216.4 L578.3,209.6 M563.0,208.6 L568.6,201.5 M553.2,201.2 L558.5,193.9 M543.1,194.2 L548.1,186.7 M532.8,187.6 L537.4,179.9 M522.2,181.5 L526.5,173.6 M511.3,175.8 L515.3,167.8 M500.2,170.6 L503.9,162.4 M488.9,165.8 L492.2,157.5 M477.4,161.6 L480.4,153.1 M465.8,157.7 L468.4,149.1 M454.0,154.4 L456.2,145.7 M442.1,151.6 L443.9,142.8 M430.0,149.3 L431.5,140.4 M417.9,147.4 L419.1,138.5 M405.7,146.1 L406.5,137.2 M393.5,145.3 L393.9,136.3 M381.2,145.0 L381.3,136.0 M369.0,145.2 L368.6,136.2 M356.7,145.9 L356.0,136.9 M344.5,147.1 L343.5,138.2 M332.4,148.9 L330.9,140.0 M320.3,151.1 L318.5,142.3 M308.4,153.8 L306.2,145.1 M296.6,157.0 L294.0,148.4 M284.9,160.8 L282.0,152.2 M273.4,164.9 L270.1,156.6 M262.0,169.6 L258.4,161.4 M250.9,174.7 L247.0,166.7 M240.0,180.3 L235.7,172.4 M229.3,186.4 L224.7,178.6 M218.9,192.9 L214.0,185.3 M208.8,199.8 L203.6,192.4 M199.0,207.1 L193.4,200.0 M189.4,214.8 L183.6,207.9 M180.2,222.9 L174.2,216.3 M171.4,231.4 L165.0,225.0" class="tick"/>
+  <text class="g" x="270.0" y="126.0" text-anchor="middle">teeth on a 100 deg arc, 42 teeth</text>
+  <path d="M669.0,194.0 L668.9,190.9 L677.7,188.8 L677.3,185.6 L668.2,185.9 L667.5,182.9 L666.6,179.9 L674.6,175.6 L673.4,172.6 L664.7,175.3 L663.2,172.5 L661.6,169.8 L668.2,163.7 L666.2,161.1 L658.6,165.9 L656.4,163.6 L654.1,161.4 L658.9,153.8 L656.3,151.8 L650.2,158.4 L647.5,156.8 L644.7,155.3 L647.4,146.6 L644.4,145.4 L640.1,153.4 L637.1,152.5 L634.1,151.8 L634.4,142.7 L631.2,142.3 L629.1,151.1 L626.0,151.0 L622.9,151.1 L620.8,142.3 L617.6,142.7 L617.9,151.8 L614.9,152.5 L611.9,153.4 L607.6,145.4 L604.6,146.6 L607.3,155.3 L604.5,156.8 L601.8,158.4 L595.7,151.8 L593.1,153.8 L597.9,161.4 L595.6,163.6 L593.4,165.9 L585.8,161.1 L583.8,163.7 L590.4,169.8 L588.8,172.5 L587.3,175.3 L578.6,172.6 L577.4,175.6 L585.4,179.9 L584.5,182.9 L583.8,185.9 L574.7,185.6 L574.3,188.8 L583.1,190.9 L583.0,194.0 L583.1,197.1 L574.3,199.2 L574.7,202.4 L583.8,202.1 L584.5,205.1 L585.4,208.1 L577.4,212.4 L578.6,215.4 L587.3,212.7 L588.8,215.5 L590.4,218.2 L583.8,224.3 L585.8,226.9 L593.4,222.1 L595.6,224.4 L597.9,226.6 L593.1,234.2 L595.7,236.2 L601.8,229.6 L604.5,231.2 L607.3,232.7 L604.6,241.4 L607.6,242.6 L611.9,234.6 L614.9,235.5 L617.9,236.2 L617.6,245.3 L620.8,245.7 L622.9,236.9 L626.0,237.0 L629.1,236.9 L631.2,245.7 L634.4,245.3 L634.1,236.2 L637.1,235.5 L640.1,234.6 L644.4,242.6 L647.4,241.4 L644.7,232.7 L647.5,231.2 L650.2,229.6 L656.3,236.2 L658.9,234.2 L654.1,226.6 L656.4,224.4 L658.6,222.1 L666.2,226.9 L668.2,224.3 L661.6,218.2 L663.2,215.5 L664.7,212.7 L673.4,215.4 L674.6,212.4 L666.6,208.1 L667.5,205.1 L668.2,202.1 L677.3,202.4 L677.7,199.2 L668.9,197.1Z" class="pin"/>
+  <circle cx="626.0" cy="194.0" r="10.0" class="pin"/>
+  <circle cx="658.0" cy="194.0" r="56.0" class="srv"/>
+  <text class="g" x="724.0" y="88.0" text-anchor="end">28BYJ-48 body (behind the plate)</text>
+  <text class="g" x="694.0" y="272.0" text-anchor="middle">Z24</text>
+  <text class="g" x="694.0" y="286.0" text-anchor="middle">pinion</text>
+  <circle cx="131.5" cy="688.5" r="51.5" class="dash"/>
+  <text class="g" x="131.5" y="692.5" text-anchor="middle">free circle</text>
+  <text class="g" x="131.5" y="708.5" text-anchor="middle">d 25.7 mm</text>
+  <rect x="320.0" y="148.0" width="58.4" height="74.0" class="sen"/>
+  <text class="g" x="349.2" y="189.0" text-anchor="middle" style="fill:#fff">BH1750</text>
+  <path d="M80.0,766.0 h600.0 M80.0,758.0 v16 M680.0,758.0 v16" class="dim"/>
+  <text x="300.0" y="802.0" text-anchor="middle">150 mm window = disc diameter</text>
+
+  <text class="t" x="800.0" y="44">Section through the centre and one corner</text>
+  <text class="m" x="800.0" y="64">Outdoor on the left. Thickness exaggerated.</text>
+  <rect x="860.0" y="220.0" width="24.0" height="440.0" class="glass"/>
+  <rect x="884.0" y="290.0" width="3.2" height="300.0" class="f1"/>
+  <rect x="887.2" y="290.0" width="3.2" height="300.0" class="f2"/>
+  <rect x="890.4" y="220.0" width="24.0" height="70" class="plate"/>
+  <rect x="890.4" y="590.0" width="24.0" height="70" class="plate"/>
+  <rect x="914.4" y="220.0" width="16.0" height="70" class="plate"/>
+  <rect x="914.4" y="590.0" width="16.0" height="70" class="plate"/>
+  <rect x="894.4" y="290.0" width="16.0" height="300.0" class="disc"/>
+  <rect x="910.4" y="290.0" width="3.2" height="300.0" class="f1"/>
+  <rect x="930.4" y="220.0" width="152.0" height="56" class="srv"/>
+  <text class="g" x="940.4" y="252.0">28BYJ-48, 19 mm deep</text>
+  <rect x="893.6" y="230.0" width="14.4" height="24" class="pin"/>
+  <text class="g" x="882.4" y="246.0" text-anchor="end">pinion in the corner</text>
+  <rect x="936.4" y="432.0" width="10" height="16" class="sen"/>
+  <text class="g" x="954.4" y="444.0">cell sensor on the ring lip</text>
+  <text class="g" x="800.0" y="690.0">1. frame glass, L1 film on its back</text>
+  <text class="g" x="800.0" y="710.0">2. L2: four corner offcuts, flipped</text>
+  <text class="g" x="800.0" y="730.0">3. groove plate, hole 153 mm</text>
+  <text class="g" x="800.0" y="750.0">4. disc 2 mm acrylic + L3 film, rim in the groove</text>
+  <text class="g" x="800.0" y="770.0">5. back ring plate, opening 140 mm</text>
+</svg></div>
+<div class="note">
+  <div><b>Corner space</b>The disc takes 78.5 % of the 150 x 150 mm window. Each corner keeps 1207 mm2 (21.5 % in total). The largest free circle is 25.7 mm across and the largest square 22 mm. Corner film is dark at every angle.</div>
+  <div><b>Drive</b>The disc rim has 42 teeth on a 100 deg arc (module 1, Z150). A Z24 pinion sits in one corner, so the ratio is 6.25. A servo turns 180 deg, which gives the disc 28.8 deg, not 90. A 28BYJ-48 stepper needs 1.56 pinion turns for 90 deg and can do it.</div>
+  <div><b>Motor space</b>The 28BYJ-48 body (d 28) is bigger than the free circle, so it sits behind the back plate with its body just outside the window edge. Only the pinion and its shaft are in the corner.</div>
+  <div><b>Not measured yet</b>Backlash, friction of the disc in the groove, light lost in the 2 mm acrylic disc, and the real size of the frame border behind the 150 mm window.</div>
+</div>
+</main>
+<script>const t=new URLSearchParams(location.search).get('theme');if(t)document.documentElement.dataset.theme=t;</script></body></html>

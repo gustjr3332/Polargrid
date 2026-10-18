@@ -1,6 +1,8 @@
 # actuator
 Polarizer drive software: ESP32 firmware that turns the inner polarizer of each cell (servo) and reports the angle over oneM2M.
 
+> 10-18: the hardware changed to a 150 mm cell driven by a 28BYJ-48 stepper (`hw/README.md`). The firmware below still drives a servo and has to be rewritten for the stepper (4-pin half-step drive, homing against a stop, angle to steps). The angle convention, parser and watchdog stay.
+
 ## Prototype (one control module, ESP32, Wokwi)
 - `src/cell_logic.h`: angle to servo mapping, serial command parser, watchdog. No hardware calls, tested on the PC:
   `g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic && ./test_logic` (passes, 2026-10-16).
