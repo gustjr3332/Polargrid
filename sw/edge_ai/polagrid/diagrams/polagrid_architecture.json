@@ -11,7 +11,7 @@
       "id": "central",
       "type": "frontend",
       "label": "Central apps",
-      "sublabel": "dashboard / BMS mock",
+      "sublabel": "dashboard / app mockup",
       "pos": [
         40,
         300
@@ -19,7 +19,8 @@
       "size": [
         150,
         64
-      ]
+      ],
+      "tag": "?live=1 real cell"
     },
     {
       "id": "in-cse",
@@ -124,8 +125,8 @@
     {
       "id": "esp32",
       "type": "external",
-      "label": "Real cells (ESP32)",
-      "sublabel": "12-cell window",
+      "label": "Real cell ×1 (ESP32)",
+      "sublabel": "150 mm cell · stepper + BH1750",
       "pos": [
         1020,
         470
@@ -224,13 +225,17 @@
       "variant": "emphasis"
     },
     {
-      "id": "grp-esp32",
-      "from": "grp",
+      "id": "mn-esp32",
+      "from": "mn-cse",
       "to": "esp32",
-      "label": "MQTT (planned)",
+      "label": "HTTP poll 2 s",
       "variant": "dashed",
       "fromSide": "bottom",
-      "toSide": "left"
+      "toSide": "left",
+      "labelAt": [
+        996,
+        445
+      ]
     }
   ],
   "cards": [
@@ -258,6 +263,15 @@
       "items": [
         "IN rewrites CAdmin to /tinyiot/CAdmin",
         "Zone ACP grants it on command CNT and GRP"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Real cell (10-19)",
+      "items": [
+        "Firmware builds; PC tests pass",
+        "Not yet run on hardware",
+        "MQTT is planned, HTTP polling first"
       ]
     }
   ]

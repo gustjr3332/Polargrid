@@ -5168,11 +5168,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <path data-edge-from="mn-cse" data-edge-to="grp" data-edge-label="fan-out" data-edge-key="4" data-edge-id="mn-grp" data-composition-points="670,332;760,332" d="M 670 332 L 760 332" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="acp" data-edge-to="grp" data-edge-label="acpi" data-edge-key="5" data-edge-id="acp-grp" data-composition-points="845,184;845,300" d="M 845 184 L 845 300" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path data-edge-from="grp" data-edge-to="cells" data-edge-label="SUB notify" data-edge-key="6" data-edge-id="grp-cells" data-composition-points="930,332;1020,332" d="M 930 332 L 1020 332" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="grp" data-edge-to="esp32" data-edge-label="MQTT (planned)" data-edge-key="7" data-edge-id="grp-esp32" data-composition-points="845,364;845,388;996,388;996,502;1020,502" d="M 845 364 L 845 380 Q 845 388 853 388 L 988 388 Q 996 388 996 396 L 996 494 Q 996 502 1004 502 L 1020 502" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="mn-cse" data-edge-to="esp32" data-edge-label="HTTP poll 2 s" data-edge-key="7" data-edge-id="mn-esp32" data-composition-points="590,364;590,388;996,388;996,502;1020,502" d="M 590 364 L 590 380 Q 590 388 598 388 L 988 388 Q 996 388 996 396 L 996 494 Q 996 502 1004 502 L 1020 502" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- Components -->
-        <g id="node-central" data-node-id="central" data-node-label="Central apps" tabindex="0" role="button" aria-label="Focus Central apps, dashboard / BMS mock, Central (IN)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="dashboard / BMS mock" data-node-context="Central (IN)">
-          <title>Central apps · dashboard / BMS mock · Central (IN)</title>
+        <g id="node-central" data-node-id="central" data-node-label="Central apps" tabindex="0" role="button" aria-label="Focus Central apps, dashboard / app mockup, Central (IN)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="dashboard / app mockup" data-node-tag="?live=1 real cell" data-node-context="Central (IN)">
+          <title>Central apps · dashboard / app mockup · Central (IN) · ?live=1 real cell</title>
           <rect x="40" y="300" width="150" height="64" rx="6" class="c-mask"/>
           <rect x="40" y="300" width="150" height="64" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 306) scale(0.6875)">
@@ -5182,7 +5182,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="115" y="330" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Central apps</text>
-        <text data-detail="context" x="115" y="346" class="t-muted" font-size="9" text-anchor="middle">dashboard / BMS mock</text>
+        <text data-detail="context" x="115" y="346" class="t-muted" font-size="9" text-anchor="middle">dashboard / app mockup</text>
+        <text data-detail="fine" x="115" y="356" class="t-frontend" font-size="7" text-anchor="middle">?live=1 real cell</text>
         </g>
 
         <g id="node-in-cse" data-node-id="in-cse" data-node-label="IN-CSE" tabindex="0" role="button" aria-label="Focus IN-CSE, tinyIoT c140495, Central (IN)" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="tinyIoT c140495" data-node-tag="no route lock" data-node-context="Central (IN)">
@@ -5272,16 +5273,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="context" x="1105" y="346" class="t-muted" font-size="9" text-anchor="middle">AE: command + lux</text>
         </g>
 
-        <g id="node-esp32" data-node-id="esp32" data-node-label="Real cells (ESP32)" tabindex="0" role="button" aria-label="Focus Real cells (ESP32), 12-cell window, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="12-cell window" data-node-context="Architecture component">
-          <title>Real cells (ESP32) · 12-cell window · Architecture component</title>
+        <g id="node-esp32" data-node-id="esp32" data-node-label="Real cell ×1 (ESP32)" tabindex="0" role="button" aria-label="Focus Real cell ×1 (ESP32), 150 mm cell · stepper + BH1750, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="150 mm cell · stepper + BH1750" data-node-context="Architecture component">
+          <title>Real cell ×1 (ESP32) · 150 mm cell · stepper + BH1750 · Architecture component</title>
           <rect x="1020" y="470" width="170" height="64" rx="6" class="c-mask"/>
           <rect x="1020" y="470" width="170" height="64" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(1026 476) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="1105" y="500" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Real cells (ESP32)</text>
-        <text data-detail="context" x="1105" y="516" class="t-muted" font-size="9" text-anchor="middle">12-cell window</text>
+          <text data-node-label="" data-detail-anchor="" x="1105" y="500" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Real cell ×1 (ESP32)</text>
+        <text data-detail="context" x="1105" y="516" class="t-muted" font-size="9" text-anchor="middle">150 mm cell · stepper + BH1750</text>
         </g>
 
         <!-- Connection labels -->
@@ -5313,9 +5314,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <rect x="946" y="312" width="58" height="14" rx="3" class="c-mask"/>
           <text x="975" y="322" class="t-backend" font-size="8" text-anchor="middle">SUB notify</text>
         </g>
-        <g data-detail="context" data-edge-from="grp" data-edge-to="esp32" data-edge-label="MQTT (planned)" data-edge-key="7" data-edge-id="grp-esp32">
-          <rect x="881.9" y="368" width="77.2" height="14" rx="3" class="c-mask"/>
-          <text x="920.5" y="378" class="t-messagebus" font-size="8" text-anchor="middle">MQTT (planned)</text>
+        <g data-detail="context" data-edge-from="mn-cse" data-edge-to="esp32" data-edge-label="HTTP poll 2 s" data-edge-key="7" data-edge-id="mn-esp32">
+          <rect x="959.8" y="435" width="72.4" height="14" rx="3" class="c-mask"/>
+          <text x="996" y="445" class="t-messagebus" font-size="8" text-anchor="middle">HTTP poll 2 s</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->
@@ -5575,6 +5576,18 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <ul>
           <li>&bull; IN rewrites CAdmin to /tinyiot/CAdmin</li>
           <li>&bull; Zone ACP grants it on command CNT and GRP</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Real cell (10-19)</h3>
+        </div>
+        <ul>
+          <li>&bull; Firmware builds; PC tests pass</li>
+          <li>&bull; Not yet run on hardware</li>
+          <li>&bull; MQTT is planned, HTTP polling first</li>
         </ul>
       </div>
     </div>
