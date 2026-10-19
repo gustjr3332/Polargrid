@@ -71,7 +71,7 @@ body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
     <section><h2 data-i18n="Simulated time"></h2><div id="clock">--:--</div></section>
     <section id="ctl"><h2 data-i18n="Simulation"></h2>
       <div class="btns"><button id="run"></button>
-        <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option><option value="10">10x</option></select></div>
+        <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option></select></div>
       <div class="btns"><button id="ev-cloud" data-i18n="Cloud"></button><button id="ev-turn" data-i18n="Turn window"></button><button id="ev-reset" data-i18n="Reset"></button></div>
       <div style="color:var(--dim)" id="evs"></div>
     </section>
@@ -92,7 +92,7 @@ const KO = {
 "Simulated room, not measured on hardware.":"시뮬레이션 방입니다. 실물 하드웨어로 측정한 값이 아닙니다.",
 "Desk illuminance":"책상 조도","Desk A":"책상 A","Desk B":"책상 B","Glare index":"Glare 지수","h (cumulative)":"h (누적)","Target line (demo setting)":"목표선 (데모 설정)",
 "Command to applied":"명령 → 적용까지","Servo moves":"Servo 동작","total":"누적",
-"Simulated time":"시뮬레이션 시각","Simulation":"시뮬레이션","Start":"시작","Stop":"정지","Cloud":"구름","Turn window":"창문 방향 돌리기","Reset":"초기화",
+"Simulated time":"시뮬레이션 시각","Simulation":"시뮬레이션","Room":"방","Start":"시작","Stop":"정지","Cloud":"구름","Turn window":"창문 방향 돌리기","Reset":"초기화",
 "Events:":"이벤트:","none":"없음","Connection:":"연결:","Cells:":"셀:","Run:":"실행:","Live":"실시간","Replay":"녹화 재생",
 "desk-hours per day, lower is better":"하루 desk-hours, 낮을수록 좋음","Desk too dark":"책상이 너무 어두움",
 "desk-hours per day below 500 lux, sun up":"해가 떠 있는 동안 500 lux 미만인 하루 desk-hours","Mean desk light":"책상 평균 밝기",
@@ -120,13 +120,38 @@ function onFrame(f) {
   $("mv").textContent = f.moves;
   $("nc").textContent = f.cells.length;}
 
+// Frames from a server (live or replay, f.mode set) list the cells zone by zone: zone k = cells 100k..100k+99, a 10 x 10 room
+// numbered row by row with row 0 at the bottom (physics.py). Draw each room as its own block so what happens inside one room
+// stays in one place; the built-in demo generator below has no rooms and keeps the flat 25 x 40 grid.
+const ZR = 10, ZC = 10;
 function draw(f) {
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio || 1;
   if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const pad = 16, s = Math.floor(Math.min((r.width - 2 * pad) / COLS, (r.height - 2 * pad) / ROWS));
-  const ox = Math.round((r.width - s * COLS) / 2), oy = Math.round((r.height - s * ROWS) / 2);
   g.clearRect(0, 0, r.width, r.height);
+  const pad = 16, zones = f.cells.length / (ZR * ZC);
+  if (!f.mode || !Number.isInteger(zones) || zones < 1) return drawFlat(f, r, pad);
+  const bc = Math.min(5, zones), br = Math.ceil(zones / bc), label = 16;
+  // block gap = 1.5 cells; solve cell size s from  bc*ZC*s + (bc-1)*1.5*s = width  and  br*(ZR*s + label) + (br-1)*1.5*s = height
+  const s = Math.floor(Math.min((r.width - 2 * pad) / (bc * ZC + (bc - 1) * 1.5), (r.height - 2 * pad - br * label) / (br * ZR + (br - 1) * 1.5)));
+  const gap = Math.round(1.5 * s), bw = ZC * s, bh = ZR * s;
+  const ox = Math.round((r.width - (bc * bw + (bc - 1) * gap)) / 2), oy = Math.round((r.height - (br * (bh + label) + (br - 1) * gap)) / 2);
+  g.font = `${Math.max(11, Math.min(14, s))}px system-ui, sans-serif`; g.textBaseline = "bottom"; g.fillStyle = "#b9c3cd";
+  for (let z = 0; z < zones; z++) {
+    const bx = ox + (z % bc) * (bw + gap), by = oy + Math.floor(z / bc) * (bh + label + gap);
+    g.fillStyle = "#b9c3cd"; g.fillText(`${T("Room")} ${z + 1}`, bx, by + label - 3);
+    g.fillStyle = "#11161c"; g.fillRect(bx - 3, by + label - 3, bw + 6, bh + 6);   // room background
+    for (let k = 0; k < ZR * ZC; k++) {
+      const row = Math.floor(k / ZC), col = k % ZC, v = f.cells[z * ZR * ZC + k] / 100;
+      g.fillStyle = `hsl(205,${30 + 60 * v}%,${9 + 66 * v}%)`;
+      g.fillRect(bx + col * s + 1, by + label + (ZR - 1 - row) * s + 1, s - 2, s - 2);   // row 0 at the bottom
+    }
+  }
+}
+
+function drawFlat(f, r, pad) {
+  const s = Math.floor(Math.min((r.width - 2 * pad) / COLS, (r.height - 2 * pad) / ROWS));
+  const ox = Math.round((r.width - s * COLS) / 2), oy = Math.round((r.height - s * ROWS) / 2);
   for (let i = 0; i < Math.min(N, f.cells.length); i++) {
     const v = f.cells[i] / 100, x = ox + (i % COLS) * s, y = oy + Math.floor(i / COLS) * s;
     g.fillStyle = `hsl(205,${30 + 60 * v}%,${9 + 66 * v}%)`; // one hue, dark to bright
@@ -174,8 +199,12 @@ function tick() {
 }
 
 function evNote() { $("evs").textContent = T("Events:") + " " + (sim.evs.length ? sim.evs.map(T).join(", ") : T("none")); }
+let srv = false;    // frames come from a server (live or replay): the speed select talks to it
 let live = false;   // true once frames come from a live server: the buttons then drive the zones through POST /api/ctl
-const ctl = body => live && fetch("/api/ctl", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+// With --token on the server, open the page as /?token=... once (kept in localStorage).
+let TOKEN = ""; { const q = new URLSearchParams(location.search).get("token");
+  try { if (q) localStorage.setItem("pg-token", q); TOKEN = q || localStorage.getItem("pg-token") || ""; } catch (e) { TOKEN = q || ""; } }
+const ctl = body => srv && fetch("/api/ctl", { method: "POST", headers: { "Content-Type": "application/json", "X-Demo-Token": TOKEN }, body: JSON.stringify(body) }).catch(() => {});
 $("run").onclick = () => { sim.running = !sim.running; applyLang(); ctl({ running: sim.running }); };
 $("spd").onchange = e => { sim.speed = +e.target.value; ctl({ speed: sim.speed }); };
 $("ev-cloud").onclick = () => { sim.cloud = true; if (!sim.evs.includes("Cloud")) sim.evs.push("Cloud"); evNote(); ctl({ cloud: 0.8 }); };
@@ -235,7 +264,12 @@ if (location.protocol.startsWith("http") && !new URLSearchParams(location.search
     clearInterval(fake);
     document.querySelector(".badge").style.display = "none";
     live = f.mode === "live";
-    document.querySelector("#ctl").style.display = live ? "" : "none";   // a recording cannot react to buttons
+    srv = true;
+    // a recording only has a speed (1x, 2x, 5x); Start, Cloud, Turn window and Reset need live zones
+    document.querySelector("#ctl").style.display = "";
+    $("run").style.display = live ? "" : "none";
+    document.querySelectorAll("#ctl .btns")[1].style.display = live ? "" : "none";
+    $("evs").style.display = live ? "" : "none";
     modeKey = f.mode === "live" ? "Live" : "Replay"; $("mode").textContent = T(modeKey);
     $("run-id").textContent = f.mode;
     onFrame(f);

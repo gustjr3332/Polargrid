@@ -13,6 +13,10 @@
 #else
 #include "secrets.example.h"
 #endif
+#ifndef CELL_ROW   // a secrets.h from before the position was added
+#define CELL_ROW 0
+#define CELL_COL 0
+#endif
 
 const int MOTOR_PINS[4] = {13, 26, 14, 27};   // ULN2003 IN1..IN4; GPIO 12 is a strapping pin, avoid it
 const int BUTTON_PIN = 25;                    // to GND, internal pull-up: opens the cell
@@ -78,7 +82,7 @@ bool provision() {
   std::string envAcp, cellAcp;
   if (!acpRi(RUN + "envacp", m2m::envOrig(RUN), envAcp) ||
       !acpRi(m2m::cellRn(RUN, CELL_INDEX) + "acp", m2m::cellOrig(RUN, CELL_INDEX), cellAcp)) return false;
-  for (auto& r : m2m::resourceReqs(RUN, CELL_INDEX, envAcp, cellAcp)) {
+  for (auto& r : m2m::resourceReqs(RUN, CELL_INDEX, envAcp, cellAcp, CELL_ROW, CELL_COL)) {
     int code = send(r);
     if (code != 409 && (code < 200 || code >= 300)) return false;
   }
@@ -107,7 +111,8 @@ void netTask(void*) {
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   bool ready = false;
   int fails = 0, notFound = 0, published = -1;
-  std::string lastCmd, pendingCmd;
+  m2m::CommandGate gate;
+  std::string pendingCmd;
   long pendingSteps = 0;
   uint32_t pendingSince = 0, lastPoll = 0, lastReport = 0, lastState = 0, offlineSince = millis();
   for (;;) {
@@ -139,15 +144,16 @@ void netTask(void*) {
       // 404 is normal before the first command; if it lasts a minute the MN may have been reset, so provision again
       notFound = code == 404 ? notFound + 1 : 0;
       if (code == 403 || notFound >= 30) { ready = false; notFound = 0; }
-      if (code == 200 && m2m::parseCommandCin(reply, CELL_INDEX, cmd, angle) && cmd != lastCmd) {
-        lastCmd = cmd;
+      if (code == 404) gate.noneYet();
+      bool stale = code == 200 && !gate.baselined;   // the first command seen after boot is an old one
+      if (code == 200 && m2m::parseCommandCin(reply, CELL_INDEX, cmd, angle) && gate.accept(cmd)) {
         char line[32];
         snprintf(line, sizeof line, "A 0 %.1f", angle);
         xQueueSend(cmdQueue, line, 0);
         pendingCmd = cmd;
         pendingSteps = stepsFromDisc(angle);
         pendingSince = millis();
-      }
+      } else if (stale && gate.baselined) Serial.println("SKIP old command after boot");
     }
     long at = motorAt;
     if (at >= 0 && motorIdle) {

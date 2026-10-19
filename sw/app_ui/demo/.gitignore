@@ -1,2 +1,3 @@
 replay/*.jsonl
 runs.json
+corrections.db

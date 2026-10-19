@@ -14,20 +14,39 @@ Plan: docs/PolaGrid_시연페이지_계획.md section 7 for the frame format.
 import argparse
 import asyncio
 import collections
+import hmac
 import json
+import os
 import re
+import sqlite3
 import statistics
 import subprocess
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
 
 HERE = Path(__file__).parent
 RUNS = HERE / "runs.json"
+CORR_DB = HERE / "corrections.db"
+DDL = """CREATE TABLE IF NOT EXISTS corrections (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, run TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('too_bright', 'too_dark')),
+  amount_lux REAL NOT NULL,   -- slider size, always positive
+  offset_lux REAL NOT NULL,   -- wanted change of the desk light: -amount (too bright) or +amount (too dark), as in polagrid/prefs.py
+  level INTEGER, desk_lux REAL, cell_lux REAL,   -- cell open level and light readings when the button was pressed (NULL if unreadable)
+  fake INTEGER NOT NULL)      -- 1 = the cell was tools/fake_cell.py, so not a real preference"""
+
+
+def corr_db():
+    db = sqlite3.connect(CORR_DB)
+    db.row_factory = sqlite3.Row
+    db.execute(DDL)
+    return db
 OPS = {1: "CREATE", 2: "RETRIEVE", 3: "UPDATE", 4: "DELETE", 5: "NOTIFY"}
 _tl = threading.local()
 
@@ -246,11 +265,63 @@ class Hub:
             time.sleep(2)
 
 
-def build_app(hub, replay):
+def con_of(body, key="m2m:cin"):
+    """CIN content as a dict. tinyIoT returns a string, or a JSON object after a restart."""
+    c = body[key]["con"]
+    return json.loads(c) if isinstance(c, str) else c
+
+
+_disc = {"t": 0.0, "idx": []}   # cell indexes found by label, kept a few seconds so the page's 2 s polling does not discover every time
+
+
+def read_real(real):
+    """The real cells (or fake_cell.py) as the app sees them, viewer GETs only. Cells are found by the state label
+    polagrid/<run>/state; each one's place in the window is its label polagrid/<run>/pos/<row>/<col> (row 0 = top, col 0 = left,
+    seen from inside; a cell without it goes to row 0, col = its index). level is the mean open level of all cells."""
+    base, run, orig = f"{real['host']}/{real['cse']}", real["run"], f"C{real['run']}view"
+    out = {"run": run, "ok": False, "level": None, "cell_lux": None, "desk_lux": None, "fake": None, "lt": None, "cells": []}
+    if time.time() - _disc["t"] > 3:
+        st, b, _ = http_get(f"{base}?fu=1&ty=28&lbl=polagrid/{run}/state", orig)
+        found = sorted({int(m[1]) for u in (b or {}).get("m2m:uril", []) if (m := re.search(rf"(?:^|/){run}p(\d+)/state$", u))}) if st == 200 else []
+        _disc.update(t=time.time(), idx=found or [0])   # discovery refused: the first cell at least
+    for i in _disc["idx"]:
+        st, b, _ = http_get(f"{base}/{run}p{i}/state", orig)
+        if st != 200:
+            continue
+        d = b["cod:opeLl"]
+        pos = next((re.fullmatch(rf"polagrid/{run}/pos/(\d+)/(\d+)", l) for l in d.get("lbl", []) if re.fullmatch(rf"polagrid/{run}/pos/(\d+)/(\d+)", l)), None)
+        out["cells"].append({"i": i, "row": int(pos[1]) if pos else 0, "col": int(pos[2]) if pos else i, "level": d.get("opeLl")})
+        if out["lt"] is None:
+            out["lt"] = d.get("lt")
+    levels = [c["level"] for c in out["cells"] if c["level"] is not None]
+    if not levels:
+        return out
+    out.update(ok=True, level=round(sum(levels) / len(levels)))
+    first = out["cells"][0]["i"]
+    for key, path in (("cell_lux", f"p{first}/lux/la"), ("desk_lux", "env/desks/la")):
+        st, b, _ = http_get(f"{base}/{run}{path}", orig)
+        if st == 200:
+            d = con_of(b)
+            v = d.get("lux")
+            out[key] = v[0] if isinstance(v, list) else v
+            out["fake"] = bool(out["fake"] or d.get("fake"))
+    return out
+
+
+def build_app(hub, replay, real=None, token=None):
     from fastapi import FastAPI
     from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+    from fastapi.staticfiles import StaticFiles
 
     app = FastAPI()
+
+    @app.middleware("http")
+    async def need_token(request, call_next):
+        """With a token set, every POST (move cells, save a correction, start/stop the zones) must carry it in X-Demo-Token.
+        Reads stay open. The page takes it from ?token=... of its address."""
+        if token and request.method == "POST" and not hmac.compare_digest(request.headers.get("x-demo-token", ""), token):
+            return JSONResponse({"error": "token required"}, 401)
+        return await call_next(request)
     state = {"frame": None, "id": 0}
 
     def latest():
@@ -263,7 +334,7 @@ def build_app(hub, replay):
         while True:
             for f in frames:
                 state["frame"], state["id"] = f, state["id"] + 1
-                await asyncio.sleep(replay["interval"])
+                await asyncio.sleep(replay["interval"] / state.get("speed", 1.0))   # 1x = interval s per frame, 2x half, 5x a fifth
             if not replay["loop"]:
                 return
 
@@ -298,8 +369,11 @@ def build_app(hub, replay):
     @app.post("/api/ctl")
     def ctl(body: dict):
         """Forward a page control (running, speed, cloud, turn, reset) to every zone started with --serve."""
-        if not hub:
-            return JSONResponse({"error": "replay mode has no controls"}, 409)
+        if not hub:    # a recording only has a speed
+            if "speed" in body and float(body["speed"]) in (1.0, 2.0, 5.0):
+                state["speed"] = float(body["speed"])
+                return {"speed": state["speed"]}
+            return JSONResponse({"error": "replay mode has only the speed control (1, 2, 5)"}, 409)
         ok = 0
         for m in hub.mns:
             try:
@@ -337,6 +411,60 @@ def build_app(hub, replay):
                 await asyncio.sleep(0.25)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
+    @app.get("/api/real")
+    def real_cell():
+        """Level and light of the one real cell for the phone mockup (/mockup/?live=1). Read-only."""
+        if not real:
+            return JSONResponse({"error": "start the server with --real RUN"}, 404)
+        return read_real(real)
+
+    @app.post("/api/real/level")
+    def real_level(body: dict):
+        """A cell touched in the phone mockup (or all cells): open level 0..100 -> tools/real_cell.py app, which sends the command to the CSE."""
+        if not real:
+            return JSONResponse({"error": "start the server with --real RUN"}, 404)
+        try:
+            level = float(body["level"])
+            idx = None if body.get("i") is None else int(body["i"])
+            picked = None if body.get("cells") is None else [int(k) for k in body["cells"]]
+            if not 0 <= level <= 100 or (idx is not None and idx < 0) or (picked is not None and min(picked, default=0) < 0):
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            return JSONResponse({"error": "need {level: 0..100, i: cell index or cells: [indexes], none = every cell}"}, 400)
+        try:
+            r = requests.post(f"http://127.0.0.1:{real['app_port']}/level", json={"level": level, "i": idx, "cells": picked}, timeout=5)
+            r.raise_for_status()
+        except requests.RequestException:
+            return JSONResponse({"error": "real_cell.py app is not running"}, 503)
+        return r.json()
+
+    @app.post("/api/real/correction")
+    def add_correction(body: dict):
+        """'Too bright' / 'Too dark' from the Comfort screen: one row in corrections.db with the cell state at that moment."""
+        if not real:
+            return JSONResponse({"error": "start the server with --real RUN"}, 404)
+        try:
+            kind, amount = body["kind"], float(body["amount"])
+            if kind not in ("too_bright", "too_dark") or not 50 <= amount <= 1000:
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            return JSONResponse({"error": "need {kind: too_bright|too_dark, amount: 50..1000}"}, 400)
+        r = read_real(real)
+        ts = datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
+        with corr_db() as db:
+            db.execute("INSERT INTO corrections (ts, run, kind, amount_lux, offset_lux, level, desk_lux, cell_lux, fake) "
+                       "VALUES (?,?,?,?,?,?,?,?,?)",
+                       (ts, real["run"], kind, amount, -amount if kind == "too_bright" else amount,
+                        r["level"], r["desk_lux"], r["cell_lux"], int(bool(r["fake"]))))
+        return {"saved": True, "ts": ts}
+
+    @app.get("/api/real/corrections")
+    def corrections():
+        with corr_db() as db:
+            n = db.execute("SELECT COUNT(*) FROM corrections").fetchone()[0]
+            last = [dict(x) for x in db.execute("SELECT * FROM corrections ORDER BY id DESC LIMIT 5")]
+        return {"count": n, "last": last}
+
     @app.get("/compare.json")
     def compare():
         return FileResponse(HERE / "compare.json")   # built by make_compare.py from the measured baseline CSV
@@ -349,6 +477,7 @@ def build_app(hub, replay):
     def index():
         return FileResponse(HERE / "static" / "index.html")
 
+    app.mount("/mockup", StaticFiles(directory=HERE.parent / "mockup", html=True), name="mockup")
     return app
 
 
@@ -378,11 +507,19 @@ def main():
     ap.add_argument("--record", metavar="FILE")
     ap.add_argument("--loop", action="store_true", help="replay: start over at the end")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--real", metavar="RUN", help="run id of the one real cell, served at /api/real (phone mockup /mockup/?live=1)")
+    ap.add_argument("--token", default=os.environ.get("DEMO_TOKEN"), help="require this token (X-Demo-Token) on every POST; env DEMO_TOKEN. Without it anyone on the network can move the cells")
+    ap.add_argument("--real-host", default="http://127.0.0.1:3001")
+    ap.add_argument("--real-cse", default="TinyIoT-mn001")
+    ap.add_argument("--real-app-port", type=int, default=9600, help="port of tools/real_cell.py app")
     a = ap.parse_args()
+    if not a.token:
+        print("NOTE: no --token: anyone who can reach this port can move the cells and write corrections")
+    real = {"run": a.real, "host": a.real_host, "cse": a.real_cse, "app_port": a.real_app_port} if a.real else None
 
     if a.replay:
         import uvicorn
-        app = build_app(None, {"file": a.replay, "interval": a.interval, "loop": a.loop})
+        app = build_app(None, {"file": a.replay, "interval": a.interval, "loop": a.loop}, real, a.token)
         return uvicorn.run(app, host="0.0.0.0", port=a.port)
     hub = Hub(a.mns, a.workers, a.interval, a.record)
     if a.record:
@@ -393,7 +530,7 @@ def main():
     for fn in (hub.frame_loop, hub.cin_loop, hub.mqtt_loop):
         threading.Thread(target=fn, daemon=True).start()
     import uvicorn
-    uvicorn.run(build_app(hub, None), host="0.0.0.0", port=a.port)
+    uvicorn.run(build_app(hub, None, real, a.token), host="0.0.0.0", port=a.port)
 
 
 if __name__ == "__main__":

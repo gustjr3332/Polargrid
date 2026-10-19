@@ -15,6 +15,8 @@ host is the MN as this PC sees it, usually `http://127.0.0.1:3001`. Defaults are
 
 ```bash
 bash tools/run_in.sh && bash ~/polargrid/nodes.sh start 1     # IN, then mn001 on port 3001
+python3 tools/real_cell.py --run real1 check                  # 2 min bring-up check of a new cell, PASS/FAIL per item
+python3 tools/harden_acp.py --mns 10                          # narrow defaultACP (no /* wildcard) on MN 1..10; tools/via_in_check.py tests the roles through the IN
 python3 tools/real_cell.py --run real1 manual                 # type angles 0..90 (0 = open), q to quit
 python3 tools/real_cell.py --run real1 manual 45 90 0         # same, angles from the command line
 python3 tools/real_cell.py --run real1 sweep --n 5            # 0,10,..,90,0 deg -> results/real_cell_sweep_*.csv

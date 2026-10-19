@@ -9,6 +9,8 @@ repeat with the same run id. Run inside WSL next to the MN, because the CSE call
     python3 tools/real_cell.py --run real1 manual 45 90 0  # the same with angles from the command line
     python3 tools/real_cell.py --run real1 sweep --n 5     # angle vs lux, 0,10,..,90,0 -> results/real_cell_sweep_*.csv
     python3 tools/real_cell.py --run real1 ai --speed 120  # AI (1)+(2) with a SIMULATED sun clock
+    python3 tools/real_cell.py --run real1 check           # 2 min bring-up check of a new cell: PASS/FAIL per item (Wi-Fi/CSE, sensors, steps, direction)
+    python3 tools/real_cell.py --run real1 app             # the phone app: POST 127.0.0.1:9600/level {"level": 0..100, "i": cell}
 
 Every mode resends the last angle at least every HEARTBEAT_MIN (wall time) so the cell's 30 min watchdog never opens
 it while this runs, and sends OPEN (angle 0) on exit or Ctrl+C. CSE errors are retried with backoff 1, 2, 4 .. 60 s.
@@ -16,11 +18,14 @@ Without hardware run tools/fake_cell.py with the same --run first; its readings 
 """
 import argparse
 import csv
+import json
 import math
+import re
 import sys
 import threading
 import time
 from datetime import datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import numpy as np
@@ -31,7 +36,7 @@ from polagrid import online                                        # noqa: E402
 from polagrid.closed_loop import HEARTBEAT_MIN                     # noqa: E402
 from polagrid.onem2m import Client, _headers, con as cin_con   # noqa: E402
 from polagrid.physics import KST, Room, sun_position, window_lux   # noqa: E402
-from polagrid.zone import Controller, roles                        # noqa: E402
+from polagrid.zone import ALL, Controller, grant_discovery, make_acp, remote, roles                        # noqa: E402
 
 RESULTS = Path(__file__).resolve().parent.parent / "results"
 SWEEP = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 0]
@@ -192,6 +197,125 @@ def manual(cell, a):
         show(cell, v, cell.send(v))
 
 
+def app_mode(client, run, a):
+    """The phone app's cell control (via demo/server.py), 127.0.0.1 only: POST /level {"level": 0..100, "i": cell index | "cells": [indexes]; none = every cell}.
+    Each cell gets its own command CIN in {run}p<i>/command (angle list long enough for its CELL_INDEX), so a cell added later
+    works at once; no command group. Cells are found by the state label. The newest command wins, a heartbeat keeps each
+    cell's last angle fresh, and exit opens every cell."""
+    me, lock, sent, seq = roles(run)["ctl"], threading.Lock(), {}, [int(time.time())]
+
+    def cells():
+        uris = retry(lambda: client.discover(me, lbl=f"polagrid/{run}/state", ty=28), "discover cells", 3) or []
+        return sorted({int(m[1]) for u in uris if (m := re.search(rf"(?:^|/){run}p(\d+)/state$", u))})
+
+    def command(idx, angle, tries=3):
+        with lock:
+            seq[0] += 1
+            body = {"cmd": f"{run}a{seq[0]}", "angles": [round(angle, 1)] * (idx + 1)}   # the cell reads entry CELL_INDEX
+            if retry(lambda: client.create(f"{run}p{idx}/command", me, body), f"command p{idx}", tries) is not None:
+                sent[idx] = (angle, time.monotonic())
+
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            try:
+                req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                level = float(req["level"])
+                idx = None if req.get("i") is None else int(req["i"])
+                picked = None if req.get("cells") is None else [int(k) for k in req["cells"]]
+                if not 0 <= level <= 100 or (idx is not None and idx < 0) or (picked is not None and min(picked, default=0) < 0):
+                    raise ValueError
+            except (ValueError, KeyError, TypeError, AttributeError):
+                return self.send_error(400, "need JSON {level: 0..100, i: cell index or cells: [indexes], optional}")
+            angle = math.degrees(math.acos(math.sqrt(level / 100)))   # opeLl = 100 cos^2(angle)
+            targets = [idx] if idx is not None else sorted(set(picked)) if picked is not None else cells()
+            for k in targets:
+                command(k, angle)
+            print(f"[app] level {level:.0f} (angle {angle:.1f}) -> cells {targets}")
+            body = json.dumps({"level": level, "angle": round(angle, 1), "cells": targets}).encode()
+            self.send_response(202)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    def heartbeat():
+        while True:
+            time.sleep(10)
+            for idx, (angle, t) in list(sent.items()):
+                if time.monotonic() - t >= HEARTBEAT_MIN * 60:
+                    command(idx, angle)
+
+    def setup():
+        """The controller's own ACP and AE, and discovery under the CSE base: a fresh database has none of them (zone.py's
+        Controller.setup does the same). Safe to repeat."""
+        grant_discovery(client)
+        make_acp(client, f"{run}ctlacp", [(remote(me), ALL)], exist_ok=True)
+        client.post("", me, {"m2m:ae": {"rn": f"{run}ctl", "api": "Npolagrid", "rr": False, "srv": ["3"]}}, 2, exist_ok=True)
+
+    print(f"[app] waiting for the CSE on {client.host}/{client.cse} ...")
+    retry(setup, "controller setup")
+    threading.Thread(target=heartbeat, daemon=True).start()
+    server = ThreadingHTTPServer(("127.0.0.1", a.app_port), H)
+    print(f"[app] cell control at http://127.0.0.1:{a.app_port}/level, Ctrl+C to stop (every cell opens on exit)")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print()
+    finally:
+        print("[exit] opening every cell")
+        for idx in list(sent):
+            command(idx, 0, tries=5)
+
+
+def check(cell, a):
+    """Bring-up check of the real cell from the PC side, before the 10/24 sweep: it moves the disc 0, 45, 90, 0 deg.
+    Prints PASS/FAIL per item; the exit code is 1 if anything failed. Needs a cell that has booted and reached the CSE."""
+    rows, fake = [], False
+
+    def rec(name, ok, detail):
+        rows.append(ok)
+        print(f"  {'PASS' if ok else 'FAIL'}  {name}: {detail}")
+
+    level = retry(cell.state, "read state", 3)
+    rec("cell on the CSE (Wi-Fi, provisioning)", level is not None, f"state opeLl={level}" if level is not None else
+        "no state: is the ESP32 on, on the same Wi-Fi as the MN, and RUN_ID/CSE_HOST right? (serial shows 'CSE ready')")
+    if level is None:
+        return rows
+    for sensor, what in (("cell", "cell sensor BH1750 0x23"), ("desk", "desk sensor BH1750 0x5C")):
+        vals, f = new_readings(lambda: retry(lambda: cell.lux(sensor), "read lux", 3), 1, timeout_s=30)
+        fake |= f
+        rec(what, bool(vals), f"{vals[0]:.1f} lux" if vals else "no new reading in 30 s (sensor wiring, I2C address, or the cell is not posting)")
+    got, lux0 = {}, {}
+    for ang in (0, 45, 90, 0):
+        r = cell.send(ang)
+        if r is None:
+            rec(f"{ang} deg applied", False, "no desk reply within 30 s (motor stuck, homing not done, or command not received)")
+            return rows
+        vals, f = new_readings(lambda: retry(lambda: cell.lux("cell"), "read lux", 3), 2, timeout_s=45)
+        fake |= f
+        lv = retry(cell.state, "read state", 3)
+        want = round(100 * math.cos(math.radians(ang)) ** 2)
+        got[ang] = (r[0], lv, float(np.mean(vals[-1:])) if vals else None)
+        rec(f"{ang} deg applied", r[0] <= 20 and lv is not None and abs(lv - want) <= 2,
+            f"in {r[0]:.1f} s (expect 15 s or less), state opeLl={lv} (expect {want})")
+    lo, hi = got[90][2], got[0][2]
+    if lo is None or hi is None or hi <= 0:
+        rec("direction and steps", False, "no cell-sensor readings to compare")
+    else:
+        mid = got[45][2] / hi if got[45][2] is not None else float("nan")
+        rec("direction (lux falls toward 90 deg)", lo < 0.5 * hi, f"90 deg {lo:.0f} lux vs 0 deg {hi:.0f} lux (ratio {lo / hi:.2f}; "
+            "if it does not fall the disc turns the wrong way, the film axes are parallel, or the disc did not move)")
+        rec("steps (45 deg is about half of 0 deg)", 0.3 <= mid <= 0.7, f"ratio {mid:.2f} (cos^2 model 0.50; the leak and the film make it differ, "
+            "far off means the half steps per degree need calibrating)")
+    back = got[0][2]
+    if back is not None and hi and hi > 0:
+        rec("returns to 0 deg", abs(back - hi) <= 0.15 * hi, f"{back:.0f} lux vs {hi:.0f} lux at the start")
+    print(f"[check] {sum(rows)}/{len(rows)} passed" + ("  (FAKE cell, not hardware)" if fake else ""))
+    return rows
+
+
 def sweep(cell, a):
     points, fake = [], False
     for ang in SWEEP:
@@ -258,6 +382,9 @@ def main():
     sub = ap.add_subparsers(dest="mode", required=True)
     m = sub.add_parser("manual")
     m.add_argument("angles", nargs="*", type=float, help="angles to apply in order; none = prompt")
+    sub.add_parser("check")
+    p = sub.add_parser("app")
+    p.add_argument("--app-port", type=int, default=9600)
     s = sub.add_parser("sweep")
     s.add_argument("--n", type=int, default=5, help="lux readings averaged per angle (one every 10 s)")
     s.add_argument("--sensor", choices=["cell", "desk"], default="cell")
@@ -270,10 +397,14 @@ def main():
     if a.mode == "manual" and any(not 0 <= v <= 90 for v in a.angles):
         ap.error("angles must be 0..90")
 
+    if a.mode == "app":
+        return app_mode(Client(a.host, a.cse), a.run, a)
     cell = Cell(Client(a.host, a.cse), a.run, a.port)
     try:
         cell.setup()
-        {"manual": manual, "sweep": sweep, "ai": ai_loop}[a.mode](cell, a)
+        res = {"manual": manual, "sweep": sweep, "ai": ai_loop, "check": check}[a.mode](cell, a)
+        if a.mode == "check" and not all(res):
+            sys.exit(1)
     except (KeyboardInterrupt, EOFError):
         print()
     finally:

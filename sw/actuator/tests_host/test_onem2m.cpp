@@ -40,7 +40,19 @@ int main(int argc, char** argv) {
   assert(desksReq(run, "t5", {}).path == "real1env/desks" && desksReq(run, "t5", {}).origin == "Creal1env");
   auto res = resourceReqs(run, 0, "A1", "A2");
   assert(res.size() == 7 && res[4].body.find("\"lbl\": [\"polagrid/real1/command\"]") != std::string::npos);
+  assert(res[5].body.find("pos/") == std::string::npos);   // no position given, no position label
+  auto placed = resourceReqs(run, 1, "A1", "A2", 2, 3);
+  assert(placed[5].body.find("\"lbl\": [\"polagrid/real1/state\", \"polagrid/real1/pos/2/3\"]") != std::string::npos);
   assert(res[5].ty == 28 && res[5].body.find("\"acpi\": [\"A2\"]") != std::string::npos);
+
+  // an old command left on the CSE is not applied after a reboot; later ones are, each once
+  CommandGate gate;
+  assert(!gate.accept("real1c9"));                    // first sight after boot = stale
+  assert(!gate.accept("real1c9"));                    // still the same one
+  assert(gate.accept("real1c10") && !gate.accept("real1c10"));
+  CommandGate fresh;
+  fresh.noneYet();                                    // 404 before any command: the first one counts
+  assert(fresh.accept("real1c1"));
 
   // ri of an ACP reply (create 201 or retrieve 200)
   std::string ri;

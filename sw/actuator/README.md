@@ -14,6 +14,7 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.
 - Build: `pio run` (PlatformIO, ESP32 Arduino). Built 2026-10-18 with the oneM2M part (RAM 14.4 %, flash 74.4 %).
+- Position in the window: `CELL_ROW`/`CELL_COL` in `secrets.h` say where the cell sits in the window (row 0 = top, col 0 = left, seen from inside); the cell adds them to its `state` as the label `polagrid/<run>/pos/<row>/<col>` so the app draws it there (host test passes, 2026-10-19, not run on hardware).
 
 ## oneM2M (HTTP, polling)
 The firmware makes the same resources `sw/edge_ai/polagrid/zone.py` makes for one virtual cell, so the polagrid
@@ -48,8 +49,7 @@ Differences from the virtual cell in zone.py:
 - One extra CNT `{run}p0/lux`. The controller does not read it.
 - `state` is written when the integer `opeLl` changes; zone.py writes when the angle changes by more than 0.05 deg.
 - The desk list has one value (one desk sensor). The default polagrid `Room` has two desks.
-- After a reboot the newest command in `command` is applied again, even if it is old (the watchdog still opens the
-  cell 30 min later if no new command comes).
+- After a reboot the newest command left in `command` is NOT applied (`m2m::CommandGate`, 2026-10-19): the first command id the cell sees after boot is only remembered, the serial log says `SKIP old command after boot`, and the cell stays open (its safe state) until the controller's heartbeat brings a fresh id (at most 10 min). A 404 (no command yet) lets the first command through. Host test passes; not run on hardware.
 
 Request check without a CSE: `tests_host/zone_capture.py` records what zone.py sends for one cell (fake
 `requests.Session`, output in `tests_host/zone_requests.txt`) and `./test_onem2m --print` prints the firmware's

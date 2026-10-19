@@ -83,8 +83,12 @@ inline std::string cntBody(const std::string& rn, const std::string& acp, const 
 }
 
 // Everything after the ACPs, in creation order. A 409 (already there) counts as done, so a reboot repeats it safely.
-inline std::vector<Req> resourceReqs(const std::string& run, int i, const std::string& envAcp, const std::string& cellAcp) {
+// row/col: where the cell sits in the window, seen from inside (row 0 = top, col 0 = left). Put on the state as a second label
+// "polagrid/<run>/pos/<row>/<col>" so the app draws each new cell where it was installed. -1 = not placed.
+inline std::vector<Req> resourceReqs(const std::string& run, int i, const std::string& envAcp, const std::string& cellAcp,
+                                     int row = -1, int col = -1) {
   std::string rn = cellRn(run, i), o = cellOrig(run, i), e = envOrig(run);
+  std::string pos = row < 0 ? "" : ", " + q("polagrid/" + run + "/pos/" + std::to_string(row) + "/" + std::to_string(col));
   return {
       {"POST", "", e, 2, aeBody(run + "env")},
       {"POST", run + "env", e, 3, cntBody("sun", envAcp)},
@@ -92,7 +96,7 @@ inline std::vector<Req> resourceReqs(const std::string& run, int i, const std::s
       {"POST", "", o, 2, aeBody(rn)},
       {"POST", rn, o, 3, cntBody("command", cellAcp, "polagrid/" + run + "/command")},
       {"POST", rn, o, 28, "{\"cod:opeLl\": {\"rn\": \"state\", \"cnd\": " + q(OPEN_LEVEL) + ", \"opeLl\": 100, \"minLl\": 0, "
-                          "\"maxLl\": 100, \"acpi\": [" + q(cellAcp) + "], \"lbl\": [" + q("polagrid/" + run + "/state") + "]}}"},
+                          "\"maxLl\": 100, \"acpi\": [" + q(cellAcp) + "], \"lbl\": [" + q("polagrid/" + run + "/state") + pos + "]}}"},
       {"POST", rn, o, 3, cntBody("lux", cellAcp)},
   };
 }
@@ -132,6 +136,21 @@ inline bool jsonString(const std::string& js, const char* key, std::string& out)
   }
   return false;
 }
+
+// Which commands to apply. command/la still holds the last command the controller sent, maybe from hours ago, so the
+// first one the cell sees after a reboot is stale: it is remembered, not applied (the cell stays open, its safe state),
+// and the controller's heartbeat (a fresh command id every 10 min) brings it back. Anything newer than that is applied once.
+struct CommandGate {
+  std::string last;
+  bool baselined = false;
+  bool accept(const std::string& cmd) {
+    if (!baselined) { baselined = true; last = cmd; return false; }
+    if (cmd == last) return false;
+    last = cmd;
+    return true;
+  }
+  void noneYet() { baselined = true; }   // command/la answered 404: there is no old command, the first one that appears is new
+};
 
 // Reply of GET command/la: {"m2m:cin": {"con": "{\"cmd\": \"r1c3\", \"angles\": [45.0, ...]}", ...}}.
 // Takes this cell's entry angles[i]. False on anything malformed, so a bad command is never applied.

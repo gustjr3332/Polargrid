@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="PolaGrid"><meta name="theme-color" content="#0b0e13">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PolaGrid app mockup</title>
@@ -13,7 +15,7 @@ body{background:#05070a;color:var(--tx);font:15px/1.4 Roboto,system-ui,sans-seri
 .top{padding:10px 20px 6px}
 .top h1{font-size:22px;font-weight:500}
 .top p{color:var(--mut);font-size:14px;margin-top:2px}
-.body{flex:1;overflow:hidden;padding:6px 16px}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;padding:6px 16px 14px;scrollbar-width:none}.body::-webkit-scrollbar{display:none}
 .nav{height:64px;background:var(--surf);display:flex;border-top:1px solid var(--line)}
 .nav button{flex:1;background:none;border:0;color:var(--mut);font-size:12.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 .nav button i{font-style:normal;font-size:17px;width:52px;height:26px;line-height:26px;border-radius:13px}
@@ -25,7 +27,20 @@ body{background:#05070a;color:var(--tx);font:15px/1.4 Roboto,system-ui,sans-seri
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
 .cell{aspect-ratio:1.45;border-radius:12px;background:var(--surf2);position:relative;overflow:hidden;border:1px solid var(--line)}
 .cell b{position:absolute;left:0;right:0;bottom:0;background:var(--acc);opacity:.9}
+.grid.one{grid-template-columns:1fr}.grid.one .cell{aspect-ratio:2.2}
 .cell.glare{box-shadow:0 0 0 2px var(--warn)}
+.cell.live{touch-action:none;cursor:ns-resize;user-select:none}
+.cell .edge{position:absolute;left:18%;right:18%;height:5px;margin-bottom:-2px;border-radius:3px;background:#fff;opacity:.9}
+.cell .tgt{position:absolute;left:0;right:0;border-top:2px dashed #fff}
+.cell.sel{box-shadow:0 0 0 3px var(--acc)}.cell.sel::after{content:"✓";position:absolute;right:8px;top:6px;background:var(--acc);color:#111;border-radius:50%;width:20px;height:20px;text-align:center;font-size:13px;line-height:20px;font-weight:700}
+.cell.live.pick{cursor:pointer}
+.hint{color:var(--mut);font-size:13px;text-align:center;margin:10px 0 2px}
+.btn{transition:transform .08s,background .15s}.btn:active{transform:scale(.97)}
+.chip{transition:background .15s,color .15s}#sel-mode,#sel-all{cursor:pointer;padding:6px 14px}
+#sel-lvl{height:28px}
+.cell.empty{background:none;border:1px dashed var(--line)}
+.cell.new{animation:pop .6s ease-out}@keyframes pop{from{transform:scale(.5);opacity:0}60%{transform:scale(1.06)}to{transform:scale(1);opacity:1}}
+.wifi{display:inline-flex;align-items:center;gap:4px}.wifi.off{opacity:.45}
 .cell span{position:absolute;top:6px;left:8px;font-size:13px;color:#fff;font-weight:600;background:#000b;border-radius:6px;padding:0 6px}
 .desk{display:flex;gap:10px}.desk div{flex:1;background:var(--surf2);border-radius:12px;padding:10px}
 .desk small{color:var(--mut);display:block;font-size:13px}.desk strong{font-size:20px;font-weight:500}
@@ -43,10 +58,10 @@ body{background:#05070a;color:var(--tx);font:15px/1.4 Roboto,system-ui,sans-seri
 .btn.p{background:var(--acc);color:#1b1500;font-weight:600}
 .met{display:grid;grid-template-columns:1fr 1fr;gap:10px}.met div{background:var(--surf2);border-radius:14px;padding:12px}
 .met strong{font-size:24px;font-weight:500;display:block}.met small{color:var(--mut);font-size:13px}
-.demo{position:absolute;bottom:72px;right:12px;background:#000a;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;color:var(--mut)}
+.demo{position:absolute;top:44px;right:16px;background:#000a;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px;color:var(--mut)}
 .screen{display:none;flex:1;flex-direction:column;overflow:hidden}.screen.show{display:flex}
 .lab{font-size:12.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;margin:6px 2px}
-body.bare{padding:0;display:block}body.bare .phone{width:412px;height:892px;border:0;border-radius:0;outline:0}body.bare #root{justify-content:flex-start!important}body.bare a.hint,body.bare #lang{display:none}
+body.bare{padding:0;display:block}body.bare .phone{width:100%;height:100vh;height:100dvh;border:0;border-radius:0;outline:0}body.bare #root{justify-content:flex-start!important}body.bare a.hint,body.bare #lang{display:none}
 a.hint{position:fixed;top:4px;left:10px;color:var(--mut);font-size:13px}
 #lang{position:fixed;top:4px;right:10px;z-index:9;background:#222932;color:var(--tx);border:2px solid var(--acc);border-radius:16px;padding:4px 12px;font:600 15px system-ui;cursor:pointer}#lang b{color:var(--acc)}
 </style>
@@ -75,7 +90,8 @@ const KO = {
 "Compared with":"비교 대상","Fixed open":"항상 열림","Blind":"블라인드","Timer":"타이머","2.3 h glare":"glare 2.3 h","dark desk":"책상이 어두움","0.3 h glare":"glare 0.3 h",
 "Connection and safety":"연결 및 안전","Safe state":"안전 상태",
 "If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.":"연결이 끊기거나 AI가 이상하게 동작하면 모든 셀이 스스로 열립니다. 여기서 언제든 셀을 직접 움직일 수도 있어요.",
-"Open all":"모두 열기","Close all":"모두 닫기"};
+"Open all":"모두 열기","Close all":"모두 닫기",
+"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","Each press is saved in the correction DB (not used by the AI yet).":"버튼을 누를 때마다 보정 DB에 저장됩니다 (아직 AI 학습에는 쓰이지 않음).","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상"};
 let LANG = "ko";
 { const q = new URLSearchParams(location.search).get("lang"); let s = null;
   try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
@@ -83,32 +99,89 @@ let LANG = "ko";
 const T = s => LANG === "ko" ? (KO[s] || s) : s;
 
 const LEVELS = [100,100,100, 100,62,100, 38,35,70, 100,45,100];   // open level 0-100, 12 cells (3 x 4)
+// ?live=1: the Window screen shows the one real cell, read every 2 s from /api/real of demo/server.py (--real RUN).
+// Needs the page served by that server (/mockup/?live=1); opened as a file it stays static. Other screens stay made-up.
+const LIVE = new URLSearchParams(location.search).has("live");
+const API = "";
+// Access token: open the page with ?token=... once (kept in localStorage); every POST sends it as X-Demo-Token.
+let TOKEN = ""; { const q = new URLSearchParams(location.search).get("token");
+  try { if (q) localStorage.setItem("pg-token", q); TOKEN = q || localStorage.getItem("pg-token") || ""; } catch (e) { TOKEN = q || ""; } }
+let AUTH_BAD = false;   // the server answered 401: no or wrong token
+const postJson = (path, body) => fetch(API + path, {method: "POST", headers: {"Content-Type": "application/json", "X-Demo-Token": TOKEN}, body: JSON.stringify(body)})
+  .then(r => { AUTH_BAD = r.status === 401; return r; }).catch(() => {});   // same server as the page; set it only if the page is opened from somewhere else
+let AMOUNT = 200, CORR = null;   // Comfort screen: slider size in lux, corrections.db summary from the server
+let SELMODE = false, SEL = new Set();   // select mode: tapping cells picks them, one slider sets them all
+let PEND = {}, dragging = false;   // PEND[cell index] = {level, t}: the open level the user set by touching that cell; dragging pauses the 2 s redraw
+let REAL = null;   // last /api/real reply, null until the first one; {ok:false} = CSE not reachable
 const GLARE = new Set([5,6,7]);                                   // cells with a warm outline
 const NAV = [["Window","▦"],["Comfort","☀"],["Mode","◐"],["Today","▤"],["Settings","⚙"]];
 
-const cells = () => `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
+// Live: one box per cell found by the server, at its installed place (row 0 = top, col 0 = left, seen from inside).
+// A cell that was not there on the last draw pops in, so adding a cell shows up one at a time.
+let SHOWN = null;
+const liveGrid = () => {
+  const cs = REAL && REAL.ok ? REAL.cells : [];
+  if (!cs.length) return `<div class="grid" style="grid-template-columns:1fr"><div class="cell" style="aspect-ratio:2.2"><span>–</span></div></div>`;
+  const rows = Math.max(...cs.map(c => c.row)) + 1, cols = Math.max(...cs.map(c => c.col)) + 1;
+  const old = SHOWN; SHOWN = new Set(cs.map(c => c.i));
+  let h = "";
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const x = cs.find(k => k.row === r && k.col === c);
+    const p = x && PEND[x.i];
+    h += x ? `<div class="cell live ${SELMODE ? "pick" : ""} ${SEL.has(x.i) ? "sel" : ""} ${old && !old.has(x.i) ? "new" : ""}" data-i="${x.i}" data-lv="${x.level}" title="row ${r}, col ${c}"><b style="height:${x.level}%"></b><u class="edge" style="bottom:${x.level}%"></u><u class="tgt" style="bottom:${p ? p.level : 0}%;display:${p ? "block" : "none"}"></u><span>${p ? x.level + " → " + p.level : x.level}</span></div>`
+           : `<div class="cell empty"></div>`;
+  }
+  return `<div class="grid" style="grid-template-columns:repeat(${cols},1fr)"><style>.grid .cell{aspect-ratio:${rows * cols === 1 ? 2.2 : cols > 1 ? 1.25 : 1}}</style>${h}</div>`;
+};
+const cells = () => LIVE ? liveGrid() : `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
 const seg = (items,on) => `<div class="seg">${items.map((s,i)=>`<div class="${i===on?'on':''}">${T(s)}</div>`).join('')}</div>`;
 const opt = (t,s,on) => `<div class="opt ${on?'on':''}"><span class="dot"></span><div>${T(t)}<small>${T(s)}</small></div></div>`;
 
+const WIFI = on => `<span class="wifi ${on ? "" : "off"}" title="${T(on ? "Wi-Fi: same network as the cell module" : "Wi-Fi: cell not reachable")}"><svg width="18" height="14" viewBox="0 0 24 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 6.5a15 15 0 0 1 20 0"/><path d="M5.5 10.5a10 10 0 0 1 13 0"/><path d="M9 14.2a5 5 0 0 1 6 0"/><circle cx="12" cy="17" r="1" fill="currentColor"/>${on ? "" : '<path d="M3 1l18 16" stroke="#ff6b6b"/>'}</svg></span>`;
+const corrList = () => {
+  const rows = CORR && CORR.last.length ? CORR.last.map(r => `<div class="row" style="padding:6px 0"><span>${r.ts.slice(11, 16)} · ${T(r.kind === "too_bright" ? "Too bright" : "Too dark")}${r.fake ? " · " + T("fake") : ""}</span><span class="chip">${r.offset_lux > 0 ? "+" : "−"}${Math.abs(r.offset_lux)} lux</span></div>`).join("")
+    : `<div style="color:var(--mut);padding:6px 0">${T("No corrections yet")}</div>`;
+  return `<div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Last corrections")}</span><span class="chip">${CORR ? CORR.count : 0} ${T("saved")}</span></div>${rows}</div>`;
+};
+const loadCorr = () => fetch(API + "/api/real/corrections").then(r => r.json()).then(d => { CORR = d; }, () => {});
+const num = v => v == null ? "–" : Math.round(v);
+const deskRow = () => LIVE
+  ? `<div class="desk"><div><small>${T("Desk")}</small><strong>${num(REAL && REAL.desk_lux)} lux</strong></div><div><small>${T("Cell sensor")}</small><strong>${num(REAL && REAL.cell_lux)} lux</strong></div></div>`
+  : `<div class="desk"><div><small>${T("Desk A")}</small><strong>412 lux</strong><small>${T("target ≥ 300")}</small></div><div><small>${T("Desk B")}</small><strong>388 lux</strong><small>${T("target ≥ 300")}</small></div></div>`;
+const selCard = () => {
+  const cs = REAL && REAL.ok ? REAL.cells : [], picked = cs.filter(c => SEL.has(c.i));
+  const mean = picked.length ? Math.round(picked.reduce((a, c) => a + c.level, 0) / picked.length) : 0;
+  return `<div class="card" style="margin-top:12px"><div class="row"><span class="chip ${SELMODE ? "acc" : ""}" id="sel-mode">${T("Select cells")}</span>
+    ${SELMODE ? `<span class="chip" id="sel-all">${T(picked.length === cs.length ? "Clear" : "Select all")}</span>` : ""}</div>
+    ${SELMODE ? `<div class="row" style="margin-top:10px"><span class="lab" style="margin:0">${picked.length}${LANG === "ko" ? "" : " "}${T("cells selected")}</span><span style="font-size:16px" id="selv">${mean}%</span></div>
+    <input id="sel-lvl" type="range" min="0" max="100" step="5" value="${mean}" ${picked.length ? "" : "disabled"} style="width:100%;accent-color:var(--acc);margin:8px 0">` : ""}</div>`;
+};
+const link = () => LIVE ? (REAL && REAL.ok ? T("● Connected") : T("● Offline")) : T("● Connected");
+
 const SCREENS = () => ({
-Window:{sub:"Study room · south window",html:`
-  <div class="card"><div class="row"><span class="chip acc">${T("Auto · Reduce desk glare")}</span><span class="chip ok">${T("● Connected")}</span></div>
+Window:{sub:LIVE?"Real cell":"Study room · south window",html:`
+  <div class="card"><div class="row"><span class="chip acc">${T("Auto · Reduce desk glare")}</span><span class="chip ${LIVE && !(REAL && REAL.ok) ? '' : 'ok'}">${link()}</span></div>
   ${cells()}
-  <div class="row"><span class="chip">${T("Open level (%)")}</span><span class="chip" style="color:var(--warn)">${T("▢ glare cells")}</span></div></div>
+  <div class="row"><span class="chip">${T("Open level (%)")}</span>${LIVE && Object.keys(PEND).length ? `<span class="chip acc">${T("Moving")}</span>` : ""}${LIVE ? "" : `<span class="chip" style="color:var(--warn)">${T("▢ glare cells")}</span>`}</div></div>
   <div class="lab">${T("Desk light")}</div>
-  <div class="desk"><div><small>${T("Desk A")}</small><strong>412 lux</strong><small>${T("target ≥ 300")}</small></div><div><small>${T("Desk B")}</small><strong>388 lux</strong><small>${T("target ≥ 300")}</small></div></div>
-  <div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Brightness")}</span><span style="font-size:16px">70%</span></div>
+  ${deskRow()}
+  ${LIVE ? selCard() : ""}
+  ${LIVE ? `<div class="btns" style="margin-top:12px"><div class="btn" id="all-open">${T("Open all")}</div><div class="btn" id="all-close">${T("Close all")}</div></div>
+  ${AUTH_BAD ? `<p class="hint" style="color:var(--warn)">${T("No access token: open the link with ?token=…")}</p>` : ""}
+  <p class="hint">${T(SELMODE ? "Tap cells to tick them, then use the slider" : "Touch a cell and drag its top edge up or down")}</p>`
+  : `<div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Brightness")}</span><span style="font-size:16px">70%</span></div>
   <div class="slider"><b style="width:70%"></b><i style="left:70%"></i></div>
-  <div class="row" style="color:var(--mut);font-size:13px"><span>${T("Dim")}</span><span>${T("Brightest possible")}</span></div></div>`},
+  <div class="row" style="color:var(--mut);font-size:13px"><span>${T("Dim")}</span><span>${T("Brightest possible")}</span></div></div>`}`},
 Comfort:{sub:"Tell the AI how it feels",html:`
   <div class="card"><div class="lab">${T("How much?")}</div>
-  <div class="slider"><b style="width:40%"></b><i style="left:40%"></i></div>
-  <div class="row" style="color:var(--mut);font-size:14px"><span>100 lux</span><span style="color:var(--tx);font-size:16px">+200 lux</span><span>500 lux</span></div></div>
-  <div class="btns"><div class="btn">${T("Too dark")}</div><div class="btn p">${T("Too bright")}</div></div>
-  <div class="card" style="margin-top:12px"><div class="lab">${T("Last corrections")}</div>
+  ${LIVE ? `<input id="amt" type="range" min="100" max="500" step="50" value="${AMOUNT}" style="width:100%;accent-color:var(--acc);margin:8px 0">`
+         : `<div class="slider"><b style="width:40%"></b><i style="left:40%"></i></div>`}
+  <div class="row" style="color:var(--mut);font-size:14px"><span>100 lux</span><span id="amtv" style="color:var(--tx);font-size:16px">${LIVE ? AMOUNT : "+200"} lux</span><span>500 lux</span></div></div>
+  <div class="btns"><div class="btn" ${LIVE ? 'id="b-dark"' : ""}>${T("Too dark")}</div><div class="btn p" ${LIVE ? 'id="b-bright"' : ""}>${T("Too bright")}</div></div>
+  ${LIVE ? corrList() : `<div class="card" style="margin-top:12px"><div class="lab">${T("Last corrections")}</div>
   <div class="row" style="padding:6px 0"><span>${T("14:05 · Too bright")}</span><span class="chip">−200 lux</span></div>
-  <div class="row" style="padding:6px 0"><span>${T("11:40 · Too dark")}</span><span class="chip">+100 lux</span></div></div>
-  <p style="color:var(--mut);font-size:14px;padding:4px">${T("Each press is also a training sample for the AI preference model.")}</p>`},
+  <div class="row" style="padding:6px 0"><span>${T("11:40 · Too dark")}</span><span class="chip">+100 lux</span></div></div>`}
+  <p style="color:var(--mut);font-size:14px;padding:4px">${T(LIVE ? "Each press is saved in the correction DB (not used by the AI yet)." : "Each press is also a training sample for the AI preference model.")}</p>`},
 Mode:{sub:"How should the window behave?",html:`
   ${seg(["Auto","Manual","Privacy","Away"],0)}
   <div class="card"><div class="lab">${T("Goal (Auto)")}</div>
@@ -125,16 +198,17 @@ Today:{sub:"Measured on this window",html:`
   <div class="row" style="padding:6px 0"><span>${T("Timer")}</span><span class="chip">${T("0.3 h glare")}</span></div></div>`},
 Settings:{sub:"Connection and safety",html:`
   <div class="card"><div class="lab">oneM2M CSE</div><div class="row"><span>polagrid-in.local:3000</span><span class="chip ok">● OK</span></div>
-  <div class="row" style="padding-top:8px"><span style="color:var(--mut)">Originator</span><span>Capp</span></div></div>
+  <div class="row" style="padding-top:8px"><span style="color:var(--mut)">Originator</span><span>Capp</span></div>
+  <div class="row" style="padding-top:8px"><span style="color:var(--mut)">${T("Network")}</span><span>${T("Wi-Fi (same as the cell module)")}</span></div></div>
   <div class="card"><div class="lab">${T("Safe state")}</div><p style="color:var(--mut)">${T("If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.")}</p></div>
   <div class="btns"><div class="btn">${T("Open all")}</div><div class="btn">${T("Close all")}</div></div>`}
 });
 
 const phone = (name, idx) => { const S = SCREENS()[name]; return `<div class="phone" data-i="${idx}">
-  <div class="status"><span>9:41</span><span>▂▄▆ 5G ▮</span></div>
+  <div class="status"><span>9:41</span><span>${WIFI(!LIVE || (REAL && REAL.ok))} ▮</span></div>
   <div class="top"><h1>${T(name)}</h1><p>${T(S.sub)}</p></div>
   <div class="body">${S.html}</div>
-  <div class="demo">${T("DEMO DATA")}</div>
+  <div class="demo">${T(!LIVE || name !== "Window" ? "DEMO DATA" : REAL && REAL.fake ? "LIVE · FAKE CELL" : "LIVE")}</div>
   <div class="nav">${NAV.map(([n,ic])=>`<button class="${n===name?'on':''}"><i>${ic}</i>${T(n)}</button>`).join('')}</div></div>`; };
 
 const all = new URLSearchParams(location.search).get("view") === "all";
@@ -143,7 +217,38 @@ const root = document.getElementById("root");
 const $lang = document.getElementById("lang");
 root.style.cssText = "display:flex;gap:28px;flex-wrap:wrap;justify-content:center";
 let cur = +(new URLSearchParams(location.search).get("s")||0);
-const draw = i => { cur = i; root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); };
+const postLevel = (level, i, cells) => postJson("/api/real/level", cells ? {level, cells} : i == null ? {level} : {level, i});
+const allSet = level => { (REAL && REAL.ok ? REAL.cells : []).forEach(c => { PEND[c.i] = {level, t: Date.now()}; }); postLevel(level); draw(cur, true); };
+// Touch a cell: its yellow top edge jumps to the finger and follows it up and down (steps of 5); letting go sends the level of that cell.
+const bindCells = () => {
+  root.querySelectorAll(".cell.live").forEach(el => {
+    const i = +el.dataset.i;
+    if (SELMODE) { el.onclick = () => { SEL.has(i) ? SEL.delete(i) : SEL.add(i); draw(cur, true); }; return; }
+    const at = e => { const r = el.getBoundingClientRect(), lv = Math.max(0, Math.min(100, Math.round((1 - (e.clientY - r.top) / r.height) * 20) * 5));
+      PEND[i] = {level: lv, t: Date.now()}; const g = el.querySelector(".tgt"); g.style.display = "block"; g.style.bottom = lv + "%"; el.querySelector("span").textContent = el.dataset.lv + " → " + lv; };
+    el.onpointerdown = e => { dragging = true; el.setPointerCapture(e.pointerId); at(e); };
+    el.onpointermove = e => { if (dragging && el.hasPointerCapture(e.pointerId)) at(e); };
+    el.onpointerup = el.onpointercancel = () => { if (!dragging) return; dragging = false; PEND[i].t = Date.now(); postLevel(PEND[i].level, i); };
+  });
+  const sm = document.getElementById("sel-mode"); if (sm) sm.onclick = () => { SELMODE = !SELMODE; if (SELMODE && !SEL.size && REAL && REAL.ok) REAL.cells.forEach(c => SEL.add(c.i)); draw(cur, true); };
+  const sa = document.getElementById("sel-all"); if (sa) sa.onclick = () => { const cs = REAL && REAL.ok ? REAL.cells : []; if (SEL.size >= cs.length) SEL.clear(); else cs.forEach(c => SEL.add(c.i)); draw(cur, true); };
+  const sl = document.getElementById("sel-lvl"); if (sl) {
+    sl.oninput = () => { dragging = true; document.getElementById("selv").textContent = sl.value + "%"; };
+    sl.onchange = () => { dragging = false; const lv = +sl.value, ids = [...SEL]; ids.forEach(k => { PEND[k] = {level: lv, t: Date.now()}; }); postLevel(lv, null, ids); draw(cur, true); };
+  }
+  const open = document.getElementById("all-open");
+  if (open) { open.onclick = () => allSet(100); document.getElementById("all-close").onclick = () => allSet(0); }
+};
+const bindComfort = () => {
+  const a = document.getElementById("amt"); if (!a) return;
+  a.oninput = () => { AMOUNT = +a.value; document.getElementById("amtv").textContent = AMOUNT + " lux"; };
+  const post = kind => postJson("/api/real/correction", {kind, amount: AMOUNT})
+    .then(loadCorr).then(() => { if (names[cur] === "Comfort") draw(cur, true); }).catch(() => {});
+  document.getElementById("b-dark").onclick = () => post("too_dark");
+  document.getElementById("b-bright").onclick = () => post("too_bright");
+};
+const draw = (i, noload) => { cur = i; root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); bindCells(); bindComfort();
+  if (LIVE && names[i] === "Comfort" && !noload) loadCorr().then(() => { if (names[cur] === "Comfort") draw(cur, true); }); };
 const render = () => {
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = T(e.dataset.i18n));
@@ -151,6 +256,14 @@ const render = () => {
   if (all) root.innerHTML = names.map(phone).join(""); else draw(cur);
 };
 $lang.onclick = () => { LANG = LANG === "ko" ? "en" : "ko"; try { localStorage.setItem("pg-lang", LANG); } catch (e) {} render(); };
+if (LIVE) {
+  const poll = () => fetch(API + "/api/real").then(r => r.json()).then(d => { REAL = d; }, () => { REAL = {ok: false}; })
+    .then(() => { if (!dragging) for (const k of Object.keys(PEND)) {   // reached, or give up after 45 s
+        const c = REAL.ok && REAL.cells.find(c => c.i == k);
+        if (Date.now() - PEND[k].t > 45000 || (c && Math.abs(c.level - PEND[k].level) <= 3)) delete PEND[k]; }
+      if (names[cur] === "Window" && !all && !dragging) draw(cur); });
+  poll(); setInterval(poll, 2000);
+}
 if (new URLSearchParams(location.search).has('bare')) document.body.classList.add('bare');
 render();
 </script>

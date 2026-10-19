@@ -29,7 +29,8 @@ HEARTBEAT_MIN = WATCHDOG_MIN // 3   # resend the table at least this often, or t
 
 class Control:
     """Demo page controls (POST /ctl on the control port): start/stop, speed, cloud, window turn, reset."""
-    STEP_WALL_S = 2.0                    # wall seconds per control step at 1x
+    STEP_WALL_S = 1.0                    # wall seconds per control step at 1x: with --step 10, 1 s = 10 simulated minutes
+    SPEEDS = (1.0, 2.0, 5.0)             # the page offers 1x, 2x, 5x = 1.0 s, 0.5 s, 0.2 s per step (a step can take longer: the CSE round trip)
 
     def __init__(self, cloud, azimuth):
         self.running, self.speed, self.cloud, self.turn, self.reset = False, 1.0, cloud, 0.0, False
@@ -42,7 +43,7 @@ class Control:
             def do_POST(self):
                 body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
                 if "running" in body: ctl.running = bool(body["running"])
-                if "speed" in body: ctl.speed = max(0.1, float(body["speed"]))
+                if "speed" in body and float(body["speed"]) in Control.SPEEDS: ctl.speed = float(body["speed"])
                 if "cloud" in body: ctl.cloud = float(body["cloud"]) if body["cloud"] else ctl.base_cloud
                 if "turn" in body: ctl.turn = float(body["turn"])
                 if body.get("reset"): ctl.reset = True
@@ -134,6 +135,8 @@ def main():
     ap.add_argument("--real-turn", type=float, default=0.0,
                     help="degrees the physical window is turned away from the model room (online controller)")
     ap.add_argument("--port", type=int, default=9500)
+    ap.add_argument("--slow", action="store_true",
+                    help="with --serve also allow speed 0.05 (20 s per step), so a recorder that needs 10 s to read all cells sees every step")
     ap.add_argument("--serve", action="store_true",
                     help="demo mode: wait for Start on the control port (port+2) and repeat the day after Reset")
     a = ap.parse_args()
@@ -166,6 +169,8 @@ def main():
     make = lambda: evaluate.night_closed(base())
     if a.serve:
         ctrl = Control(a.cloud, real.window_azimuth)
+        if a.slow:
+            Control.SPEEDS = (0.05, *Control.SPEEDS)
         ctrl.serve(a.port + 2)
         while True:
             ctrl.reset = ctrl.running = False
