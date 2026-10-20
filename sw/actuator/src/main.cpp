@@ -114,9 +114,14 @@ void netTask(void*) {
   m2m::CommandGate gate;
   std::string pendingCmd;
   long pendingSteps = 0;
-  uint32_t pendingSince = 0, lastPoll = 0, lastReport = 0, lastState = 0, offlineSince = millis();
+  uint32_t pendingSince = 0, lastPoll = 0, lastReport = 0, lastState = 0, offlineSince = millis(), lastReply = millis();
+  bool linkReported = false;
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(50));
+    if (m2m::linkLost(lastReply, millis(), linkReported)) {   // no CSE reply for a minute: open (not in privacy mode)
+      xQueueSend(cmdQueue, "FAILSAFE", 0);
+      Serial.println("LINK LOST");
+    }
     if (WiFi.status() != WL_CONNECTED) {
       ready = false;
       if (millis() - offlineSince > 15000) { WiFi.disconnect(); WiFi.begin(WIFI_SSID, WIFI_PASS); offlineSince = millis(); }
@@ -141,17 +146,26 @@ void netTask(void*) {
         continue;
       }
       fails = 0;
+      lastReply = millis();
       // 404 is normal before the first command; if it lasts a minute the MN may have been reset, so provision again
       notFound = code == 404 ? notFound + 1 : 0;
       if (code == 403 || notFound >= 30) { ready = false; notFound = 0; }
       if (code == 404) gate.noneYet();
       bool stale = code == 200 && !gate.baselined;   // the first command seen after boot is an old one
       if (code == 200 && m2m::parseCommandCin(reply, CELL_INDEX, cmd, angle) && gate.accept(cmd)) {
+        bool priv = m2m::commandPrivacy(reply);   // privacy: every disc closed, whatever the angle list says
+        bool sane = priv || m2m::angleSane(angle);
         char line[32];
-        snprintf(line, sizeof line, "A 0 %.1f", angle);
-        xQueueSend(cmdQueue, line, 0);
+        if (sane) {
+          xQueueSend(cmdQueue, priv ? "PRIV 1" : "PRIV 0", 0);
+          snprintf(line, sizeof line, "A 0 %.1f", priv ? DISC_MAX_DEG : angle);
+          xQueueSend(cmdQueue, line, 0);
+        } else {
+          xQueueSend(cmdQueue, "FAILSAFE", 0);   // nonsense angle: the controller is confused, let the light in
+          Serial.println("BAD ANGLE");
+        }
         pendingCmd = cmd;
-        pendingSteps = stepsFromDisc(angle);
+        pendingSteps = sane ? stepsFromDisc(priv ? DISC_MAX_DEG : angle) : 0;
         pendingSince = millis();
       } else if (stale && gate.baselined) Serial.println("SKIP old command after boot");
     }
@@ -211,6 +225,8 @@ void loop() {
   if (down && pressedMs && millis() - pressedMs >= 50) { parseCommand("OPEN", cells, millis()); pressedMs = 0; Serial.println("BUTTON open"); }
   wasDown = down;
   if (watchdog(cells, millis())) Serial.println("WATCHDOG open");
+  static bool wasPrivacy = false;
+  if (cells.privacy != wasPrivacy) Serial.println((wasPrivacy = cells.privacy) ? "PRIVACY on" : "PRIVACY off");
   apply();
   if (micros() - lastStepUs >= STEP_US) {      // one half step at a time, never blocks the serial parser
     lastStepUs = micros();

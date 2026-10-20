@@ -18,6 +18,7 @@ from .physics import (DESK_MIN_LUX, GLARE_LUX, KST, Room, light_matrices, simula
 STEP_MIN = 5
 SUN_ON_WINDOW_LUX = 20_000  # blind baseline closes when outdoor light on the window is above this
 NIGHT_LUX = 400             # outdoor light below this (about civil twilight) means night
+LUX_MAX = 200_000           # no sensor reads more than full sun on the glass; above it a reading is broken
 GLARE_MARGIN_LUX = 1_000    # AI (2) aims this far below GLARE_LUX, because the sun moves between probes
 
 
@@ -121,6 +122,28 @@ def teacher_log(room, day, cloud=0.0, margin=None):
         log.append((ai.features(t, alt, az, outdoor), angles.copy()))
         t += timedelta(minutes=STEP_MIN)
     return log
+
+
+def fail_open(controller):
+    """Fail-safe wrapper: if the controller raises, answers with NaN, the wrong shape or an angle outside 0..90, or the desk
+    reading is broken (NaN, negative, above LUX_MAX), open every cell instead of passing the guess on. `.opens` counts it."""
+    def safe(ctx):
+        n = len(ctx["angles"])
+        try:
+            desk = ctx.get("desk_lux")
+            if desk is not None:
+                desk = np.asarray(desk, dtype=float)
+                if not (np.all(np.isfinite(desk)) and desk.min() >= 0 and desk.max() <= LUX_MAX):
+                    raise ValueError("desk reading broken")
+            new = np.asarray(controller(ctx), dtype=float)
+            if new.shape != (n,) or not np.all(np.isfinite(new)) or new.min() < 0 or new.max() > 90:
+                raise ValueError("angles not a table of numbers in 0..90")
+            return new
+        except Exception:                            # any fault of the judgement means open, whatever it was
+            safe.opens += 1
+            return np.zeros(n)
+    safe.opens = 0
+    return safe
 
 
 def night_closed(controller):

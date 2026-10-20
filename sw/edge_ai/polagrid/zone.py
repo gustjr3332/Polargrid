@@ -82,7 +82,7 @@ class Zone:
         self.rng = np.random.default_rng(seed)
         self.angles = np.zeros(room.n_cells)
         self.moves = self.watchdog_opens = 0
-        self.t, self.cloud, self.last_cmd = None, 0.0, None
+        self.t, self.cloud, self.last_cmd, self.privacy = None, 0.0, None, False
         self._done, self._lock = {}, threading.Lock()
         self.rx = Receiver(port, self._on_command)
 
@@ -113,7 +113,8 @@ class Zone:
     def set_environment(self, t, cloud=0.0):
         """Move the simulated clock and publish the sun reading."""
         self.t, self.cloud = t, cloud
-        if self.last_cmd is not None and t - self.last_cmd > timedelta(minutes=WATCHDOG_MIN) and self.angles.any():
+        if (self.last_cmd is not None and not self.privacy and self.angles.any()
+                and t - self.last_cmd > timedelta(minutes=WATCHDOG_MIN)):
             self._open_all()                          # fail-safe: no controller, so let the light in
         alt, az = sun_position(t, self.room.lat, self.room.lon)
         self.c.create(f"{self.run}env/sun", f"C{self.run}env",
@@ -134,7 +135,12 @@ class Zone:
     def _on_command(self, path, con):
         self.last_cmd = self.t
         i = int(path[1:])
+        self.privacy = con.get("mode") == "privacy"   # the user's privacy mode: all dark, the watchdog leaves it alone
         new = float(con["angles"][i])
+        if self.privacy:
+            new = 90.0
+        elif not 0 <= new <= 90:                      # nonsense (also NaN): the controller is confused, so open
+            new = 0.0
         if abs(new - self.angles[i]) > 0.05:         # state only changes when the cell moves
             self.moves += abs(new - self.angles[i]) > MOVE_DEG
             self.angles[i] = new
@@ -184,13 +190,17 @@ class Controller:
         """Newest desk reading (lux per desk), taken at the cells' current angles."""
         return np.array(self.c.latest(f"{self.run}env/desks", self.me)["lux"])
 
-    def command(self, angles):
-        """Send one angle table to every cell; return the desk reading taken after all cells applied it."""
+    def command(self, angles, mode=None):
+        """Send one angle table to every cell; return the desk reading taken after all cells applied it.
+        mode="privacy" tells the cells to close completely and ignore their watchdog until a command without it arrives."""
         self.seq += 1
         cmd = f"{self.run}c{self.seq}"
         slot = self._waiting[cmd] = [threading.Event(), None]
         t0 = time.perf_counter()
-        self.c.create(f"{self.run}ctl/grp/fopt", self.me, {"cmd": cmd, "angles": [round(float(a), 1) for a in angles]})
+        body = {"cmd": cmd, "angles": [round(float(a), 1) for a in angles]}
+        if mode:
+            body["mode"] = mode
+        self.c.create(f"{self.run}ctl/grp/fopt", self.me, body)
         if not slot[0].wait(WAIT_S):
             raise TimeoutError(f"no desk reading for {cmd} within {WAIT_S}s")
         self.latencies.append(time.perf_counter() - t0)

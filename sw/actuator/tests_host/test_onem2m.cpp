@@ -75,6 +75,21 @@ int main(int argc, char** argv) {
   assert(!parseCommandCin("{\"m2m:dbg\": \"resource does not exist\"}", 0, cmd, a));
   assert(!parseCommandCin("{\"m2m:cin\": {\"con\": \"{\\\"cmd\\\": \\\"x\\\", \\\"angles\\\": [1", 0, cmd, a));   // cut off
 
+  // privacy mode rides in the command CIN as "mode"; missing or any other value is auto
+  assert(commandPrivacy("{\"m2m:cin\": {\"con\": \"{\\\"cmd\\\": \\\"p1\\\", \\\"angles\\\": [90.0], \\\"mode\\\": \\\"privacy\\\"}\"}}"));
+  assert(commandPrivacy("{\"m2m:cin\": {\"con\": {\"cmd\": \"p2\", \"angles\": [90.0], \"mode\": \"privacy\"}}}"));   // object-form con
+  assert(!commandPrivacy(la) && !commandPrivacy("{\"m2m:cin\": {\"con\": \"{\\\"cmd\\\": \\\"a\\\", \\\"angles\\\": [5], \\\"mode\\\": \\\"auto\\\"}\"}}"));
+
+  // nonsense angles and a silent link are the cell's own reasons to open
+  assert(angleSane(0) && angleSane(90) && angleSane(-0.4f) && angleSane(90.4f));
+  assert(!angleSane(-1) && !angleSane(91) && !angleSane(NAN) && !angleSane(INFINITY));
+  bool rep = false;
+  assert(!linkLost(1000, 1000 + LINK_LOST_MS, rep));                         // exactly at the limit: still fine
+  assert(linkLost(1000, 1001 + LINK_LOST_MS, rep) && rep);
+  assert(!linkLost(1000, 2000 + LINK_LOST_MS, rep));                         // reported once per outage
+  assert(!linkLost(90000, 90500, rep) && !rep);                              // a reply ends the outage, the next one reports again
+  assert(linkLost(90000, 90001 + LINK_LOST_MS, rep));
+
   // the angle goes through the same serial parser path as a typed command
   Cells c;
   char line[32];

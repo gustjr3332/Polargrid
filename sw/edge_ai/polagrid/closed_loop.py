@@ -166,7 +166,7 @@ def main():
         make = lambda: evaluate.polagrid_predict(model)
         print(f"[train] {a.train_days} days")
     base = make
-    make = lambda: evaluate.night_closed(base())
+    make = lambda: evaluate.fail_open(evaluate.night_closed(base()))
     if a.serve:
         ctrl = Control(a.cloud, real.window_azimuth)
         if a.slow:

@@ -49,11 +49,14 @@ struct Stepper {
 struct Cells {
   float disc[N_CELLS] = {};
   uint32_t lastCmdMs = 0;
+  bool privacy = false;   // privacy mode: the user wants every cell dark, so the fail-safe must not open them
 };
 
 enum class Result { Ok, BadCommand, BadCell };
 
-// "A <cell> <deg>", "ALL <deg>", "OPEN". Any valid command counts as the controller heartbeat.
+// "A <cell> <deg>", "ALL <deg>", "OPEN", "PRIV <0|1>", "FAILSAFE". Any valid command counts as the controller heartbeat.
+// OPEN is the user's own override (button, serial) and also ends privacy mode. FAILSAFE is the cell's own decision
+// (link lost, nonsense command) and opens the cells unless privacy mode is on.
 inline Result parseCommand(const char* line, Cells& c, uint32_t nowMs) {
   int i; float d;
   if (sscanf(line, "A %d %f", &i, &d) == 2) {
@@ -62,7 +65,12 @@ inline Result parseCommand(const char* line, Cells& c, uint32_t nowMs) {
   } else if (sscanf(line, "ALL %f", &d) == 1) {
     for (int k = 0; k < N_CELLS; k++) c.disc[k] = clampDisc(d);
   } else if (strncmp(line, "OPEN", 4) == 0) {
+    c.privacy = false;
     for (int k = 0; k < N_CELLS; k++) c.disc[k] = 0;
+  } else if (sscanf(line, "PRIV %d", &i) == 1) {
+    c.privacy = i != 0;
+  } else if (strncmp(line, "FAILSAFE", 8) == 0) {
+    if (!c.privacy) for (int k = 0; k < N_CELLS; k++) c.disc[k] = 0;
   } else {
     return Result::BadCommand;
   }
@@ -70,9 +78,9 @@ inline Result parseCommand(const char* line, Cells& c, uint32_t nowMs) {
   return Result::Ok;
 }
 
-// Fail-safe: no command for WATCHDOG_MS, so let the light in. Returns true when it opened the cells.
+// Fail-safe: no command for WATCHDOG_MS, so let the light in (not in privacy mode). Returns true when it opened the cells.
 inline bool watchdog(Cells& c, uint32_t nowMs) {
-  if (nowMs - c.lastCmdMs <= WATCHDOG_MS) return false;
+  if (c.privacy || nowMs - c.lastCmdMs <= WATCHDOG_MS) return false;
   bool any = false;
   for (int k = 0; k < N_CELLS; k++) { any |= c.disc[k] > 0; c.disc[k] = 0; }
   return any;

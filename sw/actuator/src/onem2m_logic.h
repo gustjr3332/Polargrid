@@ -152,6 +152,24 @@ struct CommandGate {
   void noneYet() { baselined = true; }   // command/la answered 404: there is no old command, the first one that appears is new
 };
 
+// A command whose angle is not a number or lies outside 0..90 means the controller is confused: the cell opens instead.
+inline bool angleSane(float a) { return std::isfinite(a) && a >= -0.5f && a <= 90.5f; }
+
+// Fail-safe on a lost link: no reply from the CSE (any HTTP status counts) for LINK_LOST_MS. True once per outage.
+constexpr uint32_t LINK_LOST_MS = 60000;
+inline bool linkLost(uint32_t lastReplyMs, uint32_t nowMs, bool& reported) {
+  if (nowMs - lastReplyMs <= LINK_LOST_MS) { reported = false; return false; }
+  if (reported) return false;
+  return reported = true;
+}
+
+// True when the command CIN says "mode": "privacy" (missing or anything else = auto). Same `con` unwrapping as below.
+inline bool commandPrivacy(const std::string& body) {
+  std::string con, mode;
+  if (!jsonString(body, "con", con)) con = body;
+  return jsonString(con, "mode", mode) && mode == "privacy";
+}
+
 // Reply of GET command/la: {"m2m:cin": {"con": "{\"cmd\": \"r1c3\", \"angles\": [45.0, ...]}", ...}}.
 // Takes this cell's entry angles[i]. False on anything malformed, so a bad command is never applied.
 inline bool parseCommandCin(const std::string& body, int i, std::string& cmd, float& angle) {

@@ -19,6 +19,21 @@ int main() {
   parseCommand("OPEN", c, 400);
   assert(c.disc[0] == 0);
 
+  // privacy mode: closed, and neither the watchdog nor a FAILSAFE opens it; only the user's OPEN (button, serial) does
+  Cells p;
+  parseCommand("A 0 90", p, 1000);
+  assert(parseCommand("PRIV 1", p, 1000) == Result::Ok && p.privacy && p.disc[0] == 90);
+  assert(!watchdog(p, 1000 + 10 * WATCHDOG_MS) && p.disc[0] == 90);       // no controller for hours: stays dark
+  assert(parseCommand("FAILSAFE", p, 2000) == Result::Ok && p.disc[0] == 90);
+  assert(parseCommand("OPEN", p, 3000) == Result::Ok && !p.privacy && p.disc[0] == 0);
+  // outside privacy FAILSAFE opens at once, and PRIV 0 only clears the flag
+  Cells f;
+  parseCommand("A 0 60", f, 1000);
+  assert(parseCommand("FAILSAFE", f, 1100) == Result::Ok && f.disc[0] == 0);
+  parseCommand("PRIV 1", f, 1200);
+  assert(parseCommand("PRIV 0", f, 1300) == Result::Ok && !f.privacy);
+  assert(parseCommand("PRIV", f, 1400) == Result::BadCommand);
+
   // stepper: homes first (pos = 0 at the stop), then reaches the target one half step at a time
   Stepper m;
   m.target = 100;

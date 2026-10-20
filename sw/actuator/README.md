@@ -14,6 +14,11 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.
 - Build: `pio run` (PlatformIO, ESP32 Arduino). Built 2026-10-18 with the oneM2M part (RAM 14.4 %, flash 74.4 %).
+- Fail-safe and privacy (2026-10-20, host tests and `pio run` pass, not run on hardware):
+  - The cell opens by itself (serial `FAILSAFE`) when the CSE has not answered for `LINK_LOST_MS` = 60 s, or a fresh command carries an angle that is not a number or outside 0..90. The 30 min watchdog still covers a controller that went silent while the link is fine.
+  - Privacy mode: a command CIN with `"mode": "privacy"` (the controller sends angles 90) makes the cell send `PRIV 1` and close fully; the watchdog, the link-loss open and a nonsense angle then leave it dark. A command without `mode` sends `PRIV 0`. The button or serial `OPEN` always opens and ends privacy (the user's own hand). Serial `PRIV <0|1>` sets the flag by hand.
+  - After a reboot the disc homes open and the old command is skipped (below), so privacy is restored by the controller's next heartbeat (10 min at most), not by the cell. Mode is not stored in flash.
+  - PC side: `evaluate.fail_open(controller)` opens every cell when the AI raises, answers NaN or angles outside 0..90, or the desk reading is broken; `real_cell.py app` takes `POST /mode {"mode": "privacy" | "auto"}` (and answers `/level` with 409 while privacy is on).
 - Position in the window: `CELL_ROW`/`CELL_COL` in `secrets.h` say where the cell sits in the window (row 0 = top, col 0 = left, seen from inside); the cell adds them to its `state` as the label `polagrid/<run>/pos/<row>/<col>` so the app draws it there (host test passes, 2026-10-19, not run on hardware).
 
 ## oneM2M (HTTP, polling)

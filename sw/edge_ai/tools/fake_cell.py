@@ -67,6 +67,7 @@ def main():
     last_cmd = pending = None
     published, ready, fails = None, False, 0
     last_poll = last_report = last_rx = t_prev = time.monotonic()
+    privacy = False
     cell_lux = lambda: (a.lamp * math.cos(math.radians(disc)) ** 2 + a.leak) * (1 + 0.01 * rng.standard_normal())
     desk_lux = lambda: 0.5 * cell_lux() + 40
     print(f"[FAKE cell] {cell_rn} at row {a.row} col {col}, run {run} on {a.host}/{a.cse}, {DEG_PER_S:.2f} deg/s")
@@ -95,9 +96,11 @@ def main():
                         print(f"[FAKE cell] SKIP old command {last_cmd} after boot (the heartbeat sends a fresh one)")
                     elif con["cmd"] != last_cmd:
                         last_cmd, pending, last_rx = con["cmd"], con["cmd"], now
-                        target = min(90.0, max(0.0, float(con["angles"][idx if idx < len(con["angles"]) else 0])))
-                        print(f"[FAKE cell] {con['cmd']}: {disc:.0f} -> {target:.0f} deg")
-            if now - last_rx > WATCHDOG_S and target:
+                        privacy = con.get("mode") == "privacy"   # like the firmware: all dark, the watchdog leaves it alone
+                        want = float(con["angles"][idx if idx < len(con["angles"]) else 0])
+                        target = 90.0 if privacy else want if 0 <= want <= 90 else 0.0   # nonsense angle (or NaN): open
+                        print(f"[FAKE cell] {con['cmd']}: {disc:.0f} -> {target:.0f} deg" + (" (privacy)" if privacy else ""))
+            if now - last_rx > WATCHDOG_S and target and not privacy:
                 target, last_rx = 0.0, now
                 print("[FAKE cell] watchdog: no command for 30 min, opening")
             if disc == target:

@@ -69,6 +69,21 @@ def test_preference_learns_a_morning_boost():
     assert morning > DESK_MIN_LUX + 100 and morning > afternoon
 
 
+def test_fail_open_opens_on_any_fault_and_passes_good_answers():
+    from polagrid.evaluate import fail_open
+    ctx = {"angles": np.array([30.0, 60.0]), "desk_lux": np.array([800.0])}
+    good = fail_open(lambda c: np.array([45.0, 90.0]))
+    assert np.array_equal(good(ctx), [45.0, 90.0]) and good.opens == 0
+    for bad in (lambda c: np.array([np.nan, 10.0]), lambda c: np.array([10.0, 95.0]), lambda c: np.array([-1.0, 0.0]),
+                lambda c: np.array([10.0]), lambda c: 1 / 0):
+        w = fail_open(bad)
+        assert np.array_equal(w(ctx), [0.0, 0.0]) and w.opens == 1
+    for lux in (np.array([np.nan]), np.array([-5.0]), np.array([1e9])):          # a broken desk reading
+        w = fail_open(lambda c: np.array([45.0, 45.0]))
+        assert np.array_equal(w({**ctx, "desk_lux": lux}), [0.0, 0.0]) and w.opens == 1
+    assert np.array_equal(fail_open(lambda c: np.array([45.0, 45.0]))({"angles": ctx["angles"]}), [45.0, 45.0])   # no desk key
+
+
 def test_night_mode_closes_everything_only_when_dark():
     from polagrid.evaluate import NIGHT_LUX, night_closed
     control = night_closed(lambda ctx: np.zeros_like(ctx["angles"]))

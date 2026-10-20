@@ -11,6 +11,7 @@ repeat with the same run id. Run inside WSL next to the MN, because the CSE call
     python3 tools/real_cell.py --run real1 ai --speed 120  # AI (1)+(2) with a SIMULATED sun clock
     python3 tools/real_cell.py --run real1 check           # 2 min bring-up check of a new cell: PASS/FAIL per item (Wi-Fi/CSE, sensors, steps, direction)
     python3 tools/real_cell.py --run real1 app             # the phone app: POST 127.0.0.1:9600/level {"level": 0..100, "i": cell}
+                                                           # and /mode {"mode": "privacy" | "auto"}: privacy = all dark, the cells' watchdog and link-loss fail-safe do not open them
 
 Every mode resends the last angle at least every HEARTBEAT_MIN (wall time) so the cell's 30 min watchdog never opens
 it while this runs, and sends OPEN (angle 0) on exit or Ctrl+C. CSE errors are retried with backoff 1, 2, 4 .. 60 s.
@@ -32,7 +33,7 @@ import numpy as np
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from polagrid import online                                        # noqa: E402
+from polagrid import evaluate, online                              # noqa: E402
 from polagrid.closed_loop import HEARTBEAT_MIN                     # noqa: E402
 from polagrid.onem2m import Client, _headers, con as cin_con   # noqa: E402
 from polagrid.physics import KST, Room, sun_position, window_lux   # noqa: E402
@@ -203,20 +204,52 @@ def app_mode(client, run, a):
     works at once; no command group. Cells are found by the state label. The newest command wins, a heartbeat keeps each
     cell's last angle fresh, and exit opens every cell."""
     me, lock, sent, seq = roles(run)["ctl"], threading.Lock(), {}, [int(time.time())]
+    privacy, before = [False], {}   # privacy mode: every cell dark, kept dark by the cells themselves; before = angles to return to
 
     def cells():
         uris = retry(lambda: client.discover(me, lbl=f"polagrid/{run}/state", ty=28), "discover cells", 3) or []
         return sorted({int(m[1]) for u in uris if (m := re.search(rf"(?:^|/){run}p(\d+)/state$", u))})
 
-    def command(idx, angle, tries=3):
+    def command(idx, angle, tries=3, mode=None):
         with lock:
             seq[0] += 1
             body = {"cmd": f"{run}a{seq[0]}", "angles": [round(angle, 1)] * (idx + 1)}   # the cell reads entry CELL_INDEX
+            if mode:
+                body["mode"] = mode
             if retry(lambda: client.create(f"{run}p{idx}/command", me, body), f"command p{idx}", tries) is not None:
-                sent[idx] = (angle, time.monotonic())
+                sent[idx] = (angle, time.monotonic(), mode)
+
+    def set_privacy(on):
+        """POST /mode {"mode": "privacy" | "auto"}. Privacy closes every cell and the cells then ignore their watchdog; auto
+        puts each cell back at its angle from before (open if there was none)."""
+        targets = cells()
+        if on and not privacy[0]:
+            before.update({k: sent[k][0] for k in targets if k in sent and sent[k][2] != "privacy"})
+        privacy[0] = on
+        for k in targets:
+            if on:
+                command(k, 90.0, mode="privacy")
+            else:
+                command(k, before.pop(k, 0.0))
+        print(f"[app] privacy {'on' if on else 'off'} -> cells {targets}")
+        return targets
 
     class H(BaseHTTPRequestHandler):
         def do_POST(self):
+            if self.path == "/mode":
+                try:
+                    mode = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))["mode"]
+                    if mode not in ("privacy", "auto"):
+                        raise ValueError
+                except (ValueError, KeyError, TypeError):
+                    return self.send_error(400, 'need JSON {mode: "privacy" | "auto"}')
+                body = json.dumps({"mode": mode, "cells": set_privacy(mode == "privacy")}).encode()
+                self.send_response(202)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                return self.wfile.write(body)
+            if privacy[0]:
+                return self.send_error(409, 'privacy mode is on: POST /mode {"mode": "auto"} first')
             try:
                 req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
                 level = float(req["level"])
@@ -243,9 +276,9 @@ def app_mode(client, run, a):
     def heartbeat():
         while True:
             time.sleep(10)
-            for idx, (angle, t) in list(sent.items()):
+            for idx, (angle, t, mode) in list(sent.items()):
                 if time.monotonic() - t >= HEARTBEAT_MIN * 60:
-                    command(idx, angle)
+                    command(idx, angle, mode=mode)
 
     def setup():
         """The controller's own ACP and AE, and discovery under the CSE base: a fresh database has none of them (zone.py's
@@ -264,9 +297,12 @@ def app_mode(client, run, a):
     except KeyboardInterrupt:
         print()
     finally:
-        print("[exit] opening every cell")
-        for idx in list(sent):
-            command(idx, 0, tries=5)
+        if privacy[0]:
+            print("[exit] privacy mode is on: the cells stay dark until the app sends /mode auto or the button is pressed")
+        else:
+            print("[exit] opening every cell")
+            for idx in list(sent):
+                command(idx, 0, tries=5)
 
 
 def check(cell, a):
@@ -353,7 +389,7 @@ def sweep(cell, a):
 def ai_loop(cell, a):
     """AI (1) online + AI (2) for one cell. Desk lux is the real sensor; the sun is a SIMULATED accelerated clock."""
     t0 = datetime.fromisoformat(a.start).replace(tzinfo=KST)
-    wall0, ctrl = time.monotonic(), online.polagrid_online(ROOM)
+    wall0, ctrl = time.monotonic(), evaluate.fail_open(online.polagrid_online(ROOM))   # a faulty judgement opens the cell
     env = roles(cell.run)["env"]
     print(f"[ai] SIMULATED SUN: clock starts {t0:%m-%d %H:%M}, {a.speed:g}x; desk lux from the real sensor")
     while True:
