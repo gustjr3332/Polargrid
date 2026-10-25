@@ -44,3 +44,19 @@ the CSV `real_cell_sweep_FAKE_*.csv` with a FAKE header line. Use a run id other
 `fk1`) so fake readings never sit in the real cell's containers.
 
 Tests for the pure parts (backoff, retry, averaging, fit): `python -m pytest -q tests/test_real_cell.py`.
+
+### Over Bluetooth instead of Wi-Fi
+
+With the cell flashed as `pio run -e bt` (`sw/actuator/README.md`), the cell has no Wi-Fi and `tools/bt_bridge.py`
+stands in for it on the CSE. The bridge does what `fake_cell.py` does over HTTP (setup, `command/la` every 2 s, `state`,
+desk reply, 10 s readings), but the disc and the sensors are the real ones on the BT link.
+
+1. Power the ESP32 from its adapter. In Windows Settings > Bluetooth & devices, add the device `polagrid-cell`.
+2. Find its COM port: More Bluetooth settings > COM Ports, the "Outgoing" one for `polagrid-cell`.
+3. In Windows PowerShell, from this folder: `pip install pyserial` (once), then
+   `python tools/bt_bridge.py --port COM5 --run real1` (your COM number). The default `--host` is `http://127.0.0.1:3001`,
+   the MN in WSL as Windows sees it. Lines from the cell that are not protocol lines print as `[cell] ...`.
+4. In WSL, start the IN and the MN and use `real_cell.py` as above (`check`, `manual`, `sweep`, `ai`).
+
+If the port drops, the bridge reopens it every 3 s. If the cell gets no `PING` for 60 s it opens by itself (not in
+privacy mode). Test with a fake port and CSE: `python -m pytest -q tests/test_bt_bridge.py`.

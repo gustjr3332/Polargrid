@@ -7,11 +7,15 @@
 
 constexpr int N_CELLS = 1;   // one control module per central module in the prototype; raise it to drive more
 constexpr float DISC_MAX_DEG = 90.0f;
-// 28BYJ-48 half-step drive, Z24 pinion on the Z150 disc rim (hw/README.md). The half steps per turn is the typical
+// 28BYJ-48 half-step drive, timing pulley on the disc rim belt (hw/README.md). The half steps per turn is the typical
 // datasheet value (about 4096); calibrate it on the real module with the 10-point test.
 constexpr float HALF_STEPS_PER_REV = 4096.0f;
-constexpr float GEAR_RATIO = 150.0f / 24.0f;
-constexpr float STEPS_PER_DISC_DEG = HALF_STEPS_PER_REV * GEAR_RATIO / 360.0f;   // about 71.1
+// 10-22: belt drive. 40T MXL pulley (pitch dia 40 x 2.032 / pi) on a O179 disc with a 76MXL3.2 strip glued teeth-out; the belt
+// pitch line is about 0.9 mm outside the rim (estimate, calibrate on the real cell).
+constexpr float PULLEY_PITCH_R_MM = 40 * 2.032f / (2 * 3.14159265f);
+constexpr float DISC_PITCH_R_MM = 89.5f + 0.9f;
+constexpr float GEAR_RATIO = DISC_PITCH_R_MM / PULLEY_PITCH_R_MM;
+constexpr float STEPS_PER_DISC_DEG = HALF_STEPS_PER_REV * GEAR_RATIO / 360.0f;   // about 79
 constexpr float HOME_OVERDRIVE_DEG = 100.0f;   // at boot drive this far toward the stop, so wherever the disc was it ends on it
 
 #ifndef WATCHDOG_MS
@@ -77,6 +81,23 @@ inline Result parseCommand(const char* line, Cells& c, uint32_t nowMs) {
   c.lastCmdMs = nowMs;
   return Result::Ok;
 }
+
+// Bluetooth line protocol (env:bt). The bridge on the laptop (sw/edge_ai/tools/bt_bridge.py) does the CSE side.
+// Bridge -> cell: the commands above, plus "PING" after each CSE reply (the link is alive; not a controller heartbeat).
+// Cell -> bridge, besides the usual "OK ..." and log lines:
+//   "POS <disc deg>"     motor idle at a new position (any cause); the bridge PUTs state
+//   "DESK <lux>"         desk reading once the disc reached the last BT "A"/"FAILSAFE"; the bridge's desk reply
+//   "LUX <cell> <desk>"  every 10 s, -1 = that sensor did not answer
+inline bool isPing(const char* line) { return strcmp(line, "PING") == 0; }
+// Half steps a bridge line asks a desk reply at, or -1. FAILSAFE waits at 0 like a nonsense angle on the Wi-Fi path.
+inline long replySteps(const char* line) {
+  int i; float d;
+  if (sscanf(line, "A %d %f", &i, &d) == 2) return stepsFromDisc(d);
+  return strncmp(line, "FAILSAFE", 8) == 0 ? 0 : -1;
+}
+inline int posLine(char* b, size_t n, float disc) { return snprintf(b, n, "POS %.1f\n", disc); }
+inline int deskLine(char* b, size_t n, float desk) { return snprintf(b, n, "DESK %.1f\n", desk); }
+inline int luxLine(char* b, size_t n, float cell, float desk) { return snprintf(b, n, "LUX %.1f %.1f\n", cell, desk); }
 
 // Fail-safe: no command for WATCHDOG_MS, so let the light in (not in privacy mode). Returns true when it opened the cells.
 inline bool watchdog(Cells& c, uint32_t nowMs) {

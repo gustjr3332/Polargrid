@@ -4,8 +4,9 @@
 #include "cell_logic.h"
 
 int main() {
-  assert(stepsFromDisc(0) == 0 && stepsFromDisc(90) == 6400 && stepsFromDisc(45) == 3200);
-  assert(stepsFromDisc(-10) == 0 && stepsFromDisc(120) == 6400);         // clamped to the 0..90 range
+  const long full = (long)(90 * STEPS_PER_DISC_DEG + 0.5f);
+  assert(stepsFromDisc(0) == 0 && stepsFromDisc(90) == full && stepsFromDisc(45) == (long)(45 * STEPS_PER_DISC_DEG + 0.5f));
+  assert(stepsFromDisc(-10) == 0 && stepsFromDisc(120) == full);         // clamped to the 0..90 range
 
   Cells c;
   assert(parseCommand("A 0 45", c, 100) == Result::Ok && c.disc[0] == 45 && c.lastCmdMs == 100);
@@ -50,5 +51,14 @@ int main() {
   Stepper z; z.homed = true; z.target = 8; while (z.step() >= 0) {}
   assert(z.phase == 0); z.target = 0; while (z.step() >= 0) {}
   assert(z.phase == 0 && z.pos == 0);
+  // Bluetooth line protocol: PING is not a command, A/FAILSAFE ask a desk reply, output lines as bt_bridge.py parses them
+  Cells b;
+  assert(isPing("PING") && !isPing("PING 1") && parseCommand("PING", b, 5) == Result::BadCommand && b.lastCmdMs == 0);
+  assert(replySteps("A 0 45") == stepsFromDisc(45) && replySteps("A 0 120") == full && replySteps("FAILSAFE") == 0);
+  assert(replySteps("PRIV 1") == -1 && replySteps("OPEN") == -1 && replySteps("PING") == -1);
+  char line[48];
+  posLine(line, sizeof line, 45.04f);         assert(!strcmp(line, "POS 45.0\n"));
+  deskLine(line, sizeof line, 120.46f);       assert(!strcmp(line, "DESK 120.5\n"));
+  luxLine(line, sizeof line, 300.0f, -1.0f);  assert(!strcmp(line, "LUX 300.0 -1.0\n"));
   puts("all tests passed");
 }

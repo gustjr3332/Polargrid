@@ -1,5 +1,5 @@
 # actuator
-Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of one control module with a 28BYJ-48 stepper and talks to a oneM2M MN-CSE (tinyIoT) over Wi-Fi with plain HTTP.
+Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of one control module with a 28BYJ-48 stepper and talks to a oneM2M MN-CSE (tinyIoT) over Wi-Fi with plain HTTP, or over Bluetooth through a bridge on the laptop (`env:bt`, below).
 
 ## Prototype (one control module, ESP32, 28BYJ-48 + ULN2003)
 - `src/cell_logic.h`: angle to half steps, half-step coil table, a position-keeping `Stepper` (homing first, then one half step per call), serial command parser, watchdog. No hardware calls, tested on the PC:
@@ -7,9 +7,9 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - `src/onem2m_logic.h`: the oneM2M side without hardware calls: request paths, originators and JSON bodies, the
   command CIN parser, angle to `opeLl`, retry backoff.
   `g++ -std=c++17 -I src tests_host/test_onem2m.cpp -o test_onem2m && ./test_onem2m` (passes, 2026-10-18).
-- `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 26, 14, 27 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it). One half step every 2 ms, the serial parser is never blocked.
+- `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 14, 27, 26 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it: the ULN2003 on it broke flashing on 10-24). One half step every 2 ms, the serial parser is never blocked.
   Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`, `HOMING` at boot and `HOMED` when done.
-  Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (150 / 24) / 360, about 71.1 half steps per degree (`hw/README.md`).
+  Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (90.4 mm belt pitch radius / 12.94 mm pulley pitch radius, 40T MXL, 10-22) / 360, about 79 half steps per degree (estimate, calibrate) (`hw/README.md`).
 - Homing: at boot the motor drives `HOME_OVERDRIVE_DEG` = 100 deg of disc back toward the stop pin, then position 0 is set. Coils switch off when the motor is idle.
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.
@@ -55,6 +55,25 @@ Differences from the virtual cell in zone.py:
 - `state` is written when the integer `opeLl` changes; zone.py writes when the angle changes by more than 0.05 deg.
 - The desk list has one value (one desk sensor). The default polagrid `Room` has two desks.
 - After a reboot the newest command left in `command` is NOT applied (`m2m::CommandGate`, 2026-10-19): the first command id the cell sees after boot is only remembered, the serial log says `SKIP old command after boot`, and the cell stays open (its safe state) until the controller's heartbeat brings a fresh id (at most 10 min). A 404 (no command yet) lets the first command through. Host test passes; not run on hardware.
+
+## Bluetooth link (env:bt)
+For demo rooms where the Wi-Fi, firewall and IP change every time. Built with `-DUSE_BT`, the firmware starts no Wi-Fi
+and no OTA. A Bluetooth SPP task (device name `polagrid-cell`) replaces the network task, and the laptop runs
+`sw/edge_ai/tools/bt_bridge.py`, which does the CSE side over HTTP. `real_cell.py` and the CSE resources stay the same.
+The ESP32 can run from its own adapter; it needs no USB link to the laptop.
+
+- Build and upload over USB once: `pio run -e bt -t upload`. `env:esp32dev` and `env:ota` are the Wi-Fi build as before.
+  Built 2026-10-25 with the default partition table (bt: RAM 12.3 %, flash 85.2 %; esp32dev: RAM 15.7 %, flash 77.8 %).
+- Bridge to cell: the serial commands (`A 0 <deg>`, `PRIV <0|1>`, `FAILSAFE`, `OPEN`), plus `PING` after every CSE reply.
+  `PING` keeps the link alive but is not a controller heartbeat, so the 30 min watchdog still counts only commands.
+- Cell to bridge: `OK ...`, `HOMING`, `HOMED` and the other log lines as on USB, and
+  - `POS <disc deg>` when the motor stops at a new position (any cause, and again on every new BT connection). The bridge PUTs `state`.
+  - `DESK <lux>` once the disc reaches the target of the last `A` (or 0 after `FAILSAFE`), 250 ms after arrival. The bridge posts it to `{run}env/desks` with the command id, which is the reply the controller waits for. No reading gives `ERR desk sensor` and no reply.
+  - `LUX <cell> <desk>` every 10 s, `-1` for a sensor that did not answer.
+- Fail-open: no `PING` for `LINK_LOST_MS` = 60 s sends `FAILSAFE` (opens unless privacy mode is on). That covers a lost
+  BT link, a stopped bridge and a silent CSE. The bridge does the old-command skip after its own start and the angle check.
+- The helpers (`isPing`, `replySteps`, `posLine`, `deskLine`, `luxLine`) are in `src/cell_logic.h`, tested in `tests_host/test_logic.cpp`.
+- Not run on hardware yet: BT pairing, the SPP link from Windows and its range in the demo room.
 
 Request check without a CSE: `tests_host/zone_capture.py` records what zone.py sends for one cell (fake
 `requests.Session`, output in `tests_host/zone_requests.txt`) and `./test_onem2m --print` prints the firmware's

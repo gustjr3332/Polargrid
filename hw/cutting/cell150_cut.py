@@ -63,9 +63,12 @@ def gear_full(z, rp, m=M):
     return pts
 
 
-def disc_outline():
-    """Z150 teeth on a 100 deg arc, plain rim (tip radius) elsewhere."""
+def disc_outline(drive="belt"):
+    """belt: a plain circle of the tip radius (the timing belt is glued on the rim). teeth: Z150 teeth on a 100 deg arc,
+    plain rim (tip radius) elsewhere."""
     ra, rr = RP_DISC + M, RP_DISC - 1.25 * M
+    if drive == "belt":
+        return [(ra * math.cos(2 * math.pi * i / 240), ra * math.sin(2 * math.pi * i / 240)) for i in range(240)]
     pitch = 2 * math.pi / Z_DISC
     first = math.radians(TEETH_FROM_DEG) + pitch / 2
     pts = []
@@ -133,7 +136,18 @@ def double_d(d, flat):
 
 
 # ---------- parts: each is {"cut": [("poly", pts, hole?) | ("circle", cx, cy, r, hole?)], "mark": [...]} ----------
-def parts(kerf):
+def belt_marks():
+    """Blue guide on the disc: the 100 deg rim arc where the timing belt strip is glued, with a tick at each end."""
+    r = RP_DISC + M
+    a0, a1 = math.radians(TEETH_FROM_DEG), math.radians(TEETH_FROM_DEG + N_TEETH * 360 / Z_DISC)
+    pts = arc(0, 0, r - 2.0, a0, a1, 40)
+    lines = [("line", *pts[i], *pts[i + 1]) for i in range(len(pts) - 1)]
+    for a in (a0, a1):
+        lines.append(("line", (r - 5) * math.cos(a), (r - 5) * math.sin(a), r * math.cos(a), r * math.sin(a)))
+    return lines + [("text", -60, 10, 4, f"belt strip on the rim between the ticks, teeth outward, about {math.radians(N_TEETH * 360 / Z_DISC) * r:.0f} mm")]
+
+
+def parts(kerf, drive="belt"):
     k = kerf / 2
     P = {}
 
@@ -146,17 +160,19 @@ def parts(kerf):
     arrow = [("line", -60, 0, 60, 0), ("line", 60, 0, 52, 4), ("line", 60, 0, 52, -4)]
     P["groove_3mm"] = {"cut": [poly(rect(160, 160)), poly(union_hole(), True)],
                        "mark": [("text", -70, 70, 6, "groove plate 3 mm: hole 153 mm + pinion pocket top right")]}
-    P["disc_2mm"] = {"cut": [poly(disc_outline())] +
+    P["disc_3mm"] = {"cut": [poly(disc_outline(drive))] +
                      [poly(arc_band(), True)],
-                     "mark": [("text", -60, 0, 5, "disc 2 mm, stop slot at the bottom left"), ("circle", 0, 0, R_WIN)]}
+                     "mark": [("text", -60, 0, 5, "disc 3 mm, stop slot at the bottom left"), ("circle", 0, 0, R_WIN)]
+                     + (belt_marks() if drive == "belt" else [])}
     P["ring_2mm"] = {"cut": [poly(rect(172, 172)), circ(0, 0, RING_OPEN_R, True), circ(PIN_XY[0], PIN_XY[1], SHAFT_HOLE_D / 2, True)],
                      "mark": [("rect", -15, 54.5, 14.6, 18.5), ("text", -40, 40, 5, "BH1750 (position to confirm)"),
                               ("rect", SLOT_R * math.cos(math.radians(STOP_DEG)) - PIN_SIZE / 2,
                                SLOT_R * math.sin(math.radians(STOP_DEG)) - PIN_SIZE / 2, PIN_SIZE, PIN_SIZE),
                               ("text", -75, -75, 5, "stop pin here (glue the 3 x 3 pin)"),
                               ("text", 40, 80, 5, "motor body behind, shaft hole top right")]}
-    P["pinion_3mm"] = {"cut": [poly(gear_full(Z_PIN, RP_PIN)), poly(double_d(SHAFT_D, SHAFT_FLAT), True)],
-                       "mark": [("text", -12, -16, 3, "Z24, m1, double-D hole")]}
+    if drive == "teeth":
+        P["pinion_3mm"] = {"cut": [poly(gear_full(Z_PIN, RP_PIN)), poly(double_d(SHAFT_D, SHAFT_FLAT), True)],
+                           "mark": [("text", -12, -16, 3, "Z24, m1, double-D hole")]}
     P["pins_2mm"] = {"cut": [poly(rect(PIN_SIZE, PIN_SIZE, 0, 0)), poly(rect(PIN_SIZE, PIN_SIZE, 6, 0))],
                      "mark": [("text", -3, -6, 2, "2 spare stop pins")]}
     P["film_L1"] = {"cut": [poly(rect(150, 150))],
@@ -222,8 +238,9 @@ def dxf(part):
 
 
 def svg_overview(P, kerf):
-    layout = [("groove_3mm", 0, 0), ("ring_2mm", 190, 0), ("disc_2mm", 0, 190), ("pinion_3mm", 175, 190),
+    layout = [("groove_3mm", 0, 0), ("ring_2mm", 190, 0), ("disc_3mm", 0, 190), ("pinion_3mm", 175, 190),
               ("pins_2mm", 175, 230), ("film_L1", 0, 360), ("film_L3", 170, 360)]
+    layout = [item for item in layout if item[0] in P]
     s = 2.6
     body = []
     for name, ox, oy in layout:
@@ -258,9 +275,9 @@ def svg_overview(P, kerf):
 
 
 # ---------- checks ----------
-def check(P):
+def check(P, drive="belt"):
     ra_d, rr_d = RP_DISC + M, RP_DISC - 1.25 * M
-    pts = disc_outline()
+    pts = disc_outline(drive)
     assert max(math.hypot(*p) for p in pts) <= HOLE_R - 0.4, "disc tip must clear the groove hole"
     assert abs(CENTRE_D - (RP_DISC + RP_PIN)) < 1e-9 and abs(PIN_XY[0] - 61.52) < 0.05
     assert PIN_XY[0] + RP_PIN + M <= R_WIN + 1e-6, "pinion tip stays inside the 150 mm window square"
@@ -268,18 +285,19 @@ def check(P):
     assert abs(area(uh)) > math.pi * HOLE_R ** 2 * 0.99, "hole plus pocket must be larger than the plain hole"
     assert all(math.hypot(x - PIN_XY[0] * 0, y) >= 0 for x, y in uh)
     # slot sits in the plain rim, clear of the teeth, and fits the ring plate overlap (r 70 .. 76)
-    teeth_end = TEETH_FROM_DEG + N_TEETH * 360 / Z_DISC
+    teeth_end = TEETH_FROM_DEG + N_TEETH * 360 / Z_DISC     # in belt mode this is the end of the belt arc
     slot0, slot1 = STOP_DEG - 1.4, STOP_DEG + 90 + 2.4
-    assert teeth_end < slot0 and slot1 < TEETH_FROM_DEG + 360, "stop slot must not overlap the tooth arc"
+    assert teeth_end < slot0 and slot1 < TEETH_FROM_DEG + 360, "stop slot must not overlap the tooth or belt arc"
     assert SLOT_R - SLOT_W / 2 >= RING_OPEN_R and SLOT_R + SLOT_W / 2 <= ra_d - 1.0, "slot sits between the ring opening and the rim, 1 mm wall left"
     for name, part in P.items():
         for kind, *a in part["cut"]:
             if kind == "poly":
                 assert len(a[0]) >= 4
-    x0, y0, x1, y1 = bbox(P["pinion_3mm"])
-    assert abs((x1 - x0) - 2 * (RP_PIN + M)) < 0.2, "pinion outside diameter"
-    h, _ = involute_flank(Z_PIN, RP_PIN, RP_PIN + M, RP_PIN - 1.25 * M)
-    assert 0 < h(RP_PIN + M) and 2 * h(RP_PIN) * RP_PIN > 1.4, "pinion tooth must keep a positive tip and about pi/2 m thickness"
+    if "pinion_3mm" in P:
+        x0, y0, x1, y1 = bbox(P["pinion_3mm"])
+        assert abs((x1 - x0) - 2 * (RP_PIN + M)) < 0.2, "pinion outside diameter"
+        h, _ = involute_flank(Z_PIN, RP_PIN, RP_PIN + M, RP_PIN - 1.25 * M)
+        assert 0 < h(RP_PIN + M) and 2 * h(RP_PIN) * RP_PIN > 1.4, "pinion tooth must keep a positive tip and about pi/2 m thickness"
     print("checks passed")
 
 
@@ -287,10 +305,14 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--kerf", type=float, default=0.0)
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--drive", choices=["belt", "teeth"], default="belt",
+                    help="belt (default): plain 3 mm disc, a timing belt strip glued on the rim; teeth: Z150 teeth cut in the disc plus the Z24 pinion")
     a = ap.parse_args()
-    P = parts(a.kerf)
-    check(P)
+    P = parts(a.kerf, a.drive)
+    check(P, a.drive)
     if not a.check:
+        for stale in ("disc_2mm.dxf",) + (("pinion_3mm.dxf",) if a.drive == "belt" else ()):
+            (HERE / stale).unlink(missing_ok=True)      # drawings of an earlier design must not get cut by mistake
         for name, part in P.items():
             (HERE / f"{name}.dxf").write_text(dxf(part), encoding="ascii")
         (HERE / "cut_overview.svg").write_text(svg_overview(P, a.kerf), encoding="utf-8")
