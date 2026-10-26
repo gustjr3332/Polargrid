@@ -80,3 +80,16 @@ screen (Share, Add to Home Screen) and it opens full screen. Open `http://<PC IP
 
 **Cells appear one by one, where they were installed.** Each cell firmware has `CELL_INDEX`, `CELL_ROW`, `CELL_COL` in `secrets.h` (row 0 = top, col 0 = left, seen from inside the room). It puts the position on its `state` as a second label `polagrid/<run>/pos/<row>/<col>`. `/api/real` finds the cells by the state label (cached 3 s), reads each position and level, and returns `cells`; the Window screen draws one box per cell at its row and column, dashed boxes for empty places, and a new cell pops in. Checked with `fake_cell.py --index 1 --row 0 --col 1` etc. (four cells in a 2 x 2 grid, the fourth appeared within a few seconds of starting it). Not done: a cell cannot be removed from the screen except by deleting its resources on the CSE. While the disc turns the cell shows "Moving, target N%". The status bar has a Wi-Fi icon (struck out when the cell cannot be read) because the phone must be on the same Wi-Fi as the cell module. It reads `/api/real` from the same server, so there is no API address setting. Not tried on a phone.
 An Android app via Capacitor was scaffolded and removed the same day (the SDK alone was about 7 GB and the demo phone is an iPhone).
+
+## Virtual lecture room (3D replay)
+
+`classroom/index.html` shows a simulated lecture room whose south window starts 2.2 m above the floor, so nobody
+can reach a blind. It opens straight from disk (no server, no internet, no library: a small canvas perspective
+renderer). Two panes compare methods side by side over one day (default: bare glass vs PolaGrid AI (1)+(2)); use the
+time slider, Play, drag to orbit and the wheel to zoom. `?lang=en` for English labels, `?t=<step>&still=1` for a fixed frame.
+
+- Data: `classroom/classroom_data.js`, written by `python tools/classroom_sim.py` in `sw/edge_ai` (about 13 min; summary in
+  `sw/edge_ai/results/classroom_<mmdd>.txt`). Every room value is an assumption and the numbers come from the
+  physics model, not from measurement.
+- Video: `python classroom/make_gif.py [--lang en] [--every 2]` takes one headless Chrome screenshot per step and joins
+  them into `classroom/video/*.gif` (git ignored). No ffmpeg is needed; for MP4, run ffmpeg on `video/frames/*.png`.

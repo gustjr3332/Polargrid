@@ -1,0 +1,20 @@
+Virtual lecture room (ASSUMED, physics model only, not measured). 2026-10-26
+window: south (+8 deg in the built room), 24x5 cells of 0.3 m, sill 2.2 m, glass 0.8; 15 tables 1.8x0.6 m at 0.75 m (built room: moved 0.2 m); sky KMA ASOS Seoul 2025 hourly
+test days: 18 days from 2025-09-01, every 6 days; class hours 9-18 h; AI (3): 60 KMA days, design room
+replay day 2025-11-04 (KMA sky). glare = direct sun > 2000 lux on a desk; target = desk >= 500 lux and no glare, share of desk-steps with sun up
+
+method                         glare desk-h/day  target share  mean lux  servo moves
+-- test-day average
+No film, blind out of reach               32.63          0.45      4286            0
+Cells fixed open                          26.52          0.20      1736            0
+Time schedule 11-15 h                      7.91          0.09       519          240
+PolaGrid AI (1)+(2) online                 2.19          0.17       321         1175
+PolaGrid AI (3) predict                    9.02          0.22       627         1807
+AI (1)+(2), room = drawing                 0.25          0.26       336         1075
+-- replay 2025-11-04
+No film, blind out of reach               38.00          0.23      7089            0
+Cells fixed open                          35.83          0.02      2871            0
+Time schedule 11-15 h                     11.58          0.02       797          240
+PolaGrid AI (1)+(2) online                 3.75          0.11       235         1300
+PolaGrid AI (3) predict                   21.42          0.11       888         2365
+run time 762 s

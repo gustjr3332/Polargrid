@@ -18,3 +18,6 @@ sw/edge_ai/data/weather/kma_*.csv
 
 # Personal part photos
 hw/archaive/
+
+# Classroom replay frames and GIF (large), made by sw/app_ui/classroom/make_gif.py
+sw/app_ui/classroom/video/
