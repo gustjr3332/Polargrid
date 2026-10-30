@@ -38,8 +38,10 @@ from polagrid.closed_loop import HEARTBEAT_MIN                     # noqa: E402
 from polagrid.onem2m import Client, _headers, con as cin_con   # noqa: E402
 from polagrid.physics import KST, Room, sun_position, window_lux   # noqa: E402
 from polagrid.zone import ALL, Controller, grant_discovery, make_acp, remote, roles                        # noqa: E402
+from live_learning import LivePreference                           # noqa: E402
 
 RESULTS = Path(__file__).resolve().parent.parent / "results"
+MODELS = Path(__file__).resolve().parent.parent / "models"
 SWEEP = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 0]
 CSE_ERRORS = (requests.RequestException, RuntimeError, OSError, ValueError, KeyError, TypeError)   # odd replies too
 # One 150 mm cell and one desk sensor in front of it (the demo table). Geometry is a guess, only the AI prior uses it.
@@ -389,9 +391,17 @@ def sweep(cell, a):
 def ai_loop(cell, a):
     """AI (1) online + AI (2) for one cell. Desk lux is the real sensor; the sun is a SIMULATED accelerated clock."""
     t0 = datetime.fromisoformat(a.start).replace(tzinfo=KST)
-    wall0, ctrl = time.monotonic(), evaluate.fail_open(online.polagrid_online(ROOM))   # a faulty judgement opens the cell
+    wall0 = time.monotonic()
+    kw = {}
+    if a.learn:   # AI (1) state and AI (3) preference survive a restart; a faulty judgement still opens the cell
+        pref = LivePreference(include_fake=a.learn_fake, source=a.pref)
+        kw = {"state_path": MODELS / ("filter_FAKE.npz" if a.learn_fake else "filter_real.npz"), "save_every": 1,
+              "glare_offset": lambda ctx: pref.offset(datetime.now(KST))}   # wall clock: that is when the app stamps corrections
+    MODELS.mkdir(exist_ok=True)
+    ctrl = evaluate.fail_open(online.polagrid_online(ROOM, **kw))
     env = roles(cell.run)["env"]
-    print(f"[ai] SIMULATED SUN: clock starts {t0:%m-%d %H:%M}, {a.speed:g}x; desk lux from the real sensor")
+    print(f"[ai] SIMULATED SUN: clock starts {t0:%m-%d %H:%M}, {a.speed:g}x; desk lux from the real sensor"
+          + ("; learning ON (filter + preference saved in models/)" if a.learn else "; learning off"))
     while True:
         tick = time.monotonic()
         t = t0 + timedelta(seconds=(tick - wall0) * a.speed)
@@ -402,6 +412,8 @@ def ai_loop(cell, a):
         desk = retry(cell.ctl.desks, "read desks")
         new = ctrl({"t": t, "outdoor": sun["outdoor"], "angles": np.array([cell.angle]), "desk_lux": desk})
         line = f"[ai] sim {t:%H:%M} sun alt {alt:5.1f} outdoor {sun['outdoor']:>6} lux | desk {desk[0]:7.1f} lux"
+        if a.learn and pref.model is not None:
+            line += f" | pref {pref.offset(datetime.now(KST)):+5.0f} lux ({pref.rows} corr.)"
         if abs(new[0] - cell.angle) > 0.05:
             got = cell.send(new[0])
             line += f" -> {new[0]:.0f} deg" + (f" in {got[0]:.1f} s" if got else " (no reply)")
@@ -429,6 +441,10 @@ def main():
     i.add_argument("--speed", type=float, default=60, help="simulated seconds per wall second")
     i.add_argument("--step", type=float, default=20, help="wall seconds per control step (a 90 deg turn takes ~13 s)")
     i.add_argument("--cloud", type=float, default=0.0, help="simulated cloud 0..1")
+    i.add_argument("--no-learn", dest="learn", action="store_false", help="do not keep the filter or refit from the app's corrections")
+    i.add_argument("--pref", choices=["server", "web"], default="server",
+                   help="AI (3) preference: server = fitted here from corrections.db; web = the model the phone page learned in its browser")
+    i.add_argument("--learn-fake", action="store_true", help="also learn from fake-cell correction rows (own FAKE files, to try the chain)")
     a = ap.parse_args()
     if a.mode == "manual" and any(not 0 <= v <= 90 for v in a.angles):
         ap.error("angles must be 0..90")

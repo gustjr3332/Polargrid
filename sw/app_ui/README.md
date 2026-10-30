@@ -15,6 +15,7 @@ Out of v0: accounts, multiple windows, push notifications, anything that needs a
    100). Below it the desk light per desk in lux, the mode chip, and a connection badge. Tap a cell for manual control.
 2. **Comfort**. Two big buttons, "Too bright" and "Too dark", plus a slider for how much (about 100 to 500 lux). Each
    press is one correction: it is sent to the controller and also kept as a training sample for the AI (3) preference model.
+   With `?live=1` the Comfort screen also shows "My AI": the page learns the preference itself (`mockup/ridge.js`, Ridge in the browser), draws the wanted offset now and over the day, and posts the model to the demo server (`/api/real/params`). `tools/real_cell.py ai --pref web` aims the cell with it. Web demo only: no installed app.
 3. **Mode**. Auto, Manual, Privacy (all cells closed at night), Away (all open). Auto is the default. Manual keeps the
    AI out until the user switches back or the timer ends.
 4. **Today**. Measured values only: glare hours, hours the desk was below target, number of corrections, servo moves.

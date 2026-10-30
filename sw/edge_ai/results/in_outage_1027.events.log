@@ -1,0 +1,10 @@
+1793082196.974861685 CSR_BEFORE {"m2m:uril":["TinyIoT/id-mn010","TinyIoT/id-mn009","TinyIoT/id-mn008","TinyIoT/id-mn007","TinyIoT/id-mn006","TinyIoT/id-mn005","TinyIoT/id-mn004","TinyIoT/id-mn003","TinyIoT/id-mn002","TinyIoT/id-mn001"]}
+1793082361.881054042 IN_STOP
+1793082362.897928529 IN_DOWN_CHECK 0 listeners; mn001 alive: 1
+1793082617.378758780 IN_START
+LISTEN 0      128          0.0.0.0:3000      0.0.0.0:*    users:(("server",pid=1132,fd=6))
+1793082642.149552588 CSR_AFTER_RESTART_20s {"m2m:uril":["TinyIoT/id-mn010","TinyIoT/id-mn009","TinyIoT/id-mn008","TinyIoT/id-mn007","TinyIoT/id-mn006","TinyIoT/id-mn005","TinyIoT/id-mn004","TinyIoT/id-mn003","TinyIoT/id-mn002","TinyIoT/id-mn001"]}
+1793082747.433181982 CSR_END {"m2m:uril":["TinyIoT/id-mn010","TinyIoT/id-mn009","TinyIoT/id-mn008","TinyIoT/id-mn007","TinyIoT/id-mn006","TinyIoT/id-mn005","TinyIoT/id-mn004","TinyIoT/id-mn003","TinyIoT/id-mn002","TinyIoT/id-mn001"]}
+1793082747.436396540 DRIVER_EXIT 0
+Terminated
+1793082748.467972259 CLEANED

@@ -11,6 +11,7 @@ Optional dither closes one cell a little further each step so the filter also se
 """
 import dataclasses
 from datetime import date
+from pathlib import Path
 
 import numpy as np
 
@@ -38,6 +39,24 @@ class ContributionFilter:
     def matrix(self, prior):
         return np.clip(prior + self.delta, 0.0, None)
 
+    def save(self, path):
+        """Keep what was learned (path ends in .npz) so a restarted controller does not begin from the virtual room again."""
+        tmp = Path(path).with_suffix(".tmp.npz")
+        np.savez(tmp, delta=self.delta, p=self.p)
+        tmp.replace(path)
+
+    def load(self, path):
+        """Restore a saved state; False (nothing changed) when there is none or it is for another number of desks/cells."""
+        try:
+            with np.load(path) as f:
+                delta, p = f["delta"], f["p"]
+        except (OSError, KeyError, ValueError):
+            return False
+        if delta.shape != self.delta.shape or p.shape != self.p.shape:
+            return False
+        self.delta, self.p = delta, p
+        return True
+
 
 def model_prior(room_model, t, outdoor):
     """Contribution matrix of the virtual room, scaled by measured outdoor light / clear-sky outdoor light."""
@@ -56,9 +75,12 @@ def polagrid_prior_only(room_model):
     return controller
 
 
-def polagrid_online(room_model, dither_deg=0.0, **filter_args):
-    """AI (1) online + AI (2). dither_deg > 0 closes one cell (round robin) that much further each sunny step."""
-    state = {"kf": None, "step": 0}
+def polagrid_online(room_model, dither_deg=0.0, state_path=None, glare_offset=None, save_every=10, **filter_args):
+    """AI (1) online + AI (2). dither_deg > 0 closes one cell (round robin) that much further each sunny step.
+
+    state_path (.npz): the filter is loaded from it at the first sunny step and saved every `save_every` updates.
+    glare_offset(ctx) -> lux: AI (3), shifts the desk lux the angles aim below (negative = this user wants it darker)."""
+    state = {"kf": None, "step": 0, "updates": 0}
 
     def controller(ctx):
         n = len(ctx["angles"])
@@ -67,9 +89,16 @@ def polagrid_online(room_model, dither_deg=0.0, **filter_args):
         prior = model_prior(room_model, ctx["t"], ctx["outdoor"])
         if state["kf"] is None:
             state["kf"] = ContributionFilter(prior.shape[0], n, **filter_args)
+            if state_path:
+                state["kf"].load(state_path)
         state["kf"].update(prior, transmission(ctx["angles"]), ctx["desk_lux"])
-        angles = ai.decide_angles(state["kf"].matrix(prior), ctx["angles"],
-                                  glare_lux=GLARE_LUX - evaluate.GLARE_MARGIN_LUX)
+        state["updates"] += 1
+        if state_path and state["updates"] % save_every == 0:
+            state["kf"].save(state_path)
+        limit = GLARE_LUX - evaluate.GLARE_MARGIN_LUX
+        if glare_offset:
+            limit = max(200.0, limit + glare_offset(ctx))   # same floor as prefs.run_day
+        angles = ai.decide_angles(state["kf"].matrix(prior), ctx["angles"], glare_lux=limit)
         if dither_deg:
             angles[state["step"] % n] = min(90.0, angles[state["step"] % n] + dither_deg)
             state["step"] += 1

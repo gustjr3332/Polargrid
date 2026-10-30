@@ -1,0 +1,36 @@
+[FAKE cell] fk1p0 at row 0 col 0, run fk1 on http://127.0.0.1:3001/TinyIoT-mn001, 7.03 deg/s
+[FAKE cell] CSE ready
+[FAKE cell] SKIP old command fk1c1793081017 after boot (the heartbeat sends a fresh one)
+[FAKE cell] fk1c1793082206: 0 -> 45 deg
+[FAKE cell] fk1c1793082207: 45 -> 90 deg
+[FAKE cell] fk1v1: 90 -> 90 deg
+[FAKE cell] fk1c1793082208: 90 -> 45 deg
+[FAKE cell] fk1v2: 45 -> 45 deg
+[FAKE cell] fk1c1793082209: 45 -> 0 deg
+[FAKE cell] fk1c1793082210: 0 -> 60 deg
+[FAKE cell] fk1v3: 60 -> 60 deg
+[FAKE cell] fk1c1793082211: 60 -> 0 deg
+[FAKE cell] fk1c1793082212: 0 -> 45 deg
+[FAKE cell] fk1v4: 45 -> 45 deg
+[FAKE cell] fk1c1793082213: 45 -> 90 deg
+[FAKE cell] fk1c1793082214: 90 -> 45 deg
+[FAKE cell] fk1c1793082215: 45 -> 0 deg
+[FAKE cell] fk1c1793082216: 0 -> 60 deg
+[FAKE cell] fk1c1793082217: 60 -> 0 deg
+[FAKE cell] fk1c1793082218: 0 -> 45 deg
+[FAKE cell] fk1c1793082219: 45 -> 90 deg
+[FAKE cell] fk1c1793082220: 90 -> 45 deg
+[FAKE cell] fk1c1793082221: 45 -> 0 deg
+[FAKE cell] fk1c1793082222: 0 -> 60 deg
+[FAKE cell] fk1c1793082223: 60 -> 0 deg
+[FAKE cell] fk1c1793082224: 0 -> 45 deg
+[FAKE cell] fk1c1793082225: 45 -> 90 deg
+[FAKE cell] fk1v13: 90 -> 90 deg
+[FAKE cell] fk1c1793082226: 90 -> 45 deg
+[FAKE cell] fk1c1793082227: 45 -> 0 deg
+[FAKE cell] fk1v14: 0 -> 0 deg
+[FAKE cell] fk1c1793082228: 0 -> 60 deg
+[FAKE cell] fk1v15: 60 -> 60 deg
+[FAKE cell] fk1c1793082229: 60 -> 0 deg
+[FAKE cell] fk1c1793082230: 0 -> 45 deg
+[FAKE cell] fk1c1793082231: 45 -> 0 deg

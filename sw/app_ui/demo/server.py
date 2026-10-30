@@ -21,6 +21,7 @@ import re
 import sqlite3
 import statistics
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -308,6 +309,13 @@ def read_real(real):
     return out
 
 
+def edge_tool():
+    """tools/live_learning.py of sw/edge_ai (loaded on first use: it needs numpy and scikit-learn, the replay mode does not)."""
+    sys.path.insert(0, str(HERE.parent.parent / "edge_ai" / "tools"))
+    import live_learning
+    return live_learning
+
+
 def build_app(hub, replay, real=None, token=None):
     from fastapi import FastAPI
     from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -464,6 +472,20 @@ def build_app(hub, replay, real=None, token=None):
             n = db.execute("SELECT COUNT(*) FROM corrections").fetchone()[0]
             last = [dict(x) for x in db.execute("SELECT * FROM corrections ORDER BY id DESC LIMIT 5")]
         return {"count": n, "last": last}
+
+    @app.get("/api/real/learn")
+    def learn(fake: int = 0):
+        """Corrections with their model input, for the phone page's Ridge (fake=1 also takes fake-cell rows, as --learn-fake)."""
+        return edge_tool().learn_payload(CORR_DB, bool(fake))
+
+    @app.post("/api/real/params")
+    def put_params(body: dict):
+        """The model the phone page learned (mean, scale, coef, intercept, n). real_cell.py ai --pref web reads it."""
+        try:
+            path = edge_tool().save_params(body, bool(body.get("fake")))
+        except (KeyError, TypeError, ValueError) as e:
+            return JSONResponse({"error": str(e)}, 400)
+        return {"saved": path.name}
 
     @app.get("/compare.json")
     def compare():

@@ -1,0 +1,4 @@
+[setup] waiting for cell fk1p0 on http://127.0.0.1:3001/TinyIoT-mn001 ...
+[setup] controller ready (group of 1 cell, desk subscription)
+[exit] sending OPEN (0 deg)
+[exit] cell open

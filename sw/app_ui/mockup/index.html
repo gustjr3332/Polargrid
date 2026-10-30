@@ -69,10 +69,12 @@ a.hint{position:fixed;top:4px;left:10px;color:var(--mut);font-size:13px}
 <a class="hint" href="?view=all" data-i18n="?view=all shows 5 screens"></a>
 <button id="lang" title="Language / 언어"></button>
 <div id="root"></div>
+<script src="ridge.js"></script>
 <script>
 // Static mockup, no network. All numbers are made-up demo values (labelled DEMO DATA on screen).
 // Language: Korean by default, English with ?lang=en. KO maps each English string to its Korean text; technical terms stay English.
 const KO = {
+"My AI (learns in this page)":"내 AI (이 페이지에서 학습)","corrections":"보정","Needs 3 corrections to start learning":"보정 3번부터 학습을 시작해요","Wanted change of the desk light now":"지금 시각에 원하는 책상 밝기 변화","Offset through the day (today)":"하루 동안의 오프셋 (오늘)","What it learned (weights)":"학습한 가중치","Hour":"시각","Season (sin)":"계절 (sin)","Season (cos)":"계절 (cos)","Sun height":"태양 고도","Sun direction":"태양 방위","Outdoor light":"바깥 밝기","Sent to the controller":"컨트롤러로 전송됨","Not sent: server refused":"전송 실패: 서버가 거절했어요","Web demo: learning runs in this page, not in an installed app.":"웹 데모: 학습은 설치한 앱이 아니라 이 페이지에서 돌아가요.","Each press is saved; this page learns from them and sends the result to the controller.":"버튼을 누를 때마다 저장되고, 이 페이지가 학습해 결과를 컨트롤러로 보내요.",
 "?view=all shows 5 screens":"?view=all 로 화면 5개 보기","DEMO DATA":"데모 데이터",
 "Window":"창문","Comfort":"쾌적도","Mode":"모드","Today":"오늘","Settings":"설정",
 "Study room · south window":"서재 · 남향 창문","Auto · Reduce desk glare":"자동 · 책상 glare 줄이기","● Connected":"● 연결됨",
@@ -91,7 +93,7 @@ const KO = {
 "Connection and safety":"연결 및 안전","Safe state":"안전 상태",
 "If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.":"연결이 끊기거나 AI가 이상하게 동작하면 모든 셀이 스스로 열립니다. 여기서 언제든 셀을 직접 움직일 수도 있어요.",
 "Open all":"모두 열기","Close all":"모두 닫기",
-"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","Each press is saved in the correction DB (not used by the AI yet).":"버튼을 누를 때마다 보정 DB에 저장됩니다 (아직 AI 학습에는 쓰이지 않음).","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상"};
+"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상"};
 let LANG = "ko";
 { const q = new URLSearchParams(location.search).get("lang"); let s = null;
   try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
@@ -143,7 +145,38 @@ const corrList = () => {
     : `<div style="color:var(--mut);padding:6px 0">${T("No corrections yet")}</div>`;
   return `<div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Last corrections")}</span><span class="chip">${CORR ? CORR.count : 0} ${T("saved")}</span></div>${rows}</div>`;
 };
+let MYAI = null;   // this page's own AI (3): {n, p: fitted model or null, now, hours, sent: Date or null, err}
+const learnMyAi = () => fetch(API + "/api/real/learn" + (REAL && REAL.fake ? "?fake=1" : "")).then(r => r.json()).then(async d => {
+  const n = d.y.length, same = MYAI && MYAI.n === n && MYAI.p, m = {n, now: d.now, hours: d.hours, p: same ? MYAI.p : null, sent: same ? MYAI.sent : null, err: false};
+  if (n >= 3 && !m.p) {   // a new correction: learn again here, then hand the model to the controller
+    m.p = fitRidge(d.x, d.y);
+    const r = await postJson("/api/real/params", {...m.p, fake: !!(REAL && REAL.fake)});
+    if (r && r.ok) m.sent = new Date(); else m.err = true;
+  }
+  MYAI = m;
+}, () => {});
 const loadCorr = () => fetch(API + "/api/real/corrections").then(r => r.json()).then(d => { CORR = d; }, () => {});
+const FEAT = ["Hour", "Season (sin)", "Season (cos)", "Sun height", "Sun direction", "Outdoor light"];
+const myAiCard = () => {
+  const m = MYAI; if (!m) return "";
+  const clip = v => Math.max(-1000, Math.min(1000, v)), at = x => clip(predictRidge(m.p, x));
+  let body = `<div style="color:var(--mut);padding:6px 0">${T("Needs 3 corrections to start learning")} (${m.n})</div>`;
+  if (m.p) {
+    const off = at(m.now), ys = m.hours.map(at), top = Math.max(200, ...ys.map(Math.abs)), cmax = Math.max(1e-9, ...m.p.coef.map(Math.abs));
+    const pts = ys.map((y, k) => `${10 + k * 20},${40 - y / top * 32}`).join(" ");
+    const hh = m.sent ? m.sent.toTimeString().slice(0, 5) : "";
+    body = `<div class="row"><span class="lab" style="margin:0">${T("Wanted change of the desk light now")}</span><strong style="font-size:22px;color:var(--acc)">${off > 0 ? "+" : ""}${Math.round(off)} lux</strong></div>
+      <div class="lab" style="margin-top:10px">${T("Offset through the day (today)")}</div>
+      <svg viewBox="0 0 260 80" width="100%"><line x1="10" x2="250" y1="40" y2="40" stroke="var(--line)" stroke-dasharray="4 3"/><polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="2.5"/>
+        <text x="10" y="76" fill="var(--mut)" font-size="11">07</text><text x="130" y="76" fill="var(--mut)" font-size="11" text-anchor="middle">13</text><text x="250" y="76" fill="var(--mut)" font-size="11" text-anchor="end">19</text></svg>
+      <div class="lab" style="margin-top:6px">${T("What it learned (weights)")}</div>
+      ${m.p.coef.map((c, k) => `<div class="row" style="padding:2px 0;font-size:13px"><span style="width:38%;color:var(--mut)">${T(FEAT[k])}</span><span style="flex:1;height:8px;background:var(--surf2);border-radius:4px;position:relative"><b style="position:absolute;top:0;height:8px;border-radius:4px;background:${c < 0 ? "var(--warn)" : "var(--ok)"};${c < 0 ? "right" : "left"}:50%;width:${Math.abs(c) / cmax * 50}%"></b></span><span style="width:18%;text-align:right">${c.toFixed(0)}</span></div>`).join("")}
+      <div class="row" style="margin-top:8px"><span class="chip ${m.err ? "" : "ok"}">${m.err ? T("Not sent: server refused") : "● " + T("Sent to the controller") + " " + hh}</span></div>`;
+  }
+  return `<div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("My AI (learns in this page)")}</span><span class="chip acc">${m.n} ${T("corrections")}</span></div>${body}
+    <p class="hint" style="margin-top:8px">${T("Web demo: learning runs in this page, not in an installed app.")}</p></div>`;
+};
+const loadAll = () => loadCorr().then(learnMyAi);
 const num = v => v == null ? "–" : Math.round(v);
 const deskRow = () => LIVE
   ? `<div class="desk"><div><small>${T("Desk")}</small><strong>${num(REAL && REAL.desk_lux)} lux</strong></div><div><small>${T("Cell sensor")}</small><strong>${num(REAL && REAL.cell_lux)} lux</strong></div></div>`
@@ -178,10 +211,10 @@ Comfort:{sub:"Tell the AI how it feels",html:`
          : `<div class="slider"><b style="width:40%"></b><i style="left:40%"></i></div>`}
   <div class="row" style="color:var(--mut);font-size:14px"><span>100 lux</span><span id="amtv" style="color:var(--tx);font-size:16px">${LIVE ? AMOUNT : "+200"} lux</span><span>500 lux</span></div></div>
   <div class="btns"><div class="btn" ${LIVE ? 'id="b-dark"' : ""}>${T("Too dark")}</div><div class="btn p" ${LIVE ? 'id="b-bright"' : ""}>${T("Too bright")}</div></div>
-  ${LIVE ? corrList() : `<div class="card" style="margin-top:12px"><div class="lab">${T("Last corrections")}</div>
+  ${LIVE ? myAiCard() + corrList() : `<div class="card" style="margin-top:12px"><div class="lab">${T("Last corrections")}</div>
   <div class="row" style="padding:6px 0"><span>${T("14:05 · Too bright")}</span><span class="chip">−200 lux</span></div>
   <div class="row" style="padding:6px 0"><span>${T("11:40 · Too dark")}</span><span class="chip">+100 lux</span></div></div>`}
-  <p style="color:var(--mut);font-size:14px;padding:4px">${T(LIVE ? "Each press is saved in the correction DB (not used by the AI yet)." : "Each press is also a training sample for the AI preference model.")}</p>`},
+  <p style="color:var(--mut);font-size:14px;padding:4px">${T(LIVE ? "Each press is saved; this page learns from them and sends the result to the controller." : "Each press is also a training sample for the AI preference model.")}</p>`},
 Mode:{sub:"How should the window behave?",html:`
   ${seg(["Auto","Manual","Privacy","Away"],0)}
   <div class="card"><div class="lab">${T("Goal (Auto)")}</div>
@@ -243,12 +276,12 @@ const bindComfort = () => {
   const a = document.getElementById("amt"); if (!a) return;
   a.oninput = () => { AMOUNT = +a.value; document.getElementById("amtv").textContent = AMOUNT + " lux"; };
   const post = kind => postJson("/api/real/correction", {kind, amount: AMOUNT})
-    .then(loadCorr).then(() => { if (names[cur] === "Comfort") draw(cur, true); }).catch(() => {});
+    .then(loadAll).then(() => { if (names[cur] === "Comfort") draw(cur, true); }).catch(() => {});
   document.getElementById("b-dark").onclick = () => post("too_dark");
   document.getElementById("b-bright").onclick = () => post("too_bright");
 };
 const draw = (i, noload) => { cur = i; root.innerHTML = phone(names[i], i); root.querySelectorAll(".nav button").forEach((b,k)=>b.onclick=()=>draw(k)); bindCells(); bindComfort();
-  if (LIVE && names[i] === "Comfort" && !noload) loadCorr().then(() => { if (names[cur] === "Comfort") draw(cur, true); }); };
+  if (LIVE && names[i] === "Comfort" && !noload) loadAll().then(() => { if (names[cur] === "Comfort") draw(cur, true); }); };
 const render = () => {
   document.documentElement.lang = LANG;
   document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = T(e.dataset.i18n));
