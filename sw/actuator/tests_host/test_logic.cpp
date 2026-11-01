@@ -4,8 +4,10 @@
 #include "cell_logic.h"
 
 int main() {
-  const long full = (long)(90 * STEPS_PER_DISC_DEG + 0.5f);
-  assert(stepsFromDisc(0) == 0 && stepsFromDisc(90) == full && stepsFromDisc(45) == (long)(45 * STEPS_PER_DISC_DEG + 0.5f));
+  const long full = (long)(MOTOR_CLOSED_DEG * STEPS_PER_DISC_DEG + 0.5f);   // command 90 = the measured dark motor angle
+  assert(stepsFromDisc(0) == (long)(MOTOR_OPEN_DEG * STEPS_PER_DISC_DEG + 0.5f) && stepsFromDisc(90) == full);
+  assert(stepsFromDisc(45) == (long)(MOTOR_OPEN_DEG * STEPS_PER_DISC_DEG + (full - MOTOR_OPEN_DEG * STEPS_PER_DISC_DEG) / 2 + 0.5f));
+  assert(discFromMotor(MOTOR_OPEN_DEG) == 0 && discFromMotor(MOTOR_CLOSED_DEG) == DISC_MAX_DEG);
   assert(stepsFromDisc(-10) == 0 && stepsFromDisc(120) == full);         // clamped to the 0..90 range
 
   Cells c;

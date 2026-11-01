@@ -46,6 +46,22 @@ def test_preference_needs_rows_then_follows_new_ones(tmp_path):
     assert LivePreference(db, tmp_path / "m.joblib").model is not None            # restart: model loaded from file
 
 
+def test_preference_starts_from_the_virtual_users_and_real_presses_override(tmp_path):
+    import json
+    from polagrid import ai
+    from fit_corrections import moment_features
+    xs = [moment_features(f"2026-11-04T{h:02d}:00:00+09:00") for h in (10, 12, 14, 16)]
+    pre = tmp_path / "pre.json"
+    pre.write_text(json.dumps({"x": xs, "y": [-300.0] * 4}))
+    db = tmp_path / "c.db"
+    add_rows(db, [("2026-11-04T12:00:00+09:00", 0, 0)])
+    pref = LivePreference(db, tmp_path / "m.joblib", pretrained=pre)
+    assert pref.offset(NOON) < -250 and pref.model is not None                    # no real press yet: the virtual start value
+    add_rows(db, [("2026-11-04T13:00:00+09:00", 0, 0), ("2026-11-04T11:00:00+09:00", 0, 0)])
+    assert pref.offset(NOON) > -200 and pref.rows == 3                            # three real presses (x5 weight) pull it to 0
+    assert LivePreference(db, tmp_path / "none.joblib").model is None            # no pretrained file given: unchanged behaviour
+
+
 def test_negative_offset_closes_the_cell_more():
     room = Room(rows=1, cols=1, cell_w=0.15, cell_h=0.15, desks=[(0.0, 0.6, 0.4, 0.3, 0.75)])
     ctx = {"t": NOON, "outdoor": window_lux(room, NOON), "angles": np.array([0.0]), "desk_lux": np.array([800.0])}

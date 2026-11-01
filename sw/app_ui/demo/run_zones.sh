@@ -2,11 +2,11 @@
 # Start M fresh zones of 10x10 cells (one MN each) and run one simulated day in each, so /flow has traffic to show.
 # Usage (inside WSL): [SERVE=--serve] bash run_zones.sh [M=10] [STEP_MIN=10]. SERVE=--serve waits for Start from the demo page (/api/ctl). Moves the old MN databases to ~/polargrid/db_backup/ (tools/fresh_mn.sh).
 # Writes runs.json for server.py when every zone has finished its setup. Zones run in the background; logs in /tmp/z<k>.log.
-M=${1:-10}; STEP=${2:-10}
+M=${1:-10}; STEP=${2:-10}; MN=$((M+${EXTRA_MNS:-0}))   # EXTRA_MNS: more MNs after the zones (demo_up.sh both puts the real cell on MN M+1)
 D=$(cd "$(dirname "$0")" && pwd); E=$D/../../edge_ai
-cd "$E" && bash tools/run_in.sh >/dev/null 2>&1 </dev/null && bash tools/fresh_mn.sh "$M" >/dev/null 2>&1 </dev/null
-for i in $(seq 90); do [ "$(ss -ltn | grep -cE ":(30(0[1-9]|[1-9][0-9])) ")" -ge "$M" ] && break; sleep 1; done
-python3 tools/harden_acp.py --mns "$M" >/dev/null || echo "WARNING: defaultACP not narrowed on every MN"   # idempotent; a fresh database has the wildcard again
+cd "$E" && bash tools/run_in.sh >/dev/null 2>&1 </dev/null && bash tools/fresh_mn.sh "$MN" >/dev/null 2>&1 </dev/null
+for i in $(seq 90); do [ "$(ss -ltn | grep -cE ":(30(0[1-9]|[1-9][0-9])) ")" -ge "$MN" ] && break; sleep 1; done
+python3 tools/harden_acp.py --mns "$MN" >/dev/null || echo "WARNING: defaultACP not narrowed on every MN"   # idempotent; a fresh database has the wildcard again
 for k in $(seq "$M"); do
   setsid nohup python3 -u -m polagrid.closed_loop --host http://127.0.0.1:$((3000+k)) --cse TinyIoT-mn$(printf %03d "$k") \
     --rows 10 --cols 10 --controller online --step "$STEP" --port $((9500+10*k)) $SERVE $SLOW > /tmp/z$k.log 2>&1 < /dev/null &

@@ -75,30 +75,50 @@ class LinearModel:
         return z @ np.asarray(self.p["coef"]) + self.p["intercept"]
 
 
+PRETRAINED_PATH = ROOT / "models" / "preference_pretrained.json"   # tools/pretrain_preference.py: corrections of two virtual users
+REAL_WEIGHT = 5   # one real press counts this many virtual ones in the refit, so the person's own taste wins after a few presses
+
+
+def load_pretrained(path):
+    """([features], [offset lux]) the virtual users logged, or empty lists when there is no file."""
+    if not path or not Path(path).exists():
+        return [], []
+    p = json.loads(Path(path).read_text())
+    return p["x"], p["y"]
+
+
 class LivePreference:
-    def __init__(self, db_path=DEFAULT_DB, model_path=None, include_fake=False, source="server"):
+    def __init__(self, db_path=DEFAULT_DB, model_path=None, include_fake=False, source="server", pretrained=None):
         self.db, self.include_fake, self.source, self.mtime = Path(db_path), include_fake, source, None
         self.path = Path(model_path) if model_path else ROOT / "models" / (
             "preference_FAKE.joblib" if include_fake else "preference_real.joblib")
         self.rows, self.model = -1, None
-        if source == "server" and self.path.exists():
-            self.model = joblib.load(self.path)
+        # the default model file means the real cell: start from what virtual users taught, then learn from the real presses
+        self.pre_x, self.pre_y = load_pretrained(pretrained if pretrained else (PRETRAINED_PATH if not model_path else None))
+        if source == "server":
+            if self.path.exists():
+                self.model = joblib.load(self.path)
+            elif len(self.pre_y) >= MIN_ROWS:
+                self.model = ai.fit_preference(self.pre_x, self.pre_y)   # in memory only: the file is written at the first real refit
 
     def refit(self):
         """True when a new model was fitted (source "web": read) from the current rows."""
         if self.source == "web":
             path = web_params_path(self.include_fake)
-            if not path.exists() or path.stat().st_mtime_ns == self.mtime:
+            if not path.exists():
                 return False
-            p = json.loads(path.read_text())
-            self.model, self.rows, self.mtime = LinearModel(p), p["n"], path.stat().st_mtime_ns
+            text = path.read_text()
+            if text == self.mtime:   # the file is a few hundred bytes: compare its text, a file time can be as coarse as a second
+                return False
+            p = json.loads(text)
+            self.model, self.rows, self.mtime = LinearModel(p), p["n"], text
             return True
         if not self.db.exists():
             return False
         x, y, _ = load_corrections(self.db, self.include_fake)
         if len(y) == self.rows or len(y) < MIN_ROWS:
             return False
-        self.model, self.rows = ai.fit_preference(x, y), len(y)
+        self.model, self.rows = ai.fit_preference(self.pre_x + x * REAL_WEIGHT, self.pre_y + y * REAL_WEIGHT), len(y)
         self.path.parent.mkdir(exist_ok=True)
         joblib.dump(self.model, self.path)
         return True

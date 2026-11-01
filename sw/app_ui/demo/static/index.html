@@ -68,7 +68,8 @@ body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
       <div class="row"><span data-i18n="Latency p95"></span><b id="p95">-</b><small>ms</small></div>
       <div class="row"><span data-i18n="Servo moves"></span><b id="mv">-</b><small data-i18n="total"></small></div>
     </section>
-    <section><h2 data-i18n="Simulated time"></h2><div id="clock">--:--</div></section>
+    <section><h2 data-i18n="Simulated time"></h2><div id="clock">--:--</div>
+      <div class="bar" style="margin-top:8px"><i id="day" style="width:0"></i></div></section>
     <section id="ctl"><h2 data-i18n="Simulation"></h2>
       <div class="btns"><button id="run"></button>
         <select id="spd"><option value="1">1x</option><option value="2">2x</option><option value="5">5x</option></select></div>
@@ -109,10 +110,29 @@ const cv = $("cv"), g = cv.getContext("2d");
 let last = null;
 
 // ---- drawing entry: the only function a future SSE/Live source needs to call ----
+// Frames can come every 0.3 s (a recorded day in 20 s): ease each cell from its last level to the new one over the frame gap,
+// so the room dims and opens smoothly instead of jumping. The first frame, a different cell count or a long pause draw at once.
+let from = null, to = null, tween0 = 0, tweenMs = 300, lastFrameAt = 0;
+function ease(now) {
+  if (!to) return;
+  const p = Math.min(1, (now - tween0) / tweenMs), c = from.map((v, i) => v + (to[i] - v) * p);
+  draw({ ...last, cells: c });
+  if (p < 1) requestAnimationFrame(ease);
+}
 function onFrame(f) {
+  const now = performance.now(), gap = now - lastFrameAt;
   last = f;
-  draw(f);
+  if (to && to.length === f.cells.length && f.mode && gap < 1200) {
+    const p = Math.min(1, (now - tween0) / tweenMs);
+    from = from.map((v, i) => v + (to[i] - v) * p);   // continue from what is on screen now
+    tweenMs = Math.max(80, gap * 0.9); lastFrameAt = now; to = f.cells; tween0 = now;
+    requestAnimationFrame(ease);
+  } else {
+    from = to = f.cells; lastFrameAt = now; draw(f);
+  }
   $("clock").textContent = (f.t || "").slice(11) || "--:--";
+  { const [h, m] = ((f.t || "").slice(11) || "07:00").split(":").map(Number);   // 07:00 to 19:00, the recorded day
+    $("day").style.width = Math.max(0, Math.min(100, ((h + m / 60) - 7) / 12 * 100)) + "%"; }
   $("d0").textContent = f.desks[0]; $("d1").textContent = f.desks[1];
   [0, 1].forEach(i => $("b" + i).style.width = Math.min(100, f.desks[i] / (TARGET * 2) * 100) + "%");
   $("gl").textContent = f.glare_h == null ? "-" : f.glare_h.toFixed(1);   // live viewer cannot see glare or command latency

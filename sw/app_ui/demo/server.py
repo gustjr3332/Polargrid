@@ -389,6 +389,13 @@ def build_app(hub, replay, real=None, token=None):
                 ok += 1
             except requests.RequestException:
                 pass
+        if real and real.get("ctl_port"):   # the real cell's AI loop follows the same Start / speed / Cloud / Reset (tools/real_cell.py ai --control-port)
+            try:
+                requests.post(f"http://127.0.0.1:{real['ctl_port']}/ctl", json=body, timeout=2).raise_for_status()
+                ok_real = True
+            except requests.RequestException:
+                ok_real = False
+            return {"zones_ok": ok, "zones": len(hub.mns), "real_ok": ok_real}
         return {"zones_ok": ok, "zones": len(hub.mns)}
 
     @app.get("/api/topology")
@@ -534,10 +541,11 @@ def main():
     ap.add_argument("--real-host", default="http://127.0.0.1:3001")
     ap.add_argument("--real-cse", default="TinyIoT-mn001")
     ap.add_argument("--real-app-port", type=int, default=9600, help="port of tools/real_cell.py app")
+    ap.add_argument("--real-ctl-port", type=int, default=0, help="port of tools/real_cell.py ai --control-port: the page's controls reach the real cell too")
     a = ap.parse_args()
     if not a.token:
         print("NOTE: no --token: anyone who can reach this port can move the cells and write corrections")
-    real = {"run": a.real, "host": a.real_host, "cse": a.real_cse, "app_port": a.real_app_port} if a.real else None
+    real = {"run": a.real, "host": a.real_host, "cse": a.real_cse, "app_port": a.real_app_port, "ctl_port": a.real_ctl_port} if a.real else None
 
     if a.replay:
         import uvicorn

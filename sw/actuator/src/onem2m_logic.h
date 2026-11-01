@@ -26,7 +26,7 @@ struct Req { std::string method, path, origin; int ty; std::string body; };
 
 // Same mapping as zone.py: 0 closed .. 100 open = 100 cos^2(angle).
 inline int openLevel(float disc) { double c = cos(disc * 3.14159265358979 / 180.0); return (int)lround(100 * c * c); }
-inline float discFromSteps(long steps) { return steps / STEPS_PER_DISC_DEG; }
+inline float discFromSteps(long steps) { return discFromMotor(steps / STEPS_PER_DISC_DEG); }
 
 inline std::string contentType(int ty) { return ty ? "application/json;ty=" + std::to_string(ty) : "application/json"; }
 inline std::string url(const std::string& host, const std::string& cse, const std::string& path) {

@@ -10,6 +10,7 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 14, 27, 26 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it: the ULN2003 on it broke flashing on 10-24). One half step every 2 ms, the serial parser is never blocked.
   Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`, `HOMING` at boot and `HOMED` when done.
   Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (90.4 mm belt pitch radius / 12.94 mm pulley pitch radius, 40T MXL, 10-22) / 360, about 79 half steps per degree (estimate, calibrate) (`hw/README.md`).
+  10-31: the pulley is engaged about 40 deg off, so a command angle (0 open .. 90 closed) is mapped linearly onto motor 0..40 deg (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open (measured max about 17.5 lux against about 1.7 at the dark end, small sample). Re-measure after re-seating the cell.
 - Homing: at boot the motor drives `HOME_OVERDRIVE_DEG` = 100 deg of disc back toward the stop pin, then position 0 is set. Coils switch off when the motor is idle.
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.

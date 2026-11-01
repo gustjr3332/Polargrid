@@ -9,6 +9,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 from real_cell import backoff_s, malus_fit, new_readings, retry, sweep_rows   # noqa: E402
 
 
+def test_hold_closed_shuts_above_the_limit_and_reopens_below_half():
+    from real_cell import hold_closed
+    assert hold_closed(2743, False, 2000) and hold_closed(1500, True, 2000) and hold_closed(1000, True, 2000)
+    assert not hold_closed(999, True, 2000) and not hold_closed(1500, False, 2000) and not hold_closed(5000, True, 0)
+
+
+def test_level_to_angle_is_the_apps_cos_squared():
+    from real_cell import level_to_angle
+    assert level_to_angle(100) == 0 and abs(level_to_angle(50) - 45) < 1e-9 and abs(level_to_angle(0) - 90) < 1e-9
+
+
 def test_backoff_doubles_and_caps_like_the_firmware():
     assert [backoff_s(n) for n in range(0, 9)] == [0, 1, 2, 4, 8, 16, 32, 60, 60]
 

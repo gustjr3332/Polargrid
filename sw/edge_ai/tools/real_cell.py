@@ -34,7 +34,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from polagrid import evaluate, online                              # noqa: E402
-from polagrid.closed_loop import HEARTBEAT_MIN                     # noqa: E402
+from polagrid.closed_loop import HEARTBEAT_MIN, Control                     # noqa: E402
 from polagrid.onem2m import Client, _headers, con as cin_con   # noqa: E402
 from polagrid.physics import KST, Room, sun_position, window_lux   # noqa: E402
 from polagrid.zone import ALL, Controller, grant_discovery, make_acp, remote, roles                        # noqa: E402
@@ -388,10 +388,57 @@ def sweep(cell, a):
           f"({100 * rms / max(abs(amp), 1e-9):.1f}% of the swing); repeat 0 deg ratio {rows[-1][2]}")
 
 
+def level_to_angle(level):
+    """The app's open level 0..100 to a disc angle: opeLl = 100 cos^2(angle)."""
+    return math.degrees(math.acos(math.sqrt(level / 100)))
+
+
+def serve_manual(port, manual, hold_s):
+    """The phone page's slider (POST /level {"level": 0..100}) and privacy (POST /mode {"mode": "privacy" | "auto"}) while the AI
+    loop runs. A slider move holds that angle for hold_s seconds, then the AI takes over; privacy holds 90 deg until "auto"."""
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            try:
+                req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                if self.path == "/mode":
+                    if req["mode"] not in ("privacy", "auto"):
+                        raise ValueError
+                    manual.update(angle=90.0 if req["mode"] == "privacy" else None, until=math.inf)
+                else:
+                    level = float(req["level"])
+                    if not 0 <= level <= 100:
+                        raise ValueError
+                    manual.update(angle=level_to_angle(level), until=time.monotonic() + hold_s)
+            except (ValueError, KeyError, TypeError, AttributeError):
+                return self.send_error(400, 'need JSON {level: 0..100} on /level or {mode: "privacy" | "auto"} on /mode')
+            body = json.dumps({"angle": manual["angle"]}).encode()
+            self.send_response(202)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    threading.Thread(target=ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever, daemon=True).start()
+
+
+def hold_closed(desk_lux, closed, close_lux):
+    """Hysteresis of the real cell's full close: shut above close_lux, reopen only below half of it (0 = off)."""
+    if not close_lux:
+        return False
+    if desk_lux > close_lux:
+        return True
+    return closed and desk_lux >= close_lux / 2
+
+
 def ai_loop(cell, a):
     """AI (1) online + AI (2) for one cell. Desk lux is the real sensor; the sun is a SIMULATED accelerated clock."""
     t0 = datetime.fromisoformat(a.start).replace(tzinfo=KST)
-    wall0 = time.monotonic()
+    sim_t, last = t0, time.monotonic()
+    page = Control(a.cloud, ROOM.window_azimuth) if a.control_port else None   # the demo page's Start / speed / Cloud / Reset
+    if page:
+        page.serve(a.control_port)
     kw = {}
     if a.learn:   # AI (1) state and AI (3) preference survive a restart; a faulty judgement still opens the cell
         pref = LivePreference(include_fake=a.learn_fake, source=a.pref)
@@ -400,20 +447,33 @@ def ai_loop(cell, a):
     MODELS.mkdir(exist_ok=True)
     ctrl = evaluate.fail_open(online.polagrid_online(ROOM, **kw))
     env = roles(cell.run)["env"]
+    closed, manual = False, {"angle": None, "until": 0.0}
+    if a.app_port:
+        serve_manual(a.app_port, manual, a.manual_hold_s)
     print(f"[ai] SIMULATED SUN: clock starts {t0:%m-%d %H:%M}, {a.speed:g}x; desk lux from the real sensor"
           + ("; learning ON (filter + preference saved in models/)" if a.learn else "; learning off"))
     while True:
         tick = time.monotonic()
-        t = t0 + timedelta(seconds=(tick - wall0) * a.speed)
+        if page and page.reset:
+            sim_t, page.reset, page.running = t0, False, False
+        if not page or page.running:   # with the page's controls the clock waits for Start; the loop still follows the desk sensor
+            sim_t += timedelta(seconds=(tick - last) * a.speed * (page.speed if page else 1.0))
+        last, t, cloud = tick, sim_t, (page.cloud if page else a.cloud)
         alt, az = sun_position(t, ROOM.lat, ROOM.lon)
-        sun = {"t": t.isoformat(), "alt": round(alt, 2), "az": round(az, 2), "outdoor": round(window_lux(ROOM, t, a.cloud))}
+        sun = {"t": t.isoformat(), "alt": round(alt, 2), "az": round(az, 2), "outdoor": round(window_lux(ROOM, t, cloud))}
         retry(lambda: cell.c.create(f"{cell.run}env/sun", env, sun), "publish sun")
         sun = retry(cell.ctl.sun, "read sun")
         desk = retry(cell.ctl.desks, "read desks")
         new = ctrl({"t": t, "outdoor": sun["outdoor"], "angles": np.array([cell.angle]), "desk_lux": desk})
+        # 10-31: the cell's optics reach far less than the model's cos^2 (about 40 deg of motor range), so a desk this bright shuts fully
+        closed = hold_closed(desk[0], closed, a.close_lux)
+        if closed:
+            new = np.array([90.0])
+        if manual["angle"] is not None and time.monotonic() < manual["until"]:   # the person's slider beats the AI for a while
+            new = np.array([manual["angle"]])
         line = f"[ai] sim {t:%H:%M} sun alt {alt:5.1f} outdoor {sun['outdoor']:>6} lux | desk {desk[0]:7.1f} lux"
         if a.learn and pref.model is not None:
-            line += f" | pref {pref.offset(datetime.now(KST)):+5.0f} lux ({pref.rows} corr.)"
+            line += f" | pref {pref.offset(datetime.now(KST)):+5.0f} lux ({max(0, pref.rows)} corr.)"
         if abs(new[0] - cell.angle) > 0.05:
             got = cell.send(new[0])
             line += f" -> {new[0]:.0f} deg" + (f" in {got[0]:.1f} s" if got else " (no reply)")
@@ -441,6 +501,13 @@ def main():
     i.add_argument("--speed", type=float, default=60, help="simulated seconds per wall second")
     i.add_argument("--step", type=float, default=20, help="wall seconds per control step (a 90 deg turn takes ~13 s)")
     i.add_argument("--cloud", type=float, default=0.0, help="simulated cloud 0..1")
+    i.add_argument("--close-lux", type=float, default=2000.0,
+                   help="desk lux above which the cell shuts fully (90 deg) whatever the model says; it reopens below half of it; 0 = off")
+    i.add_argument("--app-port", type=int, default=0,
+                   help="also take the phone page's slider and privacy here (the demo server posts to 9600): a slider move holds that angle for --manual-hold-s")
+    i.add_argument("--manual-hold-s", type=float, default=120.0, help="seconds a slider move beats the AI")
+    i.add_argument("--control-port", type=int, default=0,
+                   help="listen here for the demo page's controls (running, speed, cloud, reset; same as the virtual zones); the clock then waits for Start")
     i.add_argument("--no-learn", dest="learn", action="store_false", help="do not keep the filter or refit from the app's corrections")
     i.add_argument("--pref", choices=["server", "web"], default="server",
                    help="AI (3) preference: server = fitted here from corrections.db; web = the model the phone page learned in its browser")

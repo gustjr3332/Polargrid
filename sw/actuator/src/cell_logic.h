@@ -16,7 +16,10 @@ constexpr float PULLEY_PITCH_R_MM = 40 * 2.032f / (2 * 3.14159265f);
 constexpr float DISC_PITCH_R_MM = 89.5f + 0.9f;
 constexpr float GEAR_RATIO = DISC_PITCH_R_MM / PULLEY_PITCH_R_MM;
 constexpr float STEPS_PER_DISC_DEG = HALF_STEPS_PER_REV * GEAR_RATIO / 360.0f;   // about 79
-constexpr float HOME_OVERDRIVE_DEG = 100.0f;   // at boot drive this far toward the stop, so wherever the disc was it ends on it
+// At boot drive this far toward the stop, so wherever the disc was it ends on it. 10-31: 0 = no homing, because there is no
+// stop yet and 100 deg is longer than the 98 deg belt arc, so every boot pulled the pulley off the belt end. Until a stop exists
+// the disc must be set by hand to the open position before power-on (position 0 = where it was at boot).
+constexpr float HOME_OVERDRIVE_DEG = 0.0f;
 
 #ifndef WATCHDOG_MS
 #define WATCHDOG_MS 1800000UL              // same 30 min as polagrid/zone.py WATCHDOG_MIN
@@ -24,7 +27,23 @@ constexpr float HOME_OVERDRIVE_DEG = 100.0f;   // at boot drive this far toward 
 
 inline float clampDisc(float d) { return d < 0 ? 0 : (d > DISC_MAX_DEG ? DISC_MAX_DEG : d); }
 
-inline long stepsFromDisc(float disc) { return (long)(clampDisc(disc) * STEPS_PER_DISC_DEG + 0.5f); }
+// 10-31: the pulley was engaged so the disc sweeps about 40..130 deg of film angle, not 0..90. Measured on the real cell with
+// the desk BH1750 behind the disc (two sweeps, 5 deg steps, a few readings each): the dark end is near motor 40 deg (the
+// minima centre at 45 and 35), the bright end is at the motor 0 stop (17.5 lux against about 1.7 at the dark end; the 90 deg end
+// read about the same, so that choice is +-). The film's true open (0 or 180 deg) is outside the motor range, so "open" is
+// only partly open. A command angle (0 = open, 90 = closed) is mapped linearly between these two motor angles. Re-measure
+// after the cell is re-seated or the film is turned.
+constexpr float MOTOR_OPEN_DEG = 0.0f;     // motor angle of the brightest reading
+// 11-01: two more sweeps (3 and 5 readings per 10 deg, command angle) put the darkest reading at command 70..75 deg = motor ~31..33,
+// and a cos^2 fit puts it at 75 (motor 33); at command 90 the old 40 read 10% of the open lux instead of ~0.
+constexpr float MOTOR_CLOSED_DEG = 33.0f;  // motor angle of the darkest reading
+
+inline float motorFromDisc(float disc) {
+  return MOTOR_OPEN_DEG + clampDisc(disc) / DISC_MAX_DEG * (MOTOR_CLOSED_DEG - MOTOR_OPEN_DEG);
+}
+inline float discFromMotor(float motor) { return (motor - MOTOR_OPEN_DEG) / (MOTOR_CLOSED_DEG - MOTOR_OPEN_DEG) * DISC_MAX_DEG; }
+
+inline long stepsFromDisc(float disc) { return (long)(motorFromDisc(disc) * STEPS_PER_DISC_DEG + 0.5f); }
 
 // Half-step coil pattern for IN1..IN4 of the ULN2003 (bit 0 = IN1).
 constexpr uint8_t HALF_STEP[8] = {0b0001, 0b0011, 0b0010, 0b0110, 0b0100, 0b1100, 0b1000, 0b1001};
