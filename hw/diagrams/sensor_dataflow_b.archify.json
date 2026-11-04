@@ -1,0 +1,128 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "② 노트북 → MN-CSE → 읽는 쪽",
+  "output": "sensor_dataflow_b.html",
+  "viewBox": [
+   660,
+   700
+  ],
+  "quality_profile": "showcase"
+ },
+ "stages": [
+  {
+   "label": "노트북"
+  },
+  {
+   "label": "MN-CSE"
+  },
+  {
+   "label": "읽는 쪽"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "bridge",
+   "type": "backend",
+   "label": "bt_bridge.py",
+   "sublabel": "HTTP, 3001",
+   "stage": 0,
+   "row": 1,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "lux",
+   "type": "database",
+   "label": "real1p0/lux",
+   "sublabel": "칸 조도",
+   "stage": 1,
+   "row": 0,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "desks",
+   "type": "database",
+   "label": "real1env/desks",
+   "sublabel": "책상 조도",
+   "stage": 1,
+   "row": 2,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "cmd",
+   "type": "messagebus",
+   "label": "real1p0/command",
+   "sublabel": "AI 명령",
+   "stage": 1,
+   "row": 3,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "page",
+   "type": "frontend",
+   "label": "시연 페이지",
+   "sublabel": "조도·각도 표시",
+   "stage": 2,
+   "row": 0,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "ctl",
+   "type": "backend",
+   "label": "AI 컨트롤러",
+   "sublabel": "각도 결정",
+   "stage": 2,
+   "row": 2,
+   "width": 130,
+   "height": 70
+  }
+ ],
+ "flows": [
+  {
+   "from": "bridge",
+   "to": "lux",
+   "label": "POST CIN",
+   "variant": "emphasis",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "bridge",
+   "to": "desks",
+   "label": "POST CIN",
+   "variant": "emphasis",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "lux",
+   "to": "page",
+   "label": "GET la",
+   "route": "straight"
+  },
+  {
+   "from": "desks",
+   "to": "ctl",
+   "label": "GET la",
+   "route": "straight"
+  },
+  {
+   "from": "ctl",
+   "to": "cmd",
+   "label": "POST CIN",
+   "variant": "dashed",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "cmd",
+   "to": "bridge",
+   "label": "GET la 2초",
+   "variant": "dashed",
+   "route": "bottom-channel"
+  }
+ ]
+}

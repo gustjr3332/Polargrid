@@ -1,0 +1,87 @@
+{
+ "schema_version": 1,
+ "diagram_type": "dataflow",
+ "meta": {
+  "title": "① 센서 → 노트북 (Bluetooth)",
+  "output": "sensor_dataflow_a.html",
+  "viewBox": [
+   700,
+   540
+  ],
+  "quality_profile": "showcase"
+ },
+ "stages": [
+  {
+   "label": "센서"
+  },
+  {
+   "label": "제어 모듈"
+  },
+  {
+   "label": "노트북"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "sCell",
+   "type": "frontend",
+   "label": "칸 센서",
+   "sublabel": "BH1750, 원판 뒤",
+   "stage": 0,
+   "row": 0,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "sDesk",
+   "type": "frontend",
+   "label": "책상 센서",
+   "sublabel": "BH1750, 책상 위",
+   "stage": 0,
+   "row": 2,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "esp",
+   "type": "backend",
+   "label": "ESP32",
+   "sublabel": "10초마다 읽어 전송",
+   "stage": 1,
+   "row": 1,
+   "width": 130,
+   "height": 70
+  },
+  {
+   "id": "bridge",
+   "type": "backend",
+   "label": "bt_bridge.py",
+   "sublabel": "줄을 CIN으로",
+   "stage": 2,
+   "row": 1,
+   "width": 130,
+   "height": 70
+  }
+ ],
+ "flows": [
+  {
+   "from": "sCell",
+   "to": "esp",
+   "label": "I2C",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "sDesk",
+   "to": "esp",
+   "label": "I2C",
+   "route": "vertical-channel"
+  },
+  {
+   "from": "esp",
+   "to": "bridge",
+   "label": "Bluetooth SPP",
+   "variant": "emphasis",
+   "route": "straight"
+  }
+ ]
+}

@@ -93,7 +93,7 @@ const KO = {
 "Connection and safety":"연결 및 안전","Safe state":"안전 상태",
 "If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.":"연결이 끊기거나 AI가 이상하게 동작하면 모든 셀이 스스로 열립니다. 여기서 언제든 셀을 직접 움직일 수도 있어요.",
 "Open all":"모두 열기","Close all":"모두 닫기",
-"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상"};
+"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상","Virtual room · 12 cells":"가상 방 · 12칸","Sunlight on the right side":"오른쪽에 해가 들어와요","Close above (lux)":"이 값 이상이면 닫음 (lux)","real":"실물","virtual":"가상","Right 6 cells are above the limit and close. Left 6 (with the real cell) are below it and stay open.":"오른쪽 6칸은 기준 이상이라 닫히고, 실물을 포함한 왼쪽 6칸은 기준 미만이라 그대로 열려 있어요.","Assumed lux for the 11 virtual cells; the real cell shows its own sensor.":"가상 11칸의 럭스는 가정값이고, 실물 칸은 자기 센서 값을 보여 줘요."};
 let LANG = "ko";
 { const q = new URLSearchParams(location.search).get("lang"); let s = null;
   try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
@@ -115,6 +115,19 @@ let AMOUNT = 200, CORR = null;   // Comfort screen: slider size in lux, correcti
 let SELMODE = false, SEL = new Set();   // select mode: tapping cells picks them, one slider sets them all
 let PEND = {}, dragging = false;   // PEND[cell index] = {level, t}: the open level the user set by touching that cell; dragging pauses the 2 s redraw
 let REAL = null;   // last /api/real reply, null until the first one; {ok:false} = CSE not reachable
+// ?room=12: one real cell + 11 virtual cells as a 4 x 3 room, sun on the right two columns. A cell closes when its lux >= THR.
+// THR is the real cell's measured full-close limit (real_cell.py --close-lux 2000; the lamp test read 2,743 lux). Change it on site: field on the page or ?thr=.
+const ROOM = new URLSearchParams(location.search).get("room") === "12";
+let THR = +new URLSearchParams(location.search).get("thr") || 2000;
+const ROOM_LUX = [0, 640, 2430, 3050,  880, 1210, 2760, 2590,  760, 1420, 2880, 3320];   // cell 0 is the real one (its own sensor); the rest are assumed
+const roomGrid = () => {
+  const real = REAL && REAL.ok ? REAL.cells[0] : null;
+  return `<div class="grid" style="grid-template-columns:repeat(4,1fr)"><style>.grid .cell{aspect-ratio:1}.cell small{position:absolute;left:6px;top:7px;font-size:11px;color:#fff;background:#000b;border-radius:6px;padding:0 5px}.cell em{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-style:normal;font-size:12px;color:#fff;text-shadow:0 0 3px #000}</style>${ROOM_LUX.map((v, k) => {
+    const lux = k ? v : REAL && REAL.cell_lux != null ? REAL.cell_lux : 120, lv = k ? (lux >= THR ? 0 : 100) : real ? real.level : 100;
+    return `<div class="cell ${lux >= THR ? "glare" : ""}"><b style="height:${lv}%"></b><small>${T(k ? "virtual" : "real")}</small><em>${num(lux)} lux</em></div>`; }).join("")}</div>`;
+};
+const roomCard = () => `<div class="card" style="margin-top:12px"><div class="chip acc">☀ ${T("Sunlight on the right side")}</div><div class="row" style="margin-top:10px"><span class="lab" style="margin:0;text-transform:none">${T("Close above (lux)")} <input id="thr" type="number" value="${THR}" step="100" min="0" style="width:72px;background:var(--surf2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:14px"></span></div>
+  <p class="hint" style="text-align:left;margin-top:8px">${T("Right 6 cells are above the limit and close. Left 6 (with the real cell) are below it and stay open.")} ${T("Assumed lux for the 11 virtual cells; the real cell shows its own sensor.")}</p></div>`;
 const GLARE = new Set([5,6,7]);                                   // cells with a warm outline
 const NAV = [["Window","▦"],["Comfort","☀"],["Mode","◐"],["Today","▤"],["Settings","⚙"]];
 
@@ -135,7 +148,7 @@ const liveGrid = () => {
   }
   return `<div class="grid" style="grid-template-columns:repeat(${cols},1fr)"><style>.grid .cell{aspect-ratio:${rows * cols === 1 ? 2.2 : cols > 1 ? 1.25 : 1}}</style>${h}</div>`;
 };
-const cells = () => LIVE ? liveGrid() : `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
+const cells = () => ROOM ? roomGrid() : LIVE ? liveGrid() : `<div class="grid">${LEVELS.map((v,i)=>`<div class="cell ${GLARE.has(i)?'glare':''}"><b style="height:${v}%"></b><span>${v}</span></div>`).join('')}</div>`;
 const seg = (items,on) => `<div class="seg">${items.map((s,i)=>`<div class="${i===on?'on':''}">${T(s)}</div>`).join('')}</div>`;
 const opt = (t,s,on) => `<div class="opt ${on?'on':''}"><span class="dot"></span><div>${T(t)}<small>${T(s)}</small></div></div>`;
 
@@ -192,14 +205,15 @@ const selCard = () => {
 const link = () => LIVE ? (REAL && REAL.ok ? T("● Connected") : T("● Offline")) : T("● Connected");
 
 const SCREENS = () => ({
-Window:{sub:LIVE?"Real cell":"Study room · south window",html:`
+Window:{sub:ROOM?"Virtual room · 12 cells":LIVE?"Real cell":"Study room · south window",html:`
   <div class="card"><div class="row"><span class="chip acc">${T("Auto · Reduce desk glare")}</span><span class="chip ${LIVE && !(REAL && REAL.ok) ? '' : 'ok'}">${link()}</span></div>
   ${cells()}
-  <div class="row"><span class="chip">${T("Open level (%)")}</span>${LIVE && Object.keys(PEND).length ? `<span class="chip acc">${T("Moving")}</span>` : ""}${LIVE ? "" : `<span class="chip" style="color:var(--warn)">${T("▢ glare cells")}</span>`}</div></div>
+  <div class="row"><span class="chip">${T("Open level (%)")}</span>${LIVE && Object.keys(PEND).length ? `<span class="chip acc">${T("Moving")}</span>` : ""}${LIVE && !ROOM ? "" : `<span class="chip" style="color:var(--warn)">${T("▢ glare cells")}</span>`}</div></div>
   <div class="lab">${T("Desk light")}</div>
   ${deskRow()}
-  ${LIVE ? selCard() : ""}
-  ${LIVE ? `<div class="btns" style="margin-top:12px"><div class="btn" id="all-open">${T("Open all")}</div><div class="btn" id="all-close">${T("Close all")}</div></div>
+  ${ROOM ? roomCard() : ""}
+  ${LIVE && !ROOM ? selCard() : ""}
+  ${ROOM ? "" : LIVE ? `<div class="btns" style="margin-top:12px"><div class="btn" id="all-open">${T("Open all")}</div><div class="btn" id="all-close">${T("Close all")}</div></div>
   ${AUTH_BAD ? `<p class="hint" style="color:var(--warn)">${T("No access token: open the link with ?token=…")}</p>` : ""}
   <p class="hint">${T(SELMODE ? "Tap cells to tick them, then use the slider" : "Touch a cell and drag its top edge up or down")}</p>`
   : `<div class="card" style="margin-top:12px"><div class="row"><span class="lab" style="margin:0">${T("Brightness")}</span><span style="font-size:16px">70%</span></div>
@@ -254,6 +268,7 @@ const postLevel = (level, i, cells) => postJson("/api/real/level", cells ? {leve
 const allSet = level => { (REAL && REAL.ok ? REAL.cells : []).forEach(c => { PEND[c.i] = {level, t: Date.now()}; }); postLevel(level); draw(cur, true); };
 // Touch a cell: its yellow top edge jumps to the finger and follows it up and down (steps of 5); letting go sends the level of that cell.
 const bindCells = () => {
+  const th = document.getElementById("thr"); if (th) th.onchange = () => { THR = +th.value || 0; draw(cur, true); };
   root.querySelectorAll(".cell.live").forEach(el => {
     const i = +el.dataset.i;
     if (SELMODE) { el.onclick = () => { SEL.has(i) ? SEL.delete(i) : SEL.add(i); draw(cur, true); }; return; }
@@ -294,7 +309,7 @@ if (LIVE) {
     .then(() => { if (!dragging) for (const k of Object.keys(PEND)) {   // reached, or give up after 45 s
         const c = REAL.ok && REAL.cells.find(c => c.i == k);
         if (Date.now() - PEND[k].t > 45000 || (c && Math.abs(c.level - PEND[k].level) <= 3)) delete PEND[k]; }
-      if (names[cur] === "Window" && !all && !dragging) draw(cur); });
+      if (names[cur] === "Window" && !all && !dragging && document.activeElement.id !== "thr") draw(cur); });
   poll(); setInterval(poll, 2000);
 }
 if (new URLSearchParams(location.search).has('bare')) document.body.classList.add('bare');
