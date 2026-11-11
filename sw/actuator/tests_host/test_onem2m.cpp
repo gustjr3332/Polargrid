@@ -90,6 +90,85 @@ int main(int argc, char** argv) {
   assert(!linkLost(90000, 90500, rep) && !rep);                              // a reply ends the outage, the next one reports again
   assert(linkLost(90000, 90001 + LINK_LOST_MS, rep));
 
+  // ---- MQTT binding. Shapes checked against the 11-11 capture (results/mqtt_stage1_1111.txt): rsc is a number, rqi a string,
+  // "to" is accepted as "<CSEBase rn>[/path]" or "<CSE-RI>" and refused with a leading "/" or "~/" ----
+  // exact primitives: create (ty, pc), retrieve (no ty, no pc), update (no ty, pc), CSE base (empty path)
+  assert(primitive("TinyIoT-mn001", {"POST", "real1p0", "Creal1p0", 3, "{\"m2m:cnt\": {\"rn\": \"lux\"}}"}, "esp1") ==
+         "{\"op\": 1, \"to\": \"TinyIoT-mn001/real1p0\", \"fr\": \"Creal1p0\", \"rqi\": \"esp1\", \"rvi\": \"3\", \"ty\": 3, "
+         "\"pc\": {\"m2m:cnt\": {\"rn\": \"lux\"}}}");
+  assert(primitive("TinyIoT-mn001", pollReq(run, 0), "esp2") ==
+         "{\"op\": 2, \"to\": \"TinyIoT-mn001/real1p0/command/la\", \"fr\": \"Creal1p0\", \"rqi\": \"esp2\", \"rvi\": \"3\"}");
+  assert(primitive("TinyIoT-mn001", stateReq(run, 0, 50), "esp3") ==
+         "{\"op\": 3, \"to\": \"TinyIoT-mn001/real1p0/state\", \"fr\": \"Creal1p0\", \"rqi\": \"esp3\", \"rvi\": \"3\", "
+         "\"pc\": {\"cod:opeLl\": {\"opeLl\": 50}}}");
+  assert(primitive("TinyIoT-mn001", {"GET", "", "CAdmin", 0, ""}, "x").find("\"to\": \"TinyIoT-mn001\"") != std::string::npos);
+
+  // topics: /oneM2M/{req|resp}/a/b/json
+  assert(reqTopic("Creal1p0", "id-mn001") == "/oneM2M/req/Creal1p0/id-mn001/json");
+  assert(reqTopic("/tinyiot/Cx", "id-mn001") == "/oneM2M/req/:tinyiot:Cx/id-mn001/json");
+  assert(respFilter("id-mn001") == "/oneM2M/resp/+/id-mn001/json");
+  assert(notifyTopic("id-mn001") == "/oneM2M/req/id-mn001/+/json");
+  assert(topicForMe("/oneM2M/req/id-mn001/Creal1p0/json", "id-mn001", "real1", 0));      // our SUB notification
+  assert(topicForMe("/oneM2M/resp/Creal1p0/id-mn001/json", "id-mn001", "real1", 0));     // our reply
+  assert(topicForMe("/oneM2M/resp/Creal1env/id-mn001/json", "id-mn001", "real1", 0));
+  assert(topicForMe("/oneM2M/resp/CAdmin/id-mn001/json", "id-mn001", "real1", 0));
+  assert(!topicForMe("/oneM2M/req/id-mn001/Creal2p0/json", "id-mn001", "real1", 0));     // another run
+  assert(!topicForMe("/oneM2M/req/id-mn001/Creal1p1/json", "id-mn001", "real1", 0));     // another cell
+  assert(!topicForMe("/oneM2M/resp/Creal2p0/id-mn001/json", "id-mn001", "real1", 0));
+  assert(!topicForMe("/oneM2M/req/id-mn002/Creal1p0/json", "id-mn001", "real1", 0));     // another CSE
+  assert(!topicForMe("/oneM2M/req/id-mn001/Creal1p0", "id-mn001", "real1", 0));          // malformed
+  assert(!topicForMe("/oneM2M/req/id-mn001/Creal1p0/json/x", "id-mn001", "real1", 0));
+  assert(!topicForMe("oneM2M/req/id-mn001/Creal1p0/json", "id-mn001", "real1", 0));
+  assert(!topicForMe("/oneM2M/reg/id-mn001/Creal1p0/json", "id-mn001", "real1", 0));
+  assert(!topicForMe("", "id-mn001", "real1", 0));
+  assert(nuFor("127.0.0.1:1883", "Creal1p0") == "mqtt://127.0.0.1:1883/Creal1p0/json");
+  assert(subReq(run, 0, "mqtt://127.0.0.1:1883/Creal1p0/json").body ==
+         "{\"m2m:sub\": {\"rn\": \"s\", \"nu\": [\"mqtt://127.0.0.1:1883/Creal1p0/json\"], \"enc\": {\"net\": [3]}, \"nct\": 1}}");
+  assert(subReq(run, 0, "n").ty == 23 && subReq(run, 0, "n").path == "real1p0/command");
+  assert(subNuReq(run, 0, "n").method == "PUT" && subNuReq(run, 0, "n").path == "real1p0/command/s" &&
+         subNuReq(run, 0, "n").body == "{\"m2m:sub\": {\"nu\": [\"n\"]}}");
+
+  // responses: rsc to HTTP code, and a late reply (other rqi) is refused
+  assert(httpCode(2000) == 200 && httpCode(2004) == 200 && httpCode(2001) == 201 && httpCode(4004) == 404 &&
+         httpCode(4103) == 403 && httpCode(4105) == 409 && httpCode(5000) == 500 && httpCode(4000) == 500);
+  int code = 0;
+  const char* resp = "{\"rsc\": 2001, \"rqi\": \"esp7\", \"rvi\": \"3\", \"pc\": {\"m2m:acp\": {\"ri\": \"3-9\"}}}";
+  assert(matchResponse(resp, "esp7", code) && code == 201);
+  code = 0;
+  assert(!matchResponse(resp, "esp8", code) && code == 0);                  // late reply to esp7 while waiting for esp8
+  assert(!matchResponse("{\"rsc\": 2000}", "esp7", code));                  // no rqi
+  assert(!matchResponse("{\"rqi\": \"esp7\"}", "esp7", code));              // no rsc
+  assert(matchResponse("{\"rsc\":4105,\"rqi\":\"esp7\"}", "esp7", code) && code == 409);
+
+  // 3 pieces make one message exactly once; a gap, a message that does not start at 0 and a too big total are dropped
+  Reassembly re;
+  std::string whole, msg = "0123456789abcdefghij";
+  assert(!re.add(msg.data(), 8, 20, 0, whole) && !re.add(msg.data() + 8, 8, 20, 8, whole));
+  assert(re.add(msg.data() + 16, 4, 20, 16, whole) && whole == msg);
+  assert(!re.add(msg.data() + 16, 4, 20, 16, whole));                       // a stray repeat of the last piece
+  assert(re.add(msg.data(), 20, 20, 0, whole) && whole == msg);             // single piece
+  assert(!re.add(msg.data(), 8, 20, 0, whole) && !re.add(msg.data() + 12, 8, 20, 12, whole));   // gap: piece at 8 missing
+  assert(!re.add(msg.data() + 8, 8, 20, 8, whole) && !re.add(msg.data() + 16, 4, 20, 16, whole));   // and the rest stays dead
+  assert(!re.add(msg.data(), 8, Reassembly::MAX + 1, 0, whole) && !re.add(msg.data() + 8, 12, Reassembly::MAX + 1, 8, whole));
+  assert(re.add(msg.data(), 20, 20, 0, whole));                             // a new message starts clean after a drop
+
+  // notification (sgn with the CIN) goes through parseCommandCin; the SUB verification (vrq) has no cmd and is refused
+  // shapes below are from the 11-11 stage-1 capture (results/mqtt_stage1_1111.txt): sgn is published bare, no pc/rqi wrapper,
+  // sur is "/<CSE-RI>/<sub ri>", and the vrq message arrives before the SUB response
+  const char* sgn = "{\"m2m:sgn\":{\"nev\":{\"net\":3,\"rep\":{\"m2m:cin\":{\"con\":\"{\\\"cmd\\\": \\\"real1c7\\\", "
+                    "\\\"angles\\\": [33.0]}\",\"ty\":4,\"ct\":\"20261111T022836,339\",\"ri\":\"4-20261111T022836,3390032\","
+                    "\"rn\":\"4-20261111T022836,3390032\",\"lt\":\"20261111T022836,339\",\"pi\":\"3-20261111T022514,0570012\","
+                    "\"et\":\"20281110T022836,339\",\"cs\":43,\"st\":3}}},\"sur\":\"/id-mn001/23-20261111T022614,0750027\"}}";
+  assert(parseCommandCin(sgn, 0, cmd, a) && cmd == "real1c7" && a == 33.0f);
+  assert(!parseCommandCin("{\"m2m:sgn\":{\"cr\":\"Creal1p0\",\"sur\":\"/id-mn001/23-20261111T022614,0750027\",\"vrq\":true}}", 0, cmd, a));
+
+  // notification first, then the boot-time la with the same command: applied once. A 404 la never blocks the first notification
+  CommandGate g2;
+  g2.noneYet();                                                             // main.cpp calls this before accept() on the notification path
+  assert(g2.accept("real1c7"));
+  assert(!g2.accept("real1c7"));                                            // la at boot answers with the same cmd
+  assert(g2.accept("real1c8"));                                             // the next command still passes
+
   // the angle goes through the same serial parser path as a typed command
   Cells c;
   char line[32];

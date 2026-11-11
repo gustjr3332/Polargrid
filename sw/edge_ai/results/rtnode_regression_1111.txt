@@ -1,0 +1,59 @@
+rtnode_regression_1111: find_rtnode fallback (13001, MN) vs HEAD (13002, base). Columns: request, HTTP, x-m2m-rsc
+--- fallback (13001)
+GET /TinyIoT-pgt	200 2000
+GET /TinyIoT-pgt/pgtae	200 2000
+GET /Cpgtae	200 2000
+GET /3-20261111T022353,1740003	200 2000
+GET /Cpgtae/c1	200 2000
+GET /TinyIoT-pgt/pgtae/c1/la	200 2000
+GET /pgtae	200 2000
+GET /pgtae/c1	200 2000
+GET /pgtae/g1/fopt	404 4004
+GET /-/pgtae	200 2000
+GET /~/id-pgt/TinyIoT-pgt/pgtae	200 2000
+GET /defaultACP	200 2000
+GET /nope	404 4004
+GET /nope/x	404 4004
+GET /TinyIoT-pgt/nope	404 4004
+GET /TinyIoT-pgt?fu=1&ty=3	200 2000
+POST FCNT /pgtae	501 4125
+--- base (13002)
+GET /TinyIoT-pgt	200 2000
+GET /TinyIoT-pgt/pgtae	200 2000
+GET /Cpgtae	200 2000
+GET /3-20261111T022353,5660003	200 2000
+GET /Cpgtae/c1	200 2000
+GET /TinyIoT-pgt/pgtae/c1/la	200 2000
+GET /pgtae	404 4004
+GET /pgtae/c1	404 4004
+GET /pgtae/g1/fopt	404 4004
+GET /-/pgtae	200 2000
+GET /~/id-pgtb/TinyIoT-pgt/pgtae	200 2000
+GET /defaultACP	404 4004
+GET /nope	404 4004
+GET /nope/x	404 4004
+GET /TinyIoT-pgt/nope	404 4004
+GET /TinyIoT-pgt?fu=1&ty=3	200 2000
+POST FCNT /pgtae	404 4004
+--- diff
+4c4
+< GET /3-20261111T022353,1740003	200 2000
+---
+> GET /3-20261111T022353,5660003	200 2000
+7,8c7,8
+< GET /pgtae	200 2000
+< GET /pgtae/c1	200 2000
+---
+> GET /pgtae	404 4004
+> GET /pgtae/c1	404 4004
+11,12c11,12
+< GET /~/id-pgt/TinyIoT-pgt/pgtae	200 2000
+< GET /defaultACP	200 2000
+---
+> GET /~/id-pgtb/TinyIoT-pgt/pgtae	200 2000
+> GET /defaultACP	404 4004
+17c17
+< POST FCNT /pgtae	501 4125
+---
+> POST FCNT /pgtae	404 4004
+--- extra: POST FCNT /TinyIoT-pgt/pgtae (full path) -> 501 4125 'Schema not found for containerDefinition' on BOTH 13001 and 13002

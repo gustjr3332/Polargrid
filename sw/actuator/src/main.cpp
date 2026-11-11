@@ -11,6 +11,9 @@
 #include <HTTPClient.h>
 #include <ArduinoOTA.h>
 #include <WiFi.h>
+#ifdef USE_MQTT
+#include <mqtt_client.h>
+#endif
 #endif
 #include "cell_logic.h"
 #include "onem2m_logic.h"
@@ -23,12 +26,23 @@
 #define CELL_ROW 0
 #define CELL_COL 0
 #endif
+#if defined(USE_MQTT) && !defined(MQTT_URI)   // a secrets.h from before MQTT: placeholders, never connects
+#define MQTT_URI "mqtt://192.168.0.10:1884"
+#define MQTT_USER "pg-master"
+#define MQTT_PASS "your-mqtt-password"
+#define CSE_RI "id-mn001"
+#define NU_BROKER "127.0.0.1:1883"
+#endif
 
 const int MOTOR_PINS[4] = {13, 14, 27, 26};   // ULN2003 IN1..IN4; GPIO 12 is a strapping pin (ULN2003 on it broke flashing), avoid it
 const int BUTTON_PIN = 25;                    // to GND, internal pull-up: opens the cell
 const uint8_t CELL_SENSOR = 0x23, DESK_SENSOR = 0x5C;   // BH1750 ADDR to GND / to 3V3
 constexpr uint32_t STEP_US = 2000;            // 500 half steps/s, slow enough for the 28BYJ-48 (calibrate)
+#ifdef USE_MQTT
+constexpr uint32_t POLL_MS = 60000;           // command/la safety net; commands arrive as SUB notifications
+#else
 constexpr uint32_t POLL_MS = 2000;            // command/la poll interval
+#endif
 constexpr uint32_t REPORT_MS = 10000;         // periodic desk and cell lux CINs
 constexpr uint32_t APPLY_WAIT_MS = 25000;     // give up the desk reply if the disc has not arrived (controller waits 30 s)
 Cells cells;
@@ -142,6 +156,63 @@ void btTask(void*) {
 
 const std::string RUN = RUN_ID;
 
+#ifdef USE_MQTT
+// esp-mqtt task -> netTask: whole messages as new std::string (the receiver deletes them). Responses and notifications apart.
+esp_mqtt_client_handle_t mqtt;
+QueueHandle_t respQ, notifQ;
+volatile bool mqttUp = false;
+std::string chipTag;                          // per-board part of the client id and of every rqi (efuse MAC, bytes 3..5)
+volatile uint32_t lastRxMs = 0;             // any message from the CSE counts as a sign of life
+bool gone = false;                            // a report got 403/404: the MN lost our resources, provision again
+
+void onMqtt(void*, esp_event_base_t, int32_t id, void* data) {
+  auto* e = (esp_mqtt_event_handle_t)data;
+  static m2m::Reassembly re;
+  static bool isResp = false;
+  if (id == MQTT_EVENT_CONNECTED) {
+    esp_mqtt_client_subscribe(mqtt, m2m::respFilter(CSE_RI).c_str(), 0);
+    esp_mqtt_client_subscribe(mqtt, m2m::notifyTopic(CSE_RI).c_str(), 0);
+    mqttUp = true;
+  } else if (id == MQTT_EVENT_DISCONNECTED) {
+    mqttUp = false;
+  } else if (id == MQTT_EVENT_DATA) {
+    static bool mine = false;
+    if (e->current_data_offset == 0) {            // topic comes with the first piece only
+      isResp = e->topic_len >= 13 && !strncmp(e->topic, "/oneM2M/resp/", 13);
+      mine = m2m::topicForMe(std::string(e->topic, e->topic_len), CSE_RI, RUN, CELL_INDEX);
+    }
+    if (!mine) return;                            // not our originator: not a sign of life either
+    std::string msg;
+    if (!re.add(e->data, e->data_len, e->total_data_len, e->current_data_offset, msg)) return;
+    lastRxMs = millis();
+    auto* p = new std::string(std::move(msg));
+    if (xQueueSend(isResp ? respQ : notifQ, &p, 0) != pdTRUE) delete p;
+  }
+}
+
+// Same contract as the HTTP send(): HTTP-style code, -1 when nothing came back. One request at a time, only the reply with our rqi counts.
+int send(const m2m::Req& r, std::string* reply = nullptr) {
+  static uint32_t seq = 0;
+  if (!mqttUp) return -1;
+  std::string* p;
+  while (xQueueReceive(respQ, &p, 0) == pdTRUE) delete p;   // replies that came after an earlier timeout
+  std::string rqi = "esp" + chipTag + "-" + std::to_string(++seq), msg = m2m::primitive(CSE_NAME, r, rqi);
+  if (esp_mqtt_client_publish(mqtt, m2m::reqTopic(r.origin, CSE_RI).c_str(), msg.c_str(), msg.size(), 0, 0) < 0) return -1;
+  for (uint32_t t0 = millis(); millis() - t0 < 5000;) {
+    if (xQueueReceive(respQ, &p, pdMS_TO_TICKS(100)) != pdTRUE) continue;
+    int code;
+    bool mine = m2m::matchResponse(*p, rqi, code);
+    if (mine && reply) *reply = *p;
+    delete p;
+    if (!mine) continue;
+    if (code < 200 || code >= 300) Serial.printf("NET %d %s /%s\n", code, r.method.c_str(), r.path.c_str());
+    if (r.method != "GET" && (code == 403 || code == 404)) gone = true;
+    return code;
+  }
+  Serial.printf("NET timeout %s /%s\n", r.method.c_str(), r.path.c_str());
+  return -1;
+}
+#else
 int send(const m2m::Req& r, std::string* reply = nullptr) {
   static uint32_t seq = 0;
   HTTPClient http;
@@ -161,6 +232,7 @@ int send(const m2m::Req& r, std::string* reply = nullptr) {
   if (code < 200 || code >= 300) Serial.printf("NET %d %s /%s\n", code, r.method.c_str(), r.path.c_str());
   return code;
 }
+#endif
 
 // ACP ri from a create reply, or by retrieving the ACP that is already there (409).
 bool acpRi(const std::string& rn, const std::string& owner, std::string& ri) {
@@ -178,6 +250,13 @@ bool provision() {
     int code = send(r);
     if (code != 409 && (code < 200 || code >= 300)) return false;
   }
+#ifdef USE_MQTT
+  gone = false;
+  std::string nu = m2m::nuFor(NU_BROKER, m2m::cellOrig(RUN, CELL_INDEX));
+  int code = send(m2m::subReq(RUN, CELL_INDEX, nu));
+  if (code == 409) code = send(m2m::subNuReq(RUN, CELL_INDEX, nu));   // an old SUB may point somewhere else
+  if (code < 200 || code >= 300) return false;
+#endif
   return true;
 }
 
@@ -195,8 +274,48 @@ void netTask(void*) {
   long pendingSteps = 0;
   uint32_t pendingSince = 0, lastPoll = 0, lastReport = 0, lastState = 0, offlineSince = millis(), lastReply = millis();
   bool linkReported = false;
+  auto take = [&](const std::string& body, const std::string& cmd, float angle) {   // a new command: to the stepper, remember it for the reply
+    bool priv = m2m::commandPrivacy(body);   // privacy: every disc closed, whatever the angle list says
+    bool sane = priv || m2m::angleSane(angle);
+    char line[32];
+    if (sane) {
+      xQueueSend(cmdQueue, priv ? "PRIV 1" : "PRIV 0", 0);
+      snprintf(line, sizeof line, "A 0 %.1f", priv ? DISC_MAX_DEG : angle);
+      xQueueSend(cmdQueue, line, 0);
+    } else {
+      xQueueSend(cmdQueue, "FAILSAFE", 0);   // nonsense angle: the controller is confused, let the light in
+      Serial.println("BAD ANGLE");
+    }
+    pendingCmd = cmd;
+    pendingSteps = sane ? stepsFromDisc(priv ? DISC_MAX_DEG : angle) : 0;
+    pendingSince = millis();
+  };
+#ifdef USE_MQTT
+  respQ = xQueueCreate(4, sizeof(std::string*));
+  notifQ = xQueueCreate(4, sizeof(std::string*));
+  lastRxMs = millis();
+  esp_mqtt_client_config_t mcfg = {};
+  mcfg.uri = MQTT_URI;
+  mcfg.username = MQTT_USER;
+  mcfg.password = MQTT_PASS;
+  char tag[8];
+  snprintf(tag, sizeof tag, "%06x", (unsigned)(ESP.getEfuseMac() >> 24));   // low bytes are the shared vendor prefix
+  chipTag = tag;
+  static char cid[40];                        // esp-mqtt keeps the pointer
+  snprintf(cid, sizeof cid, "pg-master-%s-%s", RUN_ID, tag);
+  mcfg.client_id = cid;
+  mcfg.keepalive = 30;
+  mcfg.buffer_size = 4096;
+  mqtt = esp_mqtt_client_init(&mcfg);
+  esp_mqtt_client_register_event(mqtt, MQTT_EVENT_ANY, onMqtt, nullptr);
+  esp_mqtt_client_start(mqtt);                // reconnects by itself
+#endif
   for (;;) {
     vTaskDelay(pdMS_TO_TICKS(50));
+#ifdef USE_MQTT
+    lastReply = lastRxMs;
+    if (gone) { gone = false; ready = false; }
+#endif
     if (m2m::linkLost(lastReply, millis(), linkReported)) {   // no CSE reply for a minute: open (not in privacy mode)
       xQueueSend(cmdQueue, "FAILSAFE", 0);
       Serial.println("LINK LOST");
@@ -207,14 +326,30 @@ void netTask(void*) {
       continue;
     }
     offlineSince = millis();
+#ifdef USE_MQTT
+    if (!mqttUp) { ready = false; continue; }
+#endif
     if (!ready) {
       ready = provision();
       fails = ready ? 0 : fails + 1;
       Serial.println(ready ? "CSE ready" : "CSE setup failed");
       if (!ready) vTaskDelay(pdMS_TO_TICKS(m2m::backoffMs(fails)));
       published = -1;                         // state on the CSE may be the 100 of a fresh FlexContainer
+#ifdef USE_MQTT
+      lastPoll = millis() - POLL_MS;          // la once right now, through the same gate as notifications
+#endif
       continue;
     }
+#ifdef USE_MQTT
+    for (std::string* np; xQueueReceive(notifQ, &np, 0) == pdTRUE;) {
+      std::string n = std::move(*np), cmd;
+      delete np;
+      float angle;
+      if (!m2m::parseCommandCin(n, CELL_INDEX, cmd, angle)) continue;   // verification (vrq) or something else
+      gate.noneYet();                         // a notification is a fresh command, never the stale one of a reboot
+      if (gate.accept(cmd)) take(n, cmd, angle);
+    }
+#endif
     if (millis() - lastPoll >= POLL_MS) {
       lastPoll = millis();
       std::string reply, cmd;
@@ -232,20 +367,7 @@ void netTask(void*) {
       if (code == 404) gate.noneYet();
       bool stale = code == 200 && !gate.baselined;   // the first command seen after boot is an old one
       if (code == 200 && m2m::parseCommandCin(reply, CELL_INDEX, cmd, angle) && gate.accept(cmd)) {
-        bool priv = m2m::commandPrivacy(reply);   // privacy: every disc closed, whatever the angle list says
-        bool sane = priv || m2m::angleSane(angle);
-        char line[32];
-        if (sane) {
-          xQueueSend(cmdQueue, priv ? "PRIV 1" : "PRIV 0", 0);
-          snprintf(line, sizeof line, "A 0 %.1f", priv ? DISC_MAX_DEG : angle);
-          xQueueSend(cmdQueue, line, 0);
-        } else {
-          xQueueSend(cmdQueue, "FAILSAFE", 0);   // nonsense angle: the controller is confused, let the light in
-          Serial.println("BAD ANGLE");
-        }
-        pendingCmd = cmd;
-        pendingSteps = sane ? stepsFromDisc(priv ? DISC_MAX_DEG : angle) : 0;
-        pendingSince = millis();
+        take(reply, cmd, angle);
       } else if (stale && gate.baselined) Serial.println("SKIP old command after boot");
     }
     long at = motorAt;

@@ -1,0 +1,18 @@
+FAKE cell, not a measurement
+stage 2 (run mq1), fake_cell --mqtt vs MN 13001 via real_cell manual 45 90 0
+
+[setup] waiting for cell mq1p0 on http://127.0.0.1:13001/TinyIoT-pgt ...
+[setup] controller ready (group of 1 cell, desk subscription)
+  45 deg: applied in 6.7 s, state opeLl=50 (expect 50), desk 246.4 lux, cell sensor (newest, up to 10 s old) 457.5 lux  [FAKE CELL]
+  90 deg: applied in 6.7 s, state opeLl=0 (expect 0), desk 47.5 lux, cell sensor (newest, up to 10 s old) 457.5 lux  [FAKE CELL]
+  0 deg: applied in 13.1 s, state opeLl=100 (expect 100), desk 445.0 lux, cell sensor (newest, up to 10 s old) 803.8 lux  [FAKE CELL]
+[exit] sending OPEN (0 deg)
+[exit] cell open
+
+--- fake_cell log
+[FAKE cell] mq1p0 at row 0 col 0, run mq1 on http://127.0.0.1:13001/TinyIoT-pgt, 7.03 deg/s
+[FAKE cell] CSE ready
+[FAKE cell] mq1c1794364171: 0 -> 45 deg
+[FAKE cell] mq1c1794364172: 45 -> 90 deg
+[FAKE cell] mq1c1794364173: 90 -> 0 deg
+[FAKE cell] mq1c1794364174: 0 -> 0 deg

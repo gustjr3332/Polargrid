@@ -194,4 +194,100 @@ inline bool parseCommandCin(const std::string& body, int i, std::string& cmd, fl
   return true;
 }
 
+// ---- oneM2M over MQTT (hw/MASTER_MQTT_펌웨어_설계.md 2-2, 2-3, 2-5, 2-6) ----
+
+// Request primitive: op 1/2/3 = create/retrieve/update, rvi is the STRING "3" (tinyIoT reads valuestring), ty only for create,
+// pc only when there is a body. `to` is the CSE name plus the HTTP path.
+inline std::string primitive(const std::string& cse, const Req& r, const std::string& rqi) {
+  int op = r.method == "POST" ? 1 : r.method == "PUT" ? 3 : 2;
+  return "{\"op\": " + std::to_string(op) + ", \"to\": " + q(cse + (r.path.empty() ? "" : "/" + r.path)) + ", \"fr\": " + q(r.origin) +
+         ", \"rqi\": " + q(rqi) + ", \"rvi\": \"3\"" + (op == 1 ? ", \"ty\": " + std::to_string(r.ty) : "") +
+         (r.body.empty() ? "" : ", \"pc\": " + r.body) + "}";
+}
+
+inline std::string reqTopic(const std::string& origin, const std::string& cseRi) {   // a '/' in an originator becomes ':' as in tinyIoT
+  std::string o = origin;
+  for (auto& ch : o) if (ch == '/') ch = ':';
+  return "/oneM2M/req/" + o + "/" + cseRi + "/json";
+}
+inline std::string respFilter(const std::string& cseRi) { return "/oneM2M/resp/+/" + cseRi + "/json"; }
+inline std::string notifyTopic(const std::string& cseRi) { return "/oneM2M/req/" + cseRi + "/+/json"; }   // 3rd level = the cell
+// True when an MQTT topic is for this cell (design 2-2, 3-2): resp/<our originator>/<cse>/json or req/<cse>/<cell originator>/json.
+// Anything else (another run, another CSE, a bad shape) is not ours. The resp originator may be the cell, env or CAdmin; rqi settles the rest.
+inline bool topicForMe(const std::string& topic, const std::string& cseRi, const std::string& run, int i) {
+  std::string s[7];
+  int n = 0;
+  for (size_t b = 0; n < 7;) {
+    size_t e = topic.find('/', b);
+    s[n++] = topic.substr(b, e == std::string::npos ? e : e - b);
+    if (e == std::string::npos) break;
+    b = e + 1;
+  }
+  if (n != 6 || !s[0].empty() || s[1] != "oneM2M" || s[5] != "json") return false;
+  if (s[2] == "resp") return s[4] == cseRi && (s[3] == cellOrig(run, i) || s[3] == envOrig(run) || s[3] == ADMIN);
+  return s[2] == "req" && s[3] == cseRi && s[4] == cellOrig(run, i);
+}
+// nu of the SUB: host must be the same string as the MN's MQTT_HOST:port so tinyIoT reuses its connection (design 2-2)
+inline std::string nuFor(const std::string& hostPort, const std::string& origin) { return "mqtt://" + hostPort + "/" + origin + "/json"; }
+
+inline Req subReq(const std::string& run, int i, const std::string& nu) {
+  return {"POST", cellRn(run, i) + "/command", cellOrig(run, i), 23,
+          "{\"m2m:sub\": {\"rn\": \"s\", \"nu\": [" + q(nu) + "], \"enc\": {\"net\": [3]}, \"nct\": 1}}"};
+}
+inline Req subNuReq(const std::string& run, int i, const std::string& nu) {   // the SUB exists (409): make sure nu is ours
+  return {"PUT", cellRn(run, i) + "/command/s", cellOrig(run, i), 0, "{\"m2m:sub\": {\"nu\": [" + q(nu) + "]}}"};
+}
+
+// Integer value of the first `key` in a JSON text (rsc). Not a full parser, same as jsonString.
+inline bool jsonInt(const std::string& js, const char* key, int& out) {
+  std::string k = std::string("\"") + key + "\"";
+  size_t p = js.find(k);
+  if (p == std::string::npos) return false;
+  p += k.size();
+  while (p < js.size() && (js[p] == ' ' || js[p] == ':')) p++;
+  char* end;
+  long v = strtol(js.c_str() + p, &end, 10);
+  if (end == js.c_str() + p) return false;
+  out = (int)v;
+  return true;
+}
+// rsc to the HTTP code send() returns (design 2-6); anything not in the table is 500.
+inline int httpCode(int rsc) {
+  switch (rsc) {
+    case 2000: case 2004: return 200;
+    case 2001: return 201;
+    case 4004: return 404;
+    case 4103: return 403;
+    case 4105: return 409;
+    default: return 500;
+  }
+}
+// True when js answers request `rqi` (a late reply to an earlier request has another rqi and is refused); code = HTTP code.
+inline bool matchResponse(const std::string& js, const std::string& rqi, int& code) {
+  std::string got;
+  int rsc;
+  if (!jsonString(js, "rqi", got) || got != rqi || !jsonInt(js, "rsc", rsc)) return false;
+  code = httpCode(rsc);
+  return true;
+}
+
+// esp-mqtt cuts a big message into MQTT_EVENT_DATA pieces (total_data_len, current_data_offset). add() takes one piece and
+// returns true once, with the whole text in `out`. A gap, a restart without offset 0 or a total above MAX drops the message.
+struct Reassembly {
+  static constexpr int MAX = 8192;
+  std::string buf;
+  bool ok = false;
+  bool add(const char* d, int len, int total, int offset, std::string& out) {
+    if (offset == 0) { buf.clear(); ok = total <= MAX && total >= len; }
+    else if (!ok || (size_t)offset != buf.size() || (size_t)(offset + len) > (size_t)total) ok = false;
+    if (!ok) { buf.clear(); return false; }
+    buf.append(d, len);
+    if ((int)buf.size() < total) return false;
+    out.swap(buf);
+    buf.clear();
+    ok = false;
+    return true;
+  }
+};
+
 }  // namespace m2m
