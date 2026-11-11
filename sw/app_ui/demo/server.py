@@ -9,7 +9,7 @@ Run inside WSL, where the CSEs are:
 
 Endpoints: /api/frame (latest frame, ?fresh=1 reads now), /api/events (SSE frames), /api/topology,
 /api/flow (SSE, events for the flow viewer), /flow (flow viewer), / (demo page).
-Plan: docs/PolaGrid_시연페이지_계획.md section 7 for the frame format.
+Plan: docs/2_개발/PolaGrid_시연페이지_계획.md section 7 for the frame format.
 """
 import argparse
 import asyncio

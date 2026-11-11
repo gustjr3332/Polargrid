@@ -93,7 +93,7 @@ const KO = {
 "Connection and safety":"연결 및 안전","Safe state":"안전 상태",
 "If the connection drops or the AI looks wrong, every cell opens by itself. You can also move cells by hand here at any time.":"연결이 끊기거나 AI가 이상하게 동작하면 모든 셀이 스스로 열립니다. 여기서 언제든 셀을 직접 움직일 수도 있어요.",
 "Open all":"모두 열기","Close all":"모두 닫기",
-"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상","Virtual room · 12 cells":"가상 방 · 12칸","Sunlight on the right side":"오른쪽에 해가 들어와요","Close above (lux)":"이 값 이상이면 닫음 (lux)","real":"실물","virtual":"가상","Right 6 cells are above the limit and close. Left 6 (with the real cell) are below it and stay open.":"오른쪽 6칸은 기준 이상이라 닫히고, 실물을 포함한 왼쪽 6칸은 기준 미만이라 그대로 열려 있어요.","Assumed lux for the 11 virtual cells; the real cell shows its own sensor.":"가상 11칸의 럭스는 가정값이고, 실물 칸은 자기 센서 값을 보여 줘요."};
+"Real cell":"실물 칸","Select cells":"셀 선택","No access token: open the link with ?token=…":"접근 토큰이 없어요. ?token=… 이 붙은 링크로 여세요","Tap cells to tick them, then use the slider":"셀을 눌러 선택한 뒤 슬라이더로 조절하세요","Select all":"전체 선택","Clear":"선택 해제","cells selected":"개 셀 선택됨","No corrections yet":"아직 보정이 없어요","saved":"저장됨","fake":"가짜","FAKE cell: not a real preference":"가짜 칸: 실제 취향 아님","Moving":"이동 중","Touch a cell and drag its top edge up or down":"셀을 터치해 노란 부분의 윗줄을 위아래로 끌어 보세요","Network":"네트워크","Wi-Fi (same as the cell module)":"Wi-Fi (셀 모듈과 같아야 제어 가능)","Wi-Fi: same network as the cell module":"Wi-Fi: 셀 모듈과 같은 네트워크","Wi-Fi: cell not reachable":"Wi-Fi: 셀에 연결 안 됨","Cell sensor":"칸 센서","● Offline":"● 연결 끊김","LIVE":"실시간","LIVE · FAKE CELL":"실시간 · 가짜 칸(하드웨어 없음)","Desk":"책상","Virtual room · 12 cells":"가상 방 · 12칸","Sunlight on the right side":"오른쪽에 해가 들어와요","Starts closing (lux)":"닫히기 시작 (lux)","Fully closed (lux)":"완전 닫힘 (lux)","real":"실물","virtual":"가상","From the starting value the 6 virtual cells on the sun side close in proportion to the desk sensor and are fully closed at the second value, though the real cell's own sensor reads low. The left 6 stay open.":"책상 센서가 시작값을 넘으면 해가 드는 쪽 가상 6칸이 그 비율만큼 닫히고, 완전 닫힘 값에서 모두 닫혀요. 실물 칸의 자기 센서 값은 낮아도 상관없어요. 왼쪽 6칸은 열려 있어요.","Left cells copy the real cell's sensor; the sun-side cells' lux is the desk sensor times an assumed factor.":"왼쪽 칸은 실물 칸의 센서 값을 따라가고, 해가 드는 쪽 칸의 럭스는 책상 센서 값에 가정한 배수를 곱한 값이에요."};
 let LANG = "ko";
 { const q = new URLSearchParams(location.search).get("lang"); let s = null;
   try { s = localStorage.getItem("pg-lang"); } catch (e) {}   // storage may be blocked
@@ -116,18 +116,22 @@ let SELMODE = false, SEL = new Set();   // select mode: tapping cells picks them
 let PEND = {}, dragging = false;   // PEND[cell index] = {level, t}: the open level the user set by touching that cell; dragging pauses the 2 s redraw
 let REAL = null;   // last /api/real reply, null until the first one; {ok:false} = CSE not reachable
 // ?room=12: one real cell + 11 virtual cells as a 4 x 3 room, sun on the right two columns. A cell closes when its lux >= THR.
-// THR is the real cell's measured full-close limit (real_cell.py --close-lux 2000; the lamp test read 2,743 lux). Change it on site: field on the page or ?thr=.
+// Sun-side cells close in proportion to the desk sensor: open up to FROM (180 lux), fully closed at THR (250 lux), linear between. Change on site: fields on the page, ?from= and ?thr=.
 const ROOM = new URLSearchParams(location.search).get("room") === "12";
-let THR = +new URLSearchParams(location.search).get("thr") || 2000;
-const ROOM_LUX = [0, 640, 2430, 3050,  880, 1210, 2760, 2590,  760, 1420, 2880, 3320];   // cell 0 is the real one (its own sensor); the rest are assumed
+let THR = +new URLSearchParams(location.search).get("thr") || 250, FROM = +new URLSearchParams(location.search).get("from") || 180;   // fully closed at THR, starts closing at FROM (venue mean 182)
+// Cell 0 is the real one and shows its own cell sensor (21 lux when there is no reading, the 11-04 venue mean). The desk sensor (182 lux when there is no reading, the 11-04 venue mean, or ?desk=700 to try it)
+// drives the right six virtual cells: they close when it reaches THR even though the real cell's own reading stays low. Left virtual cells copy the real cell's reading.
+const deskNow = () => { const q = new URLSearchParams(location.search).get("desk"); return q != null ? +q : REAL && REAL.desk_lux != null ? REAL.desk_lux : 182; };
+const cellNow = () => REAL && REAL.cell_lux != null ? REAL.cell_lux : 21;
+const K = {1: 0.85, 4: 1.15, 5: 0.95, 8: 1.25, 9: 1.05}, R = {2: 1.3, 3: 1.9, 6: 1.5, 7: 1.7, 10: 1.4, 11: 2.1};   // spread of the left cells; sun side lux = desk x R
 const roomGrid = () => {
-  const real = REAL && REAL.ok ? REAL.cells[0] : null;
-  return `<div class="grid" style="grid-template-columns:repeat(4,1fr)"><style>.grid .cell{aspect-ratio:1}.cell small{position:absolute;left:6px;top:7px;font-size:11px;color:#fff;background:#000b;border-radius:6px;padding:0 5px}.cell em{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-style:normal;font-size:12px;color:#fff;text-shadow:0 0 3px #000}</style>${ROOM_LUX.map((v, k) => {
-    const lux = k ? v : REAL && REAL.cell_lux != null ? REAL.cell_lux : 120, lv = k ? (lux >= THR ? 0 : 100) : real ? real.level : 100;
-    return `<div class="cell ${lux >= THR ? "glare" : ""}"><b style="height:${lv}%"></b><small>${T(k ? "virtual" : "real")}</small><em>${num(lux)} lux</em></div>`; }).join("")}</div>`;
+  const real = REAL && REAL.ok ? REAL.cells[0] : null, desk = deskNow(), cv = cellNow();
+  return `<div class="grid" style="grid-template-columns:repeat(4,1fr)"><style>.grid .cell{aspect-ratio:1}.cell small{position:absolute;left:6px;top:7px;font-size:11px;color:#fff;background:#000b;border-radius:6px;padding:0 5px}.cell em{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-style:normal;font-size:12px;color:#fff;text-shadow:0 0 3px #000}</style>${[...Array(12).keys()].map(k => {
+    const sun = k in R, lux = k === 0 ? cv : sun ? desk * R[k] : cv * K[k], part = Math.max(0, Math.min(1, (desk - FROM) / Math.max(1, THR - FROM))), shut = sun && part > 0, lv = k === 0 ? (real ? real.level : 100) : sun ? Math.round(100 * (1 - part)) : 100;
+    return `<div class="cell ${shut ? "glare" : ""}"><b style="height:${lv}%"></b><small>${T(k ? "virtual" : "real")}</small><em>${num(lux)} lux</em></div>`; }).join("")}</div>`;
 };
-const roomCard = () => `<div class="card" style="margin-top:12px"><div class="chip acc">☀ ${T("Sunlight on the right side")}</div><div class="row" style="margin-top:10px"><span class="lab" style="margin:0;text-transform:none">${T("Close above (lux)")} <input id="thr" type="number" value="${THR}" step="100" min="0" style="width:72px;background:var(--surf2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:14px"></span></div>
-  <p class="hint" style="text-align:left;margin-top:8px">${T("Right 6 cells are above the limit and close. Left 6 (with the real cell) are below it and stay open.")} ${T("Assumed lux for the 11 virtual cells; the real cell shows its own sensor.")}</p></div>`;
+const roomCard = () => `<div class="card" style="margin-top:12px"><div class="chip acc">☀ ${T("Sunlight on the right side")}</div><div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap"><span class="lab" style="margin:0;text-transform:none">${T("Starts closing (lux)")} <input id="from" type="number" value="${FROM}" step="10" min="0" style="width:64px;background:var(--surf2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:14px"></span><span class="lab" style="margin:0;text-transform:none">${T("Fully closed (lux)")} <input id="thr" type="number" value="${THR}" step="10" min="0" style="width:64px;background:var(--surf2);color:var(--tx);border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:14px"></span></div>
+  <p class="hint" style="text-align:left;margin-top:8px">${T("From the starting value the 6 virtual cells on the sun side close in proportion to the desk sensor and are fully closed at the second value, though the real cell's own sensor reads low. The left 6 stay open.")} ${T("Left cells copy the real cell's sensor; the sun-side cells' lux is the desk sensor times an assumed factor.")}</p></div>`;
 const GLARE = new Set([5,6,7]);                                   // cells with a warm outline
 const NAV = [["Window","▦"],["Comfort","☀"],["Mode","◐"],["Today","▤"],["Settings","⚙"]];
 
@@ -191,7 +195,9 @@ const myAiCard = () => {
 };
 const loadAll = () => loadCorr().then(learnMyAi);
 const num = v => v == null ? "–" : Math.round(v);
-const deskRow = () => LIVE
+const deskRow = () => ROOM
+  ? `<div class="desk"><div><small>${T("Desk")}</small><strong>${num(deskNow())} lux</strong></div><div><small>${T("Cell sensor")}</small><strong>${num(cellNow())} lux</strong></div></div>`
+  : LIVE
   ? `<div class="desk"><div><small>${T("Desk")}</small><strong>${num(REAL && REAL.desk_lux)} lux</strong></div><div><small>${T("Cell sensor")}</small><strong>${num(REAL && REAL.cell_lux)} lux</strong></div></div>`
   : `<div class="desk"><div><small>${T("Desk A")}</small><strong>412 lux</strong><small>${T("target ≥ 300")}</small></div><div><small>${T("Desk B")}</small><strong>388 lux</strong><small>${T("target ≥ 300")}</small></div></div>`;
 const selCard = () => {
@@ -269,6 +275,7 @@ const allSet = level => { (REAL && REAL.ok ? REAL.cells : []).forEach(c => { PEN
 // Touch a cell: its yellow top edge jumps to the finger and follows it up and down (steps of 5); letting go sends the level of that cell.
 const bindCells = () => {
   const th = document.getElementById("thr"); if (th) th.onchange = () => { THR = +th.value || 0; draw(cur, true); };
+  const fr = document.getElementById("from"); if (fr) fr.onchange = () => { FROM = +fr.value || 0; draw(cur, true); };
   root.querySelectorAll(".cell.live").forEach(el => {
     const i = +el.dataset.i;
     if (SELMODE) { el.onclick = () => { SEL.has(i) ? SEL.delete(i) : SEL.add(i); draw(cur, true); }; return; }
@@ -309,7 +316,7 @@ if (LIVE) {
     .then(() => { if (!dragging) for (const k of Object.keys(PEND)) {   // reached, or give up after 45 s
         const c = REAL.ok && REAL.cells.find(c => c.i == k);
         if (Date.now() - PEND[k].t > 45000 || (c && Math.abs(c.level - PEND[k].level) <= 3)) delete PEND[k]; }
-      if (names[cur] === "Window" && !all && !dragging && document.activeElement.id !== "thr") draw(cur); });
+      if (names[cur] === "Window" && !all && !dragging && !["thr", "from"].includes(document.activeElement.id)) draw(cur); });
   poll(); setInterval(poll, 2000);
 }
 if (new URLSearchParams(location.search).has('bare')) document.body.classList.add('bare');
