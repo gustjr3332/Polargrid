@@ -1,0 +1,233 @@
+diff --git a/source/server/config.h b/source/server/config.h
+index 679ad30..8c46cca 100644
+--- a/source/server/config.h
++++ b/source/server/config.h
+@@ -27,7 +27,7 @@
+ 
+ // Select Database Type: DB_SQLITE or DB_POSTGRESQL
+ // #define DB_TYPE DB_SQLITE
+-#define DB_TYPE DB_POSTGRESQL
++#define DB_TYPE DB_SQLITE
+ 
+ 
+ #if DB_TYPE == DB_POSTGRESQL
+@@ -59,7 +59,7 @@
+ 
+ // Set allowed remote CSE ID
+ // To allow all remote CSE ID, set to "/*"
+-#define ALLOWED_REMOTE_CSE_ID "/id-in,/id-mn"
++#define ALLOWED_REMOTE_CSE_ID "/*"
+ 
+ // Run server in mono Thread
+ // 0 → multi-thread, 1 → mono-thread
+@@ -107,7 +107,7 @@
+ // MQTT Settings
+ 
+ // To enable MQTT, de-comment the following line
+-// #define ENABLE_MQTT
++#define ENABLE_MQTT
+ 
+ #ifdef ENABLE_MQTT
+ // #define ENABLE_MQTT_WEBSOCKET
+@@ -116,11 +116,11 @@
+ #endif
+ 
+ #define MQTT_HOST "127.0.0.1"
+-#define MQTT_QOS MQTT_QOS_1
++#define MQTT_QOS MQTT_QOS_0
+ #define MQTT_KEEP_ALIVE_SEC 60
+ #define MQTT_CMD_TIMEOUT_MS 30000
+ #define MQTT_CON_TIMEOUT_MS 5000
+-#define MQTT_CLIENT_ID "TinyIoT"
++#define MQTT_CLIENT_ID "tinyiot"
+ #define MQTT_USERNAME "test"
+ #define MQTT_PASSWORD "mqtt"
+ 
+@@ -143,7 +143,7 @@
+ 
+ #endif
+ 
+-#define LOG_LEVEL LOG_LEVEL_DEBUG
++#define LOG_LEVEL LOG_LEVEL_INFO
+ #define LOG_BUFFER_SIZE MAX_PAYLOAD_SIZE
+ // #define SAVE_LOG
+ 
+diff --git a/source/server/httpd.c b/source/server/httpd.c
+index a8e2200..2ebf242 100644
+--- a/source/server/httpd.c
++++ b/source/server/httpd.c
+@@ -29,6 +29,9 @@ static void respond(int);
+ extern void route(oneM2MPrimitive *o2pt);
+ 
+ static char *buf[MAX_CONNECTIONS];
++// tinyIoT handles each request in its own thread but the resource tree (rtnode->obj) is not thread safe:
++// concurrent create/fopt crashed in get_ri_rtnode(). Serialize request routing.
++static pthread_mutex_t route_lock = PTHREAD_MUTEX_INITIALIZER;
+ 
+ // Client request
+ 
+@@ -444,7 +447,9 @@ void handle_http_request(HTTPRequest *req, int slotno)
+         o2pt->fc = qs;
+     }
+ 
++    pthread_mutex_lock(&route_lock);
+     route(o2pt);
++    pthread_mutex_unlock(&route_lock);
+ 
+     http_respond_to_client(o2pt, slotno);
+     free_o2pt(o2pt);
+diff --git a/source/server/onem2m.c b/source/server/onem2m.c
+index 15aa81e..e70faaf 100644
+--- a/source/server/onem2m.c
++++ b/source/server/onem2m.c
+@@ -1333,6 +1333,8 @@ int fopt_onem2m_resource(oneM2MPrimitive *o2pt, RTNode *parent_rtnode)
+             }
+         
+ 			rsc = handle_onem2m_request(memberReq, target_rtnode);
++			if (memberReq->op != OP_DELETE && !memberReq->errFlag)
++				notify_via_sub(memberReq, target_rtnode);   /* fan-out으로 만든 멤버 자원도 구독 알림을 보냄 */
+ 			json = o2pt_to_json(memberReq);
+             if (json)
+             {
+diff --git a/source/server/sqlite_implement.c b/source/server/sqlite_implement.c
+index 7469453..a3a0bb7 100644
+--- a/source/server/sqlite_implement.c
++++ b/source/server/sqlite_implement.c
+@@ -272,6 +272,11 @@ int init_dbp()
+         return 0;
+     }
+ 
++    /* 쓰기마다 fsync하던 기본 저널 대신 WAL + synchronous=NORMAL (트랜잭션 밖에서만 설정 가능).
++       앱 크래시에는 안전, 전원 차단 시 마지막 커밋 일부 유실 가능 */
++    sqlite3_exec(db, "PRAGMA journal_mode = WAL;", NULL, NULL, NULL);
++    sqlite3_exec(db, "PRAGMA synchronous = NORMAL;", NULL, NULL, NULL);
++
+     // Begin transaction for atomic table creation
+     if (!execute_sql_with_error_handling("BEGIN TRANSACTION;", "Begin Transaction", &err_msg)) {
+         sqlite3_close(db);
+@@ -443,7 +448,7 @@ cJSON *db_get_resource_by_uri(char *uri, ResourceType ty)
+     const char *colname = NULL;
+     int bytes = 0;
+     int coltype = 0;
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     cJSON *arr = NULL;
+ 
+     for (int col = 0; col < cols; col++)
+@@ -458,8 +463,7 @@ cJSON *db_get_resource_by_uri(char *uri, ResourceType ty)
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(stmt, col), bytes);
++            buf = (const char *)sqlite3_column_text(stmt, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -538,7 +542,7 @@ cJSON *db_get_resource(char *ri, ResourceType ty)
+     const char *colname = NULL;
+     int bytes = 0;
+     int coltype = 0;
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     cJSON *arr = NULL;
+ 
+     for (int col = 0; col < cols; col++)
+@@ -553,8 +557,7 @@ cJSON *db_get_resource(char *ri, ResourceType ty)
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(stmt, col), bytes);
++            buf = (const char *)sqlite3_column_text(stmt, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -1068,7 +1071,7 @@ RTNode *db_get_all_resource_as_rtnode()
+     sqlite3_stmt *res;
+     const char *colname = NULL;
+     char sql[1024] = {0};
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+ 
+     sprintf(sql, "SELECT * FROM general WHERE ty != 4 AND ty != 5 AND ty != 58;");
+     rc = sqlite3_prepare_v2(db, sql, -1, &res, NULL);
+@@ -1094,8 +1097,7 @@ RTNode *db_get_all_resource_as_rtnode()
+             switch (coltype)
+             {
+             case SQLITE_TEXT:
+-                memset(buf, 0, 256);
+-                strncpy(buf, sqlite3_column_text(res, col), bytes);
++                buf = (const char *)sqlite3_column_text(res, col);
+                 arr = cJSON_Parse(buf);
+                 if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                 {
+@@ -1141,8 +1143,7 @@ RTNode *db_get_all_resource_as_rtnode()
+                 switch (coltype)
+                 {
+                 case SQLITE_TEXT:
+-                    memset(buf, 0, 256);
+-                    strncpy(buf, sqlite3_column_text(res2, col), bytes);
++                    buf = (const char *)sqlite3_column_text(res2, col);
+                     arr = cJSON_Parse(buf);
+                     if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                     {
+@@ -1284,7 +1285,7 @@ RTNode *db_get_cin_rtnode_list(RTNode *parent_rtnode)
+ RTNode *db_get_latest_cins()
+ {
+     char sql[1024] = {0};
+-    char buf[256] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     const char *colname;
+     int rc = 0;
+     int cols, bytes, coltype;
+@@ -1320,8 +1321,7 @@ RTNode *db_get_latest_cins()
+             switch (coltype)
+             {
+             case SQLITE_TEXT:
+-                memset(buf, 0, 256);
+-                strncpy(buf, sqlite3_column_text(res, col), bytes);
++                buf = (const char *)sqlite3_column_text(res, col);
+                 arr = cJSON_Parse(buf);
+                 if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+                 {
+@@ -1363,7 +1363,8 @@ RTNode *db_get_latest_cins()
+  */
+ cJSON *db_get_cin_laol(RTNode *parent_rtnode, int laol)
+ {
+-    char sql[1024] = {0}, buf[256] = {0};
++    char sql[1024] = {0};
++    const char *buf = NULL; /* points into sqlite row; TEXT columns can exceed any fixed size */
+     char *ord = NULL;
+     const char *colname;
+     int rc = 0;
+@@ -1416,8 +1417,7 @@ cJSON *db_get_cin_laol(RTNode *parent_rtnode, int laol)
+         switch (coltype)
+         {
+         case SQLITE_TEXT:
+-            memset(buf, 0, 256);
+-            strncpy(buf, sqlite3_column_text(res, col), bytes);
++            buf = (const char *)sqlite3_column_text(res, col);
+             arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object))
+             {
+@@ -2403,7 +2403,8 @@ int db_tsi_check_dgt_dup(const char *ts_ri, const char *dgt)
+ 
+ cJSON *db_get_tsi_laol(RTNode *parent_rtnode, int laol) {
+     const char *ord = (laol == 0) ? "DESC" : "ASC";
+-    char sql[1024], buf[256];
++    char sql[1024];
++    const char *buf = NULL;
+     sqlite3_stmt *res = NULL;
+     snprintf(sql, sizeof(sql),
+              "SELECT * FROM general, tsi WHERE pi='%s' AND general.id = tsi.id "
+@@ -2423,8 +2424,7 @@ cJSON *db_get_tsi_laol(RTNode *parent_rtnode, int laol) {
+         if (bytes == 0) continue;
+ 
+         if (coltype == SQLITE_TEXT) {
+-            memset(buf, 0, sizeof(buf));
+-            strncpy(buf, (const char*)sqlite3_column_text(res, col), bytes);
++            buf = (const char *)sqlite3_column_text(res, col);
+             cJSON *arr = cJSON_Parse(buf);
+             if (arr && (arr->type == cJSON_Array || arr->type == cJSON_Object)) cJSON_AddItemToObject(json, colname, arr);
+             else { cJSON_AddItemToObject(json, colname, cJSON_CreateString(buf)); cJSON_Delete(arr); }

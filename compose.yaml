@@ -1,0 +1,46 @@
+# docker compose up: tinyIoT IN (3000) + MN mn001 (3001) + Mosquitto + the closed-loop controller.
+# tinyIoT binds 0.0.0.0 and registers the MN with POA 127.0.0.1, so all services share the network namespace of "mqtt".
+# Only the IN and MN ports are published, on the loopback of the host. No credentials: the broker is reachable only inside the namespace.
+x-tinyiot: &tinyiot
+  build: ./sw/edge_ai/sim
+  image: polagrid-tinyiot:local
+  restart: on-failure
+  network_mode: "service:mqtt"
+
+services:
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: on-failure
+    command: ["sh", "-c", "printf 'listener 1883 127.0.0.1\nallow_anonymous true\n' > /tmp/m.conf && exec mosquitto -c /tmp/m.conf"]
+    ports:
+      - "127.0.0.1:${IN_PORT:-3000}:3000"
+      - "127.0.0.1:${MN_PORT:-3001}:3001"
+
+  in:
+    <<: *tinyiot
+    working_dir: /opt/tinyiot/in
+    command: ["./server"]
+    depends_on: [mqtt]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -H 'X-M2M-Origin: CAdmin' -H 'X-M2M-RI: hc' -H 'X-M2M-RVI: 3' http://127.0.0.1:3000/TinyIoT"]
+      interval: 2s
+      retries: 60
+
+  mn:
+    <<: *tinyiot
+    working_dir: /opt/tinyiot/mn
+    command: ["./server"]
+    depends_on:
+      in: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -H 'X-M2M-Origin: CAdmin' -H 'X-M2M-RI: hc' -H 'X-M2M-RVI: 3' http://127.0.0.1:3001/TinyIoT-mn001"]
+      interval: 2s
+      retries: 60
+
+  controller:
+    build: ./sw/edge_ai
+    restart: on-failure
+    network_mode: "service:mqtt"
+    command: ["sh", "-c", "python3 tools/harden_acp.py && python3 -m polagrid.closed_loop"]
+    depends_on:
+      mn: {condition: service_healthy}

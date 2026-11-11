@@ -58,7 +58,19 @@ There is no saving figure for electricity here, because none was measured. The 2
 
 ## Run it
 
-You need a Linux shell (the project is developed on WSL Ubuntu), Python 3, and a tinyIoT build. The tinyIoT patches, configs and node scripts are in `sw/edge_ai/sim`, and `sw/edge_ai/sim/README.md` explains how to build it.
+Quick start needs only Docker with Compose. The image builds tinyIoT from a pinned upstream commit plus the patch in `sw/edge_ai/sim/patches`, so the first build takes a few minutes.
+
+```bash
+docker compose up -d   # mosquitto, tinyIoT IN (3000), MN mn001 (3001), controller
+docker compose logs controller   # "[setup] 12 cells on TinyIoT-mn001" means the first CIN is being written
+docker compose down
+```
+
+If port 3000 or 3001 is already taken on your machine, set `IN_PORT` and `MN_PORT`, for example `IN_PORT=13000 MN_PORT=13001 docker compose up -d`.
+
+To time the start instead, run `bash sw/edge_ai/tools/first_cin.sh` from the repository root. It starts the stack itself (do not run `up -d` first) and writes `sw/edge_ai/results/first_cin_<MMDD>.txt`.
+
+Running without Docker needs a Linux shell (the project is developed on WSL Ubuntu), Python 3, and a tinyIoT build. The tinyIoT patches, configs and node scripts are in `sw/edge_ai/sim`, and `sw/edge_ai/sim/README.md` explains how to build it.
 
 Virtual 1,000-cell demo and the phone-app mockup:
 
@@ -96,11 +108,39 @@ cd ../actuator && g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic 
 - `sw/actuator/`: ESP32 firmware, with host-side tests
 - `sw/app_ui/`: phone-app mockup and the demo server
 
+## Evidence and methods
+
+Where each number above comes from. All files are in `sw/edge_ai/results/`; each run's date is in its file name (MMDD).
+
+| Claim | File |
+|---|---|
+| Glare table (fixed open, timed, AI stages 1 and 2, blind) | `baseline_compare.csv` |
+| Other-room model 3.04 to 4.12 h, retrained 0.05 to 0.23 h | `ai3_rooms_1017.txt` |
+| 1,000-cell closed loop p95 1.8 to 2.9 s (five zones at a time), 4.4 to 6.7 s (ten at once) | `closed_loop_1000_repeat_1015.txt` |
+| IN down for 240 s, 48 of 48 zone-control requests succeeded | `in_outage_1027*.csv` and `.log` |
+| Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` |
+| ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
+| tinyIoT MN steady writes: 69 req/s default, 458 req/s after the serialization patch, 577 req/s in a separate write-ahead-log configuration | `bench_tinyiot_mn_1001.txt`, `bench_tinyiot_mn_latest_1007.txt`, `bench_tinyiot_mn_wal_1001.txt` |
+
+The ACME and tinyIoT runs are one laptop, one run each, and the settings differ between files, so quote them with their file. The 577 figure is from the write-ahead-log configuration of 1 October; the latest build measured 458.
+
+The three AI stages, and what is implemented here and what is a library call:
+
+| Stage | Method | Implementation |
+|---|---|---|
+| 1. Cell contribution | Kalman filter on the correction to each cell's contribution to each desk | Implemented here with numpy (`polagrid/online.py`); initial estimate by scipy `nnls` |
+| 2. Angle decision | Linear program: glare, missing lux and motor moves | Library: scipy `linprog(method="highs")` (`polagrid/ai.py`) |
+| 3. Per-user preference | StandardScaler + Ridge on the user's brighter/darker corrections | Server: scikit-learn. Browser: own JavaScript (`sw/app_ui/mockup/ridge.js`), checked against scikit-learn by `tests/test_ridge_js.py` |
+
+The Kalman filter's uncertainties (initial 3,000 lux, drift 300 lux per step, measurement noise 2% of the mean desk reading plus 25 lux squared) were tuned in the virtual room, not measured on the real sensor.
+
+Twelve-cell room view: open `sw/app_ui/mockup/index.html?room=12` (add `&live=1` with `demo/server.py --real RUN` to show the real cell as the first cell). One real cell plus eleven virtual cells; sun on the right two columns. A cell closes when its lux is at or above the limit (default 2,000, the real cell's full-close threshold; change it in the page or with `?thr=`). The virtual cells' lux values are assumptions, not measurements.
+
 ## Status and limits
 
 This is a prototype. What is not done:
 
-- A `docker compose up` quick start with a first CIN inside five minutes is a goal, not something this repository provides yet.
+- The `docker compose up` quick start reached the first CIN in 176 s with a cold rebuild and 10 to 11 s warm (three runs on one PC, base images already cached). The first CIN comes from the controller setup, not from a closed-loop run.
 - The 1,000 cells are virtual. Only one real cell exists.
 - The real cell's AI loop closes by a desk-lux threshold. The rule reads a falling desk value as a reason to reopen, so with a continuous flashlight the cell can open and close in a loop. A minimum hold time after closing would fix it, and it is not written yet.
 - The ACP hardening, TLS, SAREF mapping and MEC VM deployment planned for the contest are not in this repository.

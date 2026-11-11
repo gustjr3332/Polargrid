@@ -1,0 +1,27 @@
+ Network pgtest_default Creating 
+ Network pgtest_default Creating 
+ Network pgtest_default Created 
+ Network pgtest_default Created 
+ Container pgtest-mqtt-1 Creating 
+ Container pgtest-mqtt-1 Created 
+ Container pgtest-in-1 Creating 
+ Container pgtest-in-1 Created 
+ Container pgtest-mn-1 Creating 
+ Container pgtest-mn-1 Created 
+ Container pgtest-controller-1 Creating 
+ Container pgtest-controller-1 Created 
+ Container pgtest-mqtt-1 Starting 
+ Container pgtest-mqtt-1 Started 
+ Container pgtest-in-1 Starting 
+ Container pgtest-in-1 Started 
+ Container pgtest-in-1 Waiting 
+ Container pgtest-in-1 Healthy 
+ Container pgtest-mn-1 Starting 
+ Container pgtest-mn-1 Started 
+ Container pgtest-mn-1 Waiting 
+ Container pgtest-mn-1 Healthy 
+ Container pgtest-controller-1 Starting 
+ Container pgtest-controller-1 Started 
+first CIN after 10 s (cold=0)
+mn001 registered on IN:
+{"m2m:uril":["TinyIoT/id-mn001"]}
