@@ -1,0 +1,340 @@
+PolaGrid controller AE, GRP of two cells' command containers and fopt fan-out on the co-located ACME MN-CSE of mep1, hosted ETSI MEC Sandbox, scenario dep-opt-c (Option C). One run, 2026-11-12 (UTC). Continues sandbox_dep_opt_c_tree_1112.txt.
+Sandbox id masked as sbxXXXX. Requests sent with our own client (polagrid.onem2m.Client) through a throwaway wrapper; TLS verification off (self-signed cert). Only GET and POST were sent; nothing was updated or deleted.
+Created in this run: AE polagrid-sbx2 (originator CPolaGridSbx2) with container command (mni 10, acpi = existing ACP polagrid-sbxacp, label polagrid/sbx1112/command), controller AE polagrid-sbxctl (originator CPolaGridSbxCtl), GRP polagrid-sbxctl/grp, and two command CINs (one per cell, made by the fan-out). No new ACP: the group uses the existing polagrid-sbxacp.
+Shapes follow sw/edge_ai/polagrid/zone.py Controller.setup (GRP: rn grp, mt 3, mnm = number of cells, acpi, mid = label discovery result, no csy) and Controller.command (Client.create on <ctl>/grp/fopt, a CIN with Content-Type ty=4). Difference from our code: the controller AE was registered with rr false and no poa (our code: rr true, poa = local receiver URL), and the group's acpi is the cells' ACP instead of a separate <run>ctlacp.
+Result summary: GRP create 201/2001 (ACME stored mid as resource ids, cnm 2, mtv true, csy 1). Fan-out as the controller: HTTP 200, RSC 2000, m2m:agr with two m2m:rsp, each rsc 2001; command/la of both cells then showed the fanned-out CIN. Fan-out as an originator in no ACP rule: 403, RSC 4103, and command/la of both cells was unchanged.
+Not tested: notification delivery to cells after fan-out, IN-forwarded originator forms, grant_discovery (PUT), a group ACP separate from the cells' ACP, macp, more than two members, latency. CIN contents are test data, not measurements.
+Lines starting with ">" are the request, "<" the response (all response headers as received).
+
+=== Step 0: session check, GET CSEBase (CAdmin)
+UTC: 2026-11-12T05:11:07Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: 9df0e5673f6241f68c3f38fad7c57c2a
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:08 GMT
+< Content-Type: application/json
+< Content-Length: 881
+< Connection: keep-alive
+< X-M2M-RI: 9df0e5673f6241f68c3f38fad7c57c2a
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051108,564380
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cb": {"ri": "acme-cse-id-mn-mep1-sbxXXXX", "rn": "acme-cse-mn-mep1-sbxXXXX", "csi": "/acme-cse-id-mn-mep1-sbxXXXX", "spi": "//acme.example.com", "csz": ["application/json", "application/vnd.onem2m-res+json", "application/cbor", "application/vnd.onem2m-res+cbor"], "acpi": ["/acme-cse-id-mn-mep1-sbxXXXX/acpCreateRootResources"], "poa": ["https://82.112.253.59:443/sbxXXXX/mep1/meep-acme-mn-cse"], "cst": 2, "srt": [1, 2, 3, 4, 5, 9, 10, 13, 14, 15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 30, 34, 43, 44, 47, 48, 58, 60, 62, 63, 64, 65, 66, 10001, 10002, 10003, 10004, 10009, 10010, 10013, 10014, 10016, 10018, 10024, 10028, 10029, 10030, 10058, 10060, 10062, 10063, 10064, 10065, 10066], "srv": ["2a", "3", "4", "5"], "pi": "", "ty": 5, "ct": "20261112T044847,694362", "lt": "20261112T044847,694362", "ici": "/estimed-id-in", "ctm": "20261112T051108,563669"}}
+
+=== Step 0b: pre-check, existing ACP polagrid-sbxacp still there (CAdmin)
+UTC: 2026-11-12T05:11:09Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxacp
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: d011419000f94337969498a7ff74beb4
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:10 GMT
+< Content-Type: application/json
+< Content-Length: 402
+< Connection: keep-alive
+< X-M2M-RI: d011419000f94337969498a7ff74beb4
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051110,201126
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:acp": {"rn": "polagrid-sbxacp", "pv": {"acr": [{"acor": ["CPolaGridSbx"], "acop": 63}, {"acor": ["CPolaGridSbxCtl"], "acop": 51}, {"acor": ["CPolaGridSbxView"], "acop": 50}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}, "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "acp6tGr5gJlSR", "ty": 1, "ct": "20261112T050222,828884", "lt": "20261112T050222,828884", "et": "20311111T050223,073846"}}
+
+=== Step 0c: pre-check, GET polagrid-sbx2 before create (expect 404)
+UTC: 2026-11-12T05:11:11Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2
+> X-M2M-Origin: CPolaGridSbx2
+> X-M2M-RI: a7e5f690a3214abd8b62fba06571e12c
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 404
+< X-M2M-RSC: 4004
+< Date: Thu, 12 Nov 2026 05:11:12 GMT
+< Content-Type: application/json
+< Content-Length: 82
+< Connection: keep-alive
+< X-M2M-RI: a7e5f690a3214abd8b62fba06571e12c
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051112,002496
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "No resource with this ID: acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2"}
+
+=== Step 0d: pre-check, GET polagrid-sbxctl before create (expect 404)
+UTC: 2026-11-12T05:11:12Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 9ad5579ddd5d41b5879393819fb21408
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 404
+< X-M2M-RSC: 4004
+< Date: Thu, 12 Nov 2026 05:11:13 GMT
+< Content-Type: application/json
+< Content-Length: 84
+< Connection: keep-alive
+< X-M2M-RI: 9ad5579ddd5d41b5879393819fb21408
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051113,485756
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "No resource with this ID: acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl"}
+
+=== Step 1: second cell AE registration (fake_cell.provision shape: rr false, srv 3)
+UTC: 2026-11-12T05:11:21Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CPolaGridSbx2
+> X-M2M-RI: f642757bd4804f02ab6a48614d169447
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=2
+> body: {"m2m:ae": {"rn": "polagrid-sbx2", "api": "Npolagrid", "rr": false, "srv": ["3"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:11:22 GMT
+< Content-Type: application/json
+< Content-Length: 274
+< Connection: keep-alive
+< X-M2M-RI: f642757bd4804f02ab6a48614d169447
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051122,681145
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:ae": {"rn": "polagrid-sbx2", "api": "Npolagrid", "rr": false, "srv": ["3"], "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "CPolaGridSbx2", "ty": 2, "aei": "CPolaGridSbx2", "ct": "20261112T051122,642173", "lt": "20261112T051122,642173", "et": "20311111T051122,650764"}}
+
+=== Step 2: second cell command container (mni 10, acpi = existing ACP ri, label)
+UTC: 2026-11-12T05:11:23Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2
+> X-M2M-Origin: CPolaGridSbx2
+> X-M2M-RI: c84ec4c466c343bd8dd4b1fd42c6890e
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=3
+> body: {"m2m:cnt": {"rn": "command", "mni": 10, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/command"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:11:24 GMT
+< Content-Type: application/json
+< Content-Length: 285
+< Connection: keep-alive
+< X-M2M-RI: c84ec4c466c343bd8dd4b1fd42c6890e
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051124,947852
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cnt": {"rn": "command", "mni": 10, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/command"], "cni": 0, "cbs": 0, "st": 0, "pi": "CPolaGridSbx2", "ri": "cnteOxzkh7K4a", "ty": 3, "ct": "20261112T051124,212734", "lt": "20261112T051124,212734", "et": "20311111T051122,650764"}}
+
+=== Step 3: controller AE registration (zone.py Controller.setup shape, but rr false and no poa: no receiver is reachable from the sandbox)
+UTC: 2026-11-12T05:11:25Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 283237f84633462cac893379ef86740f
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=2
+> body: {"m2m:ae": {"rn": "polagrid-sbxctl", "api": "Npolagrid", "rr": false, "srv": ["3"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:11:27 GMT
+< Content-Type: application/json
+< Content-Length: 280
+< Connection: keep-alive
+< X-M2M-RI: 283237f84633462cac893379ef86740f
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051127,060424
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:ae": {"rn": "polagrid-sbxctl", "api": "Npolagrid", "rr": false, "srv": ["3"], "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "CPolaGridSbxCtl", "ty": 2, "aei": "CPolaGridSbxCtl", "ct": "20261112T051127,039507", "lt": "20261112T051127,039507", "et": "20311111T051127,048351"}}
+
+=== Step 4: discovery by label as the controller, then GRP create under the controller AE with mid = discovery result (zone.py Controller.setup: rn grp, mt 3, mnm = number of cells, acpi = existing ACP polagrid-sbxacp, no csy)
+UTC: 2026-11-12T05:11:34Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&lbl=polagrid/sbx1112/command&ty=3
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 0dc2826817d34a99bb354acd15c43411
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:35 GMT
+< Content-Type: application/json
+< Content-Length: 119
+< Connection: keep-alive
+< X-M2M-RI: 0dc2826817d34a99bb354acd15c43411
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051135,771354
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command", "acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2/command"]}
+
+=== Step 4: discovery by label as the controller, then GRP create under the controller AE with mid = discovery result (zone.py Controller.setup: rn grp, mt 3, mnm = number of cells, acpi = existing ACP polagrid-sbxacp, no csy)
+UTC: 2026-11-12T05:11:36Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 60c83376491d4131ab46bfab439fa9d6
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=9
+> body: {"m2m:grp": {"rn": "grp", "mt": 3, "mnm": 2, "acpi": ["acp6tGr5gJlSR"], "mid": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command", "acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2/command"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:11:36 GMT
+< Content-Type: application/json
+< Content-Length: 315
+< Connection: keep-alive
+< X-M2M-RI: 60c83376491d4131ab46bfab439fa9d6
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051136,743038
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:grp": {"rn": "grp", "mt": 3, "mnm": 2, "acpi": ["acp6tGr5gJlSR"], "mid": ["cntQsHnQ0jLGo", "cnteOxzkh7K4a"], "ssi": false, "cnm": 2, "mtv": true, "csy": 1, "pi": "CPolaGridSbxCtl", "ri": "grpPmhbtQcuEw", "ty": 9, "ct": "20261112T051136,129540", "lt": "20261112T051136,129540", "et": "20311111T051127,048351"}}
+
+=== Step 5: GET the group resource as the controller
+UTC: 2026-11-12T05:11:44Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl/grp
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 81a2300e37b342629bb06f2e74425683
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:44 GMT
+< Content-Type: application/json
+< Content-Length: 315
+< Connection: keep-alive
+< X-M2M-RI: 81a2300e37b342629bb06f2e74425683
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051144,676294
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:grp": {"rn": "grp", "mt": 3, "mnm": 2, "acpi": ["acp6tGr5gJlSR"], "mid": ["cntQsHnQ0jLGo", "cnteOxzkh7K4a"], "ssi": false, "cnm": 2, "mtv": true, "csy": 1, "pi": "CPolaGridSbxCtl", "ri": "grpPmhbtQcuEw", "ty": 9, "ct": "20261112T051136,129540", "lt": "20261112T051136,129540", "et": "20311111T051127,048351"}}
+
+=== Step 6: fan-out, one command CIN to <group>/fopt as the controller (zone.py Controller.command: Client.create(ctl/grp/fopt, ...); con is test data)
+UTC: 2026-11-12T05:11:45Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl/grp/fopt
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 6f22aca0e08f40aebf87f14dfb7ca767
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}"}}
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:46 GMT
+< Content-Type: application/json
+< Content-Length: 706
+< Connection: keep-alive
+< X-M2M-RI: 6f22aca0e08f40aebf87f14dfb7ca767
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051146,963915
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:agr": {"m2m:rsp": [{"rsc": 2001, "rqi": "6f22aca0e08f40aebf87f14dfb7ca767", "rvi": "3", "pc": {"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cin2LEwLyKQXV", "rn": "cin_BNQEF0wR3C", "ty": 4, "ct": "20261112T051146,257826", "lt": "20261112T051146,257826", "et": "20311111T050225,486737", "st": 3}}}, {"rsc": 2001, "rqi": "6f22aca0e08f40aebf87f14dfb7ca767", "rvi": "3", "pc": {"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cnteOxzkh7K4a", "ri": "cinrWAbBUcnUm", "rn": "cin_qpyvcOn9t2", "ty": 4, "ct": "20261112T051146,514292", "lt": "20261112T051146,514292", "et": "20311111T051122,650764", "st": 1}}}]}}
+
+=== Step 7: command/la of cell 1 as the controller
+UTC: 2026-11-12T05:11:47Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command/la
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 09532626daa344e89109903eb221499b
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:48 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 09532626daa344e89109903eb221499b
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051148,712722
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cin2LEwLyKQXV", "rn": "cin_BNQEF0wR3C", "ty": 4, "ct": "20261112T051146,257826", "lt": "20261112T051146,257826", "et": "20311111T050225,486737", "st": 3}}
+
+=== Step 8: command/la of cell 2 as the controller
+UTC: 2026-11-12T05:11:49Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2/command/la
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 5044f2dc0f40497887a6e1e6e6b7a4af
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:11:50 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 5044f2dc0f40497887a6e1e6e6b7a4af
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051150,876721
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cnteOxzkh7K4a", "ri": "cinrWAbBUcnUm", "rn": "cin_qpyvcOn9t2", "ty": 4, "ct": "20261112T051146,514292", "lt": "20261112T051146,514292", "et": "20311111T051122,650764", "st": 1}}
+
+=== Step 9: negative check, fan-out as an originator in no ACP rule (want refused; distinct cmd id so an accepted CIN would be visible)
+UTC: 2026-11-12T05:11:59Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxctl/grp/fopt
+> X-M2M-Origin: CPolaGridSbxNobody
+> X-M2M-RI: dfb0bbace3cb407cb09e6c7903606bff
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{\"cmd\": \"sbx1112g-neg\", \"angles\": [0.0]}"}}
+< HTTP status: 403
+< X-M2M-RSC: 4103
+< Date: Thu, 12 Nov 2026 05:12:01 GMT
+< Content-Type: application/json
+< Content-Length: 53
+< Connection: keep-alive
+< X-M2M-RI: dfb0bbace3cb407cb09e6c7903606bff
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051200,950411
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "insufficient privileges for originator"}
+
+=== Step 10: command/la of cell 1 after the negative check (want still sbx1112g1)
+UTC: 2026-11-12T05:12:03Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command/la
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 7d75c15122a84539bcca8b3337d34176
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:12:06 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 7d75c15122a84539bcca8b3337d34176
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051206,598540
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cin2LEwLyKQXV", "rn": "cin_BNQEF0wR3C", "ty": 4, "ct": "20261112T051146,257826", "lt": "20261112T051146,257826", "et": "20311111T050225,486737", "st": 3}}
+
+=== Step 11: command/la of cell 2 after the negative check (want still sbx1112g1)
+UTC: 2026-11-12T05:12:07Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx2/command/la
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 26f7d1dc4fcf4c60bb242e490ca4cfce
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:12:08 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 26f7d1dc4fcf4c60bb242e490ca4cfce
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T051208,465241
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112g1\", \"angles\": [45.0]}", "cs": 38, "pi": "cnteOxzkh7K4a", "ri": "cinrWAbBUcnUm", "rn": "cin_qpyvcOn9t2", "ty": 4, "ct": "20261112T051146,514292", "lt": "20261112T051146,514292", "et": "20311111T051122,650764", "st": 1}}
+

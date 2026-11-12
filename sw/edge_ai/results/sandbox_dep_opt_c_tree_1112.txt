@@ -1,0 +1,551 @@
+PolaGrid resource tree (one zone, one cell) on the co-located ACME MN-CSE of mep1, hosted ETSI MEC Sandbox, scenario dep-opt-c (Option C). One run, 2026-11-12 (UTC).
+Sandbox id masked as sbxXXXX. Requests sent with our own client (polagrid.onem2m.Client, polagrid.zone.make_acp) through a throwaway wrapper; TLS verification off (self-signed cert). Only GET and POST were sent; nothing was updated or deleted.
+Names: ACP polagrid-sbxacp (under the CSE base, created by CAdmin), AE polagrid-sbx (originator CPolaGridSbx), children command (CNT), state (FlexContainer cod:opeLl), lux (CNT), command/s (SUB). Labels polagrid/sbx1112/command, polagrid/sbx1112/state, polagrid/sbx1112/pos/0/0.
+Other originators used in ACP rules and checks, not registered as AEs: CPolaGridSbxCtl (controller), CPolaGridSbxView (viewer), CPolaGridSbxNobody (in no rule).
+Shapes follow sw/edge_ai/polagrid/zone.py (Zone.setup, make_acp) and sw/edge_ai/tools/fake_cell.py (provision, subscribe). CIN contents are test data, not measurements.
+Result summary: every create was accepted (2001) except the subscription with nu = http://127.0.0.1:9500/p0 (500, RSC 5204, "Verification request failed"); the same subscription with nu = the subscriber's AE-ID was accepted. ACP checks and label/type discovery answered as our code expects.
+Not built or not tested: env AE (sun, desks), controller AE with GRP and fopt fan-out, viewer AE, IN-forwarded originator forms in the ACP (zone.remote), grant_discovery (a PUT on the CSE's default ACP), state update (PUT on the FlexContainer) and the bad-openLevel schema check (PUT), notification delivery (no receiver reachable from the sandbox; AE rr=false).
+Lines starting with ">" are the request, "<" the response (all response headers as received).
+
+=== Step 0: session check, GET CSEBase (CAdmin)
+UTC: 2026-11-12T05:02:11Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: 071fdd93671c45c6977a29b07bb46489
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:02:12 GMT
+< Content-Type: application/json
+< Content-Length: 881
+< Connection: keep-alive
+< X-M2M-RI: 071fdd93671c45c6977a29b07bb46489
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050212,121744
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cb": {"ri": "acme-cse-id-mn-mep1-sbxXXXX", "rn": "acme-cse-mn-mep1-sbxXXXX", "csi": "/acme-cse-id-mn-mep1-sbxXXXX", "spi": "//acme.example.com", "csz": ["application/json", "application/vnd.onem2m-res+json", "application/cbor", "application/vnd.onem2m-res+cbor"], "acpi": ["/acme-cse-id-mn-mep1-sbxXXXX/acpCreateRootResources"], "poa": ["https://82.112.253.59:443/sbxXXXX/mep1/meep-acme-mn-cse"], "cst": 2, "srt": [1, 2, 3, 4, 5, 9, 10, 13, 14, 15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 30, 34, 43, 44, 47, 48, 58, 60, 62, 63, 64, 65, 66, 10001, 10002, 10003, 10004, 10009, 10010, 10013, 10014, 10016, 10018, 10024, 10028, 10029, 10030, 10058, 10060, 10062, 10063, 10064, 10065, 10066], "srv": ["2a", "3", "4", "5"], "pi": "", "ty": 5, "ct": "20261112T044847,694362", "lt": "20261112T044847,694362", "ici": "/estimed-id-in", "ctm": "20261112T050212,121180"}}
+
+=== Step 0b: pre-check, GET polagrid-sbx before create (expect 404)
+UTC: 2026-11-12T05:02:12Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 37457df2e3a644029cfc17c9f7393cf1
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 404
+< X-M2M-RSC: 4004
+< Date: Thu, 12 Nov 2026 05:02:13 GMT
+< Content-Type: application/json
+< Content-Length: 81
+< Connection: keep-alive
+< X-M2M-RI: 37457df2e3a644029cfc17c9f7393cf1
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050213,418100
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "No resource with this ID: acme-cse-mn-mep1-sbxXXXX/polagrid-sbx"}
+
+=== Step 0c: pre-check, GET polagrid-sbxacp before create (expect 404)
+UTC: 2026-11-12T05:02:14Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbxacp
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: 8a2f36a04395412792b4015f12287c6a
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 404
+< X-M2M-RSC: 4004
+< Date: Thu, 12 Nov 2026 05:02:14 GMT
+< Content-Type: application/json
+< Content-Length: 84
+< Connection: keep-alive
+< X-M2M-RI: 8a2f36a04395412792b4015f12287c6a
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050214,737093
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "No resource with this ID: acme-cse-mn-mep1-sbxXXXX/polagrid-sbxacp"}
+
+=== Step 1: ACP create under the CSE base as CAdmin (zone.make_acp; rules owner=ALL, controller=C|R|N|DISC, viewer=R|N|DISC; pvs CAdmin)
+UTC: 2026-11-12T05:02:22Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: 7346a65f0b334bc889ea31c6a83a2c83
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=1
+> body: {"m2m:acp": {"rn": "polagrid-sbxacp", "pv": {"acr": [{"acor": ["CPolaGridSbx"], "acop": 63}, {"acor": ["CPolaGridSbxCtl"], "acop": 51}, {"acor": ["CPolaGridSbxView"], "acop": 50}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:23 GMT
+< Content-Type: application/json
+< Content-Length: 402
+< Connection: keep-alive
+< X-M2M-RI: 7346a65f0b334bc889ea31c6a83a2c83
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050223,461891
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:acp": {"rn": "polagrid-sbxacp", "pv": {"acr": [{"acor": ["CPolaGridSbx"], "acop": 63}, {"acor": ["CPolaGridSbxCtl"], "acop": 51}, {"acor": ["CPolaGridSbxView"], "acop": 50}]}, "pvs": {"acr": [{"acor": ["CAdmin"], "acop": 63}]}, "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "acp6tGr5gJlSR", "ty": 1, "ct": "20261112T050222,828884", "lt": "20261112T050222,828884", "et": "20311111T050223,073846"}}
+
+=== Step 2: AE registration (fake_cell.provision shape: rr false, srv 3)
+UTC: 2026-11-12T05:02:24Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 0169b0bb415349068222b0573bbd080d
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=2
+> body: {"m2m:ae": {"rn": "polagrid-sbx", "api": "Npolagrid", "rr": false, "srv": ["3"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:25 GMT
+< Content-Type: application/json
+< Content-Length: 271
+< Connection: keep-alive
+< X-M2M-RI: 0169b0bb415349068222b0573bbd080d
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050225,603951
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:ae": {"rn": "polagrid-sbx", "api": "Npolagrid", "rr": false, "srv": ["3"], "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "CPolaGridSbx", "ty": 2, "aei": "CPolaGridSbx", "ct": "20261112T050225,462497", "lt": "20261112T050225,462497", "et": "20311111T050225,486737"}}
+
+=== Step 3: command container (mni 10, acpi = ACP ri, label)
+UTC: 2026-11-12T05:02:34Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: d5acd1c157034a77a0a3a62b9053875e
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=3
+> body: {"m2m:cnt": {"rn": "command", "mni": 10, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/command"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:36 GMT
+< Content-Type: application/json
+< Content-Length: 284
+< Connection: keep-alive
+< X-M2M-RI: d5acd1c157034a77a0a3a62b9053875e
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050236,326718
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cnt": {"rn": "command", "mni": 10, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/command"], "cni": 0, "cbs": 0, "st": 0, "pi": "CPolaGridSbx", "ri": "cntQsHnQ0jLGo", "ty": 3, "ct": "20261112T050235,494492", "lt": "20261112T050235,494492", "et": "20311111T050225,486737"}}
+
+=== Step 4: state FlexContainer, SDT cod:opeLl (cnd openLevel, acpi, labels)
+UTC: 2026-11-12T05:02:37Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 219e03e6ff9248b7a1b0617f6291e8e7
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=28
+> body: {"cod:opeLl": {"rn": "state", "cnd": "org.onem2m.common.moduleclass.openLevel", "opeLl": 100, "minLl": 0, "maxLl": 100, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/state", "polagrid/sbx1112/pos/0/0"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:37 GMT
+< Content-Type: application/json
+< Content-Length: 382
+< Connection: keep-alive
+< X-M2M-RI: 219e03e6ff9248b7a1b0617f6291e8e7
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050237,963948
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"cod:opeLl": {"rn": "state", "cnd": "org.onem2m.common.moduleclass.openLevel", "opeLl": 100, "minLl": 0, "maxLl": 100, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/state", "polagrid/sbx1112/pos/0/0"], "cs": 12, "st": 0, "pi": "CPolaGridSbx", "ri": "opeLlfYmdN2Bfhv", "ty": 28, "ct": "20261112T050237,862602", "lt": "20261112T050237,862602", "et": "20311111T050225,486737"}}
+
+=== Step 5: lux container (mni 10, acpi)
+UTC: 2026-11-12T05:02:38Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 6c2bc74e0eb243bd8691bdf92645d435
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=3
+> body: {"m2m:cnt": {"rn": "lux", "mni": 10, "acpi": ["acp6tGr5gJlSR"]}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:39 GMT
+< Content-Type: application/json
+< Content-Length: 243
+< Connection: keep-alive
+< X-M2M-RI: 6c2bc74e0eb243bd8691bdf92645d435
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050239,815808
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cnt": {"rn": "lux", "mni": 10, "acpi": ["acp6tGr5gJlSR"], "cni": 0, "cbs": 0, "st": 0, "pi": "CPolaGridSbx", "ri": "cntQuZC3WrbA0", "ty": 3, "ct": "20261112T050239,393261", "lt": "20261112T050239,393261", "et": "20311111T050225,486737"}}
+
+=== Step 6: subscription on command, our shape (nu = http://127.0.0.1:9500/p0 as zone.py/closed_loop default, net 3, nct 1)
+UTC: 2026-11-12T05:02:46Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: c6a42381921343d8bc6841af16c32dd6
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=23
+> body: {"m2m:sub": {"rn": "s", "nu": ["http://127.0.0.1:9500/p0"], "enc": {"net": [3]}, "nct": 1}}
+< HTTP status: 500
+< X-M2M-RSC: 5204
+< Date: Thu, 12 Nov 2026 05:02:47 GMT
+< Content-Type: application/json
+< Content-Length: 72
+< Connection: keep-alive
+< X-M2M-RI: c6a42381921343d8bc6841af16c32dd6
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050247,221630
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "Verification request failed for: http://127.0.0.1:9500/p0"}
+
+=== Step 6 variation 1: same subscription, nu = the AE-ID of the subscriber (standard resource-ID notification target)
+UTC: 2026-11-12T05:02:54Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 5b595f00b0044363b71d736ae482ee59
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=23
+> body: {"m2m:sub": {"rn": "s", "nu": ["CPolaGridSbx"], "enc": {"net": [3]}, "nct": 1}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:02:55 GMT
+< Content-Type: application/json
+< Content-Length: 231
+< Connection: keep-alive
+< X-M2M-RI: 5b595f00b0044363b71d736ae482ee59
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050255,597697
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:sub": {"rn": "s", "nu": ["CPolaGridSbx"], "enc": {"net": [3]}, "nct": 1, "pi": "cntQsHnQ0jLGo", "ri": "subt8vm4PwSp6", "ty": 23, "ct": "20261112T050255,501824", "lt": "20261112T050255,501824", "et": "20311111T050225,486737"}}
+
+=== Step 7: command CIN by the cell owner (Client.create; con is test data)
+UTC: 2026-11-12T05:03:04Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: bacd143fa4c048df8e1ef5594181e418
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{\"cmd\": \"sbx1112c1\", \"angles\": [45.0]}"}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:03:06 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: bacd143fa4c048df8e1ef5594181e418
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050306,220171
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112c1\", \"angles\": [45.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cinMEH5CF7j8n", "rn": "cin_gS1V88SGq9", "ty": 4, "ct": "20261112T050305,753348", "lt": "20261112T050305,753348", "et": "20311111T050225,486737", "st": 1}}
+
+=== Step 8: command/la by the owner (Client.latest)
+UTC: 2026-11-12T05:03:07Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command/la
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: cfe0c6f7d09848d2a6625aba02c3d831
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:08 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: cfe0c6f7d09848d2a6625aba02c3d831
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050308,041334
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112c1\", \"angles\": [45.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cinMEH5CF7j8n", "rn": "cin_gS1V88SGq9", "ty": 4, "ct": "20261112T050305,753348", "lt": "20261112T050305,753348", "et": "20311111T050225,486737", "st": 1}}
+
+=== Step 9: command CIN by the controller originator (ACP rule C|R|N|DISC; originator is not a registered AE)
+UTC: 2026-11-12T05:03:08Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 356b4f20d14a4d9e8063fb4c125e56a9
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{\"cmd\": \"sbx1112c2\", \"angles\": [30.0]}"}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:03:10 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 356b4f20d14a4d9e8063fb4c125e56a9
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050310,356116
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112c2\", \"angles\": [30.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cin3RVtpdQLYZ", "rn": "cin_kPKjEqfYCs", "ty": 4, "ct": "20261112T050309,523868", "lt": "20261112T050309,523868", "et": "20311111T050225,486737", "st": 2}}
+
+=== Step 10: command/la by the controller originator
+UTC: 2026-11-12T05:03:11Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command/la
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 3adf6da7d064430aa9955eff3e918500
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:12 GMT
+< Content-Type: application/json
+< Content-Length: 262
+< Connection: keep-alive
+< X-M2M-RI: 3adf6da7d064430aa9955eff3e918500
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050312,271513
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"cmd\": \"sbx1112c2\", \"angles\": [30.0]}", "cs": 38, "pi": "cntQsHnQ0jLGo", "ri": "cin3RVtpdQLYZ", "rn": "cin_kPKjEqfYCs", "ty": 4, "ct": "20261112T050309,523868", "lt": "20261112T050309,523868", "et": "20311111T050225,486737", "st": 2}}
+
+=== Step 11: lux CIN by the cell owner (con is test data, not a measurement)
+UTC: 2026-11-12T05:03:20Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/lux
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 135b0fc9092542f386a3e81fa0812603
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{\"lux\": 123.0, \"fake\": true}"}}
+< HTTP status: 201
+< X-M2M-RSC: 2001
+< Date: Thu, 12 Nov 2026 05:03:21 GMT
+< Content-Type: application/json
+< Content-Length: 250
+< Connection: keep-alive
+< X-M2M-RI: 135b0fc9092542f386a3e81fa0812603
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050321,347788
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"lux\": 123.0, \"fake\": true}", "cs": 28, "pi": "cntQuZC3WrbA0", "ri": "cin5K3q8oBRYM", "rn": "cin_gMkDAE69uZ", "ty": 4, "ct": "20261112T050321,035757", "lt": "20261112T050321,035757", "et": "20311111T050225,486737", "st": 1}}
+
+=== Step 12: lux/la by the owner
+UTC: 2026-11-12T05:03:22Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/lux/la
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: b0dc1430571f4c638d40ab2763ac499e
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:23 GMT
+< Content-Type: application/json
+< Content-Length: 250
+< Connection: keep-alive
+< X-M2M-RI: b0dc1430571f4c638d40ab2763ac499e
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050323,212278
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"con": "{\"lux\": 123.0, \"fake\": true}", "cs": 28, "pi": "cntQuZC3WrbA0", "ri": "cin5K3q8oBRYM", "rn": "cin_gMkDAE69uZ", "ty": 4, "ct": "20261112T050321,035757", "lt": "20261112T050321,035757", "et": "20311111T050225,486737", "st": 1}}
+
+=== Step 13: GET state FlexContainer by the owner (our code updates state with PUT; PUT not sent in this run)
+UTC: 2026-11-12T05:03:24Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 66071f3887ab468f96b2ff667bb816e6
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:25 GMT
+< Content-Type: application/json
+< Content-Length: 382
+< Connection: keep-alive
+< X-M2M-RI: 66071f3887ab468f96b2ff667bb816e6
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050325,043493
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"cod:opeLl": {"rn": "state", "cnd": "org.onem2m.common.moduleclass.openLevel", "opeLl": 100, "minLl": 0, "maxLl": 100, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/state", "polagrid/sbx1112/pos/0/0"], "cs": 12, "st": 0, "pi": "CPolaGridSbx", "ri": "opeLlfYmdN2Bfhv", "ty": 28, "ct": "20261112T050237,862602", "lt": "20261112T050237,862602", "et": "20311111T050225,486737"}}
+
+=== Step 14: check_acp without PUT - viewer reads state (want 200)
+UTC: 2026-11-12T05:03:25Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state
+> X-M2M-Origin: CPolaGridSbxView
+> X-M2M-RI: b5a339b1487c47d199c2f328996fc9ee
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:26 GMT
+< Content-Type: application/json
+< Content-Length: 382
+< Connection: keep-alive
+< X-M2M-RI: b5a339b1487c47d199c2f328996fc9ee
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050326,822379
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"cod:opeLl": {"rn": "state", "cnd": "org.onem2m.common.moduleclass.openLevel", "opeLl": 100, "minLl": 0, "maxLl": 100, "acpi": ["acp6tGr5gJlSR"], "lbl": ["polagrid/sbx1112/state", "polagrid/sbx1112/pos/0/0"], "cs": 12, "st": 0, "pi": "CPolaGridSbx", "ri": "opeLlfYmdN2Bfhv", "ty": 28, "ct": "20261112T050237,862602", "lt": "20261112T050237,862602", "et": "20311111T050225,486737"}}
+
+=== Step 15: check_acp - viewer POSTs a CIN to lux (want 403)
+UTC: 2026-11-12T05:03:27Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/lux
+> X-M2M-Origin: CPolaGridSbxView
+> X-M2M-RI: e0ee5b11428d4ec58f338deaadfb7b6d
+> X-M2M-RVI: 3
+> Accept: application/json
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"con": "{}"}}
+< HTTP status: 403
+< X-M2M-RSC: 4103
+< Date: Thu, 12 Nov 2026 05:03:28 GMT
+< Content-Type: application/json
+< Content-Length: 96
+< Connection: keep-alive
+< X-M2M-RI: e0ee5b11428d4ec58f338deaadfb7b6d
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050328,321889
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "originator: CPolaGridSbxView has no CREATE privileges for resource: cntQuZC3WrbA0"}
+
+=== Step 16: originator in no ACP rule reads state (want 403)
+UTC: 2026-11-12T05:03:29Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state
+> X-M2M-Origin: CPolaGridSbxNobody
+> X-M2M-RI: 80d5a8dfeb0342b09dc3786a08060ead
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 403
+< X-M2M-RSC: 4103
+< Date: Thu, 12 Nov 2026 05:03:30 GMT
+< Content-Type: application/json
+< Content-Length: 102
+< Connection: keep-alive
+< X-M2M-RI: 80d5a8dfeb0342b09dc3786a08060ead
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050330,107375
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "originator: CPolaGridSbxNobody has no RETRIEVE privileges for resource: opeLlfYmdN2Bfhv"}
+
+=== Step 17: discovery fu=1&lbl=<command label>&ty=3 by the controller originator (zone.py Controller.setup; no grant_discovery PUT here)
+UTC: 2026-11-12T05:03:40Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&lbl=polagrid/sbx1112/command&ty=3
+> X-M2M-Origin: CPolaGridSbxCtl
+> X-M2M-RI: 64a6aaed962a4aa09e43d9106a3706ed
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:41 GMT
+< Content-Type: application/json
+< Content-Length: 66
+< Connection: keep-alive
+< X-M2M-RI: 64a6aaed962a4aa09e43d9106a3706ed
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050341,572904
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command"]}
+
+=== Step 18: discovery fu=1&lbl=<state label>&ty=28 by the viewer originator (closed_loop.check_acp, real_cell)
+UTC: 2026-11-12T05:03:42Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&lbl=polagrid/sbx1112/state&ty=28
+> X-M2M-Origin: CPolaGridSbxView
+> X-M2M-RI: 433a6679137e4365971549ca58f7d188
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:43 GMT
+< Content-Type: application/json
+< Content-Length: 64
+< Connection: keep-alive
+< X-M2M-RI: 433a6679137e4365971549ca58f7d188
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050343,208907
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state"]}
+
+=== Step 19: discovery fu=1&lbl=<state label>&ty=28 by the cell owner
+UTC: 2026-11-12T05:03:44Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&lbl=polagrid/sbx1112/state&ty=28
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: 7fd4c219b3a14eb5bc49802867392625
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:45 GMT
+< Content-Type: application/json
+< Content-Length: 64
+< Connection: keep-alive
+< X-M2M-RI: 7fd4c219b3a14eb5bc49802867392625
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050345,102007
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state"]}
+
+=== Step 20: discovery fu=1&lbl=<pos label> (no ty) by CAdmin
+UTC: 2026-11-12T05:03:46Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&lbl=polagrid/sbx1112/pos/0/0
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: e7b9f0151f6a47589496a2f8e21611f3
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:46 GMT
+< Content-Type: application/json
+< Content-Length: 64
+< Connection: keep-alive
+< X-M2M-RI: e7b9f0151f6a47589496a2f8e21611f3
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050346,546148
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/state"]}
+
+=== Step 21: discovery fu=1&ty=3 by the cell owner (harden_acp.py filter)
+UTC: 2026-11-12T05:03:47Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&ty=3
+> X-M2M-Origin: CPolaGridSbx
+> X-M2M-RI: a92718e5a23c4cad8d6fa174134d4978
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:48 GMT
+< Content-Type: application/json
+< Content-Length: 114
+< Connection: keep-alive
+< X-M2M-RI: a92718e5a23c4cad8d6fa174134d4978
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050348,728574
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": ["acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/command", "acme-cse-mn-mep1-sbxXXXX/polagrid-sbx/lux"]}
+
+=== Step 22: discovery fu=1&ty=3 by an originator in no ACP rule
+UTC: 2026-11-12T05:03:49Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX?fu=1&ty=3
+> X-M2M-Origin: CPolaGridSbxNobody
+> X-M2M-RI: dd871c8378ae40c69099335a1d60506d
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< X-M2M-RSC: 2000
+< Date: Thu, 12 Nov 2026 05:03:50 GMT
+< Content-Type: application/json
+< Content-Length: 16
+< Connection: keep-alive
+< X-M2M-RI: dd871c8378ae40c69099335a1d60506d
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T050350,348949
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:uril": []}
+

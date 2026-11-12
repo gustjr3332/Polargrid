@@ -121,8 +121,12 @@ Where each number above comes from. All files are in `sw/edge_ai/results/`; each
 | Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` |
 | ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
 | tinyIoT MN steady writes: 69 req/s default, 458 req/s after the serialization patch, 577 req/s in a separate write-ahead-log configuration | `bench_tinyiot_mn_1001.txt`, `bench_tinyiot_mn_latest_1007.txt`, `bench_tinyiot_mn_wal_1001.txt` |
+| Hosted MEC Sandbox, scenario `dep-opt-c`: four preconfigured ACME MN-CSEs answer with `cst=2` and hold a `<remoteCSE>` for the organizers' IN-CSE; MEC 011 and MEC 033 answer | `sandbox_dep_opt_c_1112.txt` |
+| Same MN-CSE (mep1): AE, container, CIN and latest retrieval following TR-0086 clause 5.3 | `sandbox_dep_opt_c_5_3_1112.txt` |
+| Same MN-CSE: our resource tree (ACP, AE, command container, `cod:opeLl` FlexContainer, label discovery, command round trip); all accepted except one subscription whose `nu` was not reachable from the sandbox | `sandbox_dep_opt_c_tree_1112.txt` |
+| Same MN-CSE: controller AE, group with two command containers, one fan-out CIN reached both; an originator without rights got 403 | `sandbox_dep_opt_c_grp_1112.txt` |
 
-The ACME and tinyIoT runs are one laptop, one run each, and the settings differ between files, so quote them with their file. The 577 figure is from the write-ahead-log configuration of 1 October; the latest build measured 458.
+The ACME and tinyIoT runs are one laptop, one run each, and the settings differ between files, so quote them with their file. The Sandbox runs are one run each on one cell (two for the group), with request and response logs, the sandbox id masked. The 577 figure is from the write-ahead-log configuration of 1 October; the latest build measured 458.
 
 The three AI stages, and what is implemented here and what is a library call:
 
@@ -143,7 +147,10 @@ This is a prototype. What is not done:
 - The `docker compose up` quick start reached the first CIN in 176 s with a cold rebuild and 10 to 11 s warm (three runs on one PC, base images already cached). The first CIN comes from the controller setup, not from a closed-loop run.
 - The 1,000 cells are virtual. Only one real cell exists.
 - The real cell's AI loop closes by a desk-lux threshold. The rule reads a falling desk value as a reason to reopen, so with a continuous flashlight the cell can open and close in a loop. A minimum hold time after closing would fix it, and it is not written yet.
-- The ACP hardening, TLS, SAREF mapping and MEC VM deployment planned for the contest are not in this repository.
+- The ACP hardening, TLS and SAREF mapping planned for the contest are not in this repository.
+- MEC deployment is only partly done. On the hosted Sandbox we used the preconfigured `dep-opt-c` scenario and registered our own AEs, ACP and group on its ACME MN-CSE. We did not deploy our own container there, because the hosted page has no scenario editor, and we did not test notification delivery into the Sandbox. We did not check from the IN-CSE side that our resources are visible, because that needs an account we do not have.
+- tinyIoT cannot register to a public IN-CSE over HTTPS with Basic auth by itself (no TLS, no Authorization header, IP addresses only). A reverse proxy next to the MN would work according to the tinyIoT maintainers; we did not build it. MEC-IPE does not work with tinyIoT, so the MEC services path uses ACME.
+- The ESP32 MQTT firmware passes host tests and a fake-cell run. It has not run on real hardware against a real broker.
 
 ## Contributing
 

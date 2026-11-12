@@ -1,0 +1,157 @@
+TR-0086 clause 5.3 "Registering a oneM2M Device" - deployment Option C, one run, 2026-11-12 (UTC)
+Target: co-located ACME MN-CSE of mep1 on the hosted ETSI MEC Sandbox (scenario dep-opt-c). Sandbox id masked as sbxXXXX.
+Guide: docs/4_대회자료/TR-0086_Developer_Guide.pdf (GitLab branch print, 10/29/26). Steps: 5.3.2, 5.3.3.1.3 (Step 1c), 5.3.3.2 (Step 2), Annex A.2.1, A.2.6, A.2.7.
+Names: AE rn polagrid-test, originator CPolaGridTest, api NPolaGrid, container telemetry. CIN con is test data, not a measurement.
+Not done: 5.3.3.2 retrieval through the IN-CSE (needs Basic auth, out of scope), A.2.2~A.2.5, A.2.8~A.2.10. Clause 5.3 has no MEC 033 registered_devices step.
+Lines starting with ">" are the request, "<" the response (all response headers as received). curl -sk (self-signed cert).
+
+=== Step 0 (5.3.2 prerequisite): GET <cse-path> returns 200 with CSEBase
+UTC: 2026-11-12T04:54:30Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CAdmin
+> X-M2M-RI: cb-get-1794459270
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< HTTP/1.1 200 OK
+< Date: Thu, 12 Nov 2026 04:54:31 GMT
+< Content-Type: application/json
+< Content-Length: 881
+< Connection: keep-alive
+< X-M2M-RSC: 2000
+< X-M2M-RI: cb-get-1794459270
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045430,924671
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cb": {"ri": "acme-cse-id-mn-mep1-sbxXXXX", "rn": "acme-cse-mn-mep1-sbxXXXX", "csi": "/acme-cse-id-mn-mep1-sbxXXXX", "spi": "//acme.example.com", "csz": ["application/json", "application/vnd.onem2m-res+json", "application/cbor", "application/vnd.onem2m-res+cbor"], "acpi": ["/acme-cse-id-mn-mep1-sbxXXXX/acpCreateRootResources"], "poa": ["https://82.112.253.59:443/sbxXXXX/mep1/meep-acme-mn-cse"], "cst": 2, "srt": [1, 2, 3, 4, 5, 9, 10, 13, 14, 15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 30, 34, 43, 44, 47, 48, 58, 60, 62, 63, 64, 65, 66, 10001, 10002, 10003, 10004, 10009, 10010, 10013, 10014, 10016, 10018, 10024, 10028, 10029, 10030, 10058, 10060, 10062, 10063, 10064, 10065, 10066], "srv": ["2a", "3", "4", "5"], "pi": "", "ty": 5, "ct": "20261112T044847,694362", "lt": "20261112T044847,694362", "ici": "/estimed-id-in", "ctm": "20261112T045430,898913"}}
+
+=== Step 0b (5.3.3.2 reconnect note): GET <cse-path>/polagrid-test before create
+UTC: 2026-11-12T04:54:32Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-test
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: ae-pre-1794459272
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 404
+< HTTP/1.1 404 NOT FOUND
+< Date: Thu, 12 Nov 2026 04:54:32 GMT
+< Content-Type: application/json
+< Content-Length: 82
+< Connection: keep-alive
+< X-M2M-RSC: 4004
+< X-M2M-RI: ae-pre-1794459272
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045432,428220
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:dbg": "No resource with this ID: acme-cse-mn-mep1-sbxXXXX/polagrid-test"}
+
+=== Step 1c (5.3.3.1.3): AE registration to co-located MN-CSE (Option C)
+UTC: 2026-11-12T04:54:41Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: ae-1794459281-000001
+> X-M2M-RVI: 3
+> Content-Type: application/json;ty=2
+> body: {"m2m:ae": {"rn": "polagrid-test", "api": "NPolaGrid", "rr": true, "srv": ["3"]}}
+< HTTP status: 201
+< HTTP/1.1 201 CREATED
+< Date: Thu, 12 Nov 2026 04:54:42 GMT
+< Content-Type: application/json
+< Content-Length: 273
+< Connection: keep-alive
+< X-M2M-RSC: 2001
+< X-M2M-RI: ae-1794459281-000001
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045442,170989
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:ae": {"rn": "polagrid-test", "api": "NPolaGrid", "rr": true, "srv": ["3"], "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "CPolaGridTest", "ty": 2, "aei": "CPolaGridTest", "ct": "20261112T045442,157148", "lt": "20261112T045442,157148", "et": "20311111T045442,161901"}}
+
+=== Step 2 (5.3.3.2): verification, GET <cse-path>/polagrid-test
+UTC: 2026-11-12T04:54:48Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-test
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: ae-get-1794459288-000002
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< HTTP/1.1 200 OK
+< Date: Thu, 12 Nov 2026 04:54:48 GMT
+< Content-Type: application/json
+< Content-Length: 273
+< Connection: keep-alive
+< X-M2M-RSC: 2000
+< X-M2M-RI: ae-get-1794459288-000002
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045448,823758
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:ae": {"rn": "polagrid-test", "api": "NPolaGrid", "rr": true, "srv": ["3"], "pi": "acme-cse-id-mn-mep1-sbxXXXX", "ri": "CPolaGridTest", "ty": 2, "aei": "CPolaGridTest", "ct": "20261112T045442,157148", "lt": "20261112T045442,157148", "et": "20311111T045442,161901"}}
+
+=== A.2.1: container creation under the AE
+UTC: 2026-11-12T04:54:49Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-test
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: cnt-1794459289-000003
+> X-M2M-RVI: 3
+> Content-Type: application/json;ty=3
+> body: {"m2m:cnt": {"rn": "telemetry"}}
+< HTTP status: 201
+< HTTP/1.1 201 CREATED
+< Date: Thu, 12 Nov 2026 04:54:50 GMT
+< Content-Type: application/json
+< Content-Length: 212
+< Connection: keep-alive
+< X-M2M-RSC: 2001
+< X-M2M-RI: cnt-1794459289-000003
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045450,350384
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cnt": {"rn": "telemetry", "cni": 0, "cbs": 0, "st": 0, "pi": "CPolaGridTest", "ri": "cntepbduI2Zu4", "ty": 3, "ct": "20261112T045450,220285", "lt": "20261112T045450,220285", "et": "20311111T045442,161901"}}
+
+=== A.2.6: telemetry publication (contentInstance, rn omitted)
+UTC: 2026-11-12T04:54:57Z
+> POST https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-test/telemetry
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: cin-1794459296-000004
+> X-M2M-RVI: 3
+> Content-Type: application/json;ty=4
+> body: {"m2m:cin": {"cnf": "application/json:0", "con": "{\"lux\": 123, \"angle\": 45}"}}
+< HTTP status: 201
+< HTTP/1.1 201 CREATED
+< Date: Thu, 12 Nov 2026 04:54:57 GMT
+< Content-Type: application/json
+< Content-Length: 276
+< Connection: keep-alive
+< X-M2M-RSC: 2001
+< X-M2M-RI: cin-1794459296-000004
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045457,994104
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"cnf": "application/json:0", "con": "{\"lux\": 123, \"angle\": 45}", "cs": 25, "pi": "cntepbduI2Zu4", "ri": "cinw0SB9d8smb", "rn": "cin_fjpkg73SkQ", "ty": 4, "ct": "20261112T045457,658289", "lt": "20261112T045457,658289", "et": "20311111T045442,161901", "st": 1}}
+
+=== A.2.7: verification, GET <cse-path>/polagrid-test/telemetry/la
+UTC: 2026-11-12T04:54:58Z
+> GET https://82.112.253.59/sbxXXXX/mep1/meep-acme-mn-cse/acme-cse-mn-mep1-sbxXXXX/polagrid-test/telemetry/la
+> X-M2M-Origin: CPolaGridTest
+> X-M2M-RI: get-1794459298-000005
+> X-M2M-RVI: 3
+> Accept: application/json
+< HTTP status: 200
+< HTTP/1.1 200 OK
+< Date: Thu, 12 Nov 2026 04:55:00 GMT
+< Content-Type: application/json
+< Content-Length: 276
+< Connection: keep-alive
+< X-M2M-RSC: 2000
+< X-M2M-RI: get-1794459298-000005
+< X-M2M-RVI: 3
+< X-M2M-OT: 20261112T045459,945430
+< Strict-Transport-Security: max-age=15724800; includeSubDomains
+< body:
+{"m2m:cin": {"cnf": "application/json:0", "con": "{\"lux\": 123, \"angle\": 45}", "cs": 25, "pi": "cntepbduI2Zu4", "ri": "cinw0SB9d8smb", "rn": "cin_fjpkg73SkQ", "ty": 4, "ct": "20261112T045457,658289", "lt": "20261112T045457,658289", "et": "20311111T045442,161901", "st": 1}}
+
