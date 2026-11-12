@@ -7,6 +7,8 @@ docs/
 !sw/app_ui/README.md
 !sw/app_ui/demo/README.md
 !sw/edge_ai/README.md
+!sw/edge_ai/sim/TINYIOT_BUG_REPORTS.md
+!sw/edge_ai/sim/sandbox_receiver/README.md
 
 __pycache__/
 .pytest_cache/
