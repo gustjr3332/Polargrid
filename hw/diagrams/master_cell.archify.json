@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PolaGrid real cell: what is built",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1280,
+      640
+    ]
+  },
+  "components": [
+    {
+      "id": "in",
+      "type": "cloud",
+      "label": "tinyIoT IN-CSE",
+      "sublabel": "port 3000",
+      "pos": [
+        300,
+        60
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "controller",
+      "type": "backend",
+      "label": "Controller",
+      "sublabel": "AI loop",
+      "pos": [
+        50,
+        240
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "mn",
+      "type": "cloud",
+      "label": "tinyIoT MN-CSE",
+      "sublabel": "port 3001",
+      "pos": [
+        300,
+        240
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "broker",
+      "type": "messagebus",
+      "label": "mosquitto",
+      "sublabel": "MQTT broker",
+      "pos": [
+        560,
+        140
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "bt_bridge.py",
+      "sublabel": "serial lines to CSE requests",
+      "pos": [
+        560,
+        340
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "phone",
+      "type": "frontend",
+      "label": "Phone app",
+      "sublabel": "PWA + demo server",
+      "pos": [
+        300,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "esp",
+      "type": "backend",
+      "label": "Control module",
+      "sublabel": "ESP32, one cell AE",
+      "pos": [
+        820,
+        240
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "motor",
+      "type": "frontend",
+      "label": "Stepper and disc",
+      "sublabel": "28BYJ-48, belt, film",
+      "pos": [
+        820,
+        90
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "cellsensor",
+      "type": "frontend",
+      "label": "Cell sensor",
+      "sublabel": "BH1750 behind the disc",
+      "pos": [
+        1080,
+        170
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "desk",
+      "type": "frontend",
+      "label": "Desk sensor",
+      "sublabel": "BH1750 on the desk",
+      "pos": [
+        1080,
+        310
+      ],
+      "size": [
+        170,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Laptop (WSL)",
+      "wraps": [
+        "in",
+        "controller",
+        "mn",
+        "broker",
+        "bridge",
+        "phone"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Window",
+      "wraps": [
+        "esp",
+        "motor",
+        "cellsensor",
+        "desk"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ctl-mn",
+      "from": "controller",
+      "to": "mn",
+      "label": "HTTP"
+    },
+    {
+      "id": "mn-in",
+      "from": "mn",
+      "to": "in",
+      "label": "registers",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "phone-mn",
+      "from": "phone",
+      "to": "mn",
+      "label": "HTTP",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "mn-broker",
+      "from": "mn",
+      "to": "broker",
+      "label": "MQTT",
+      "variant": "dashed"
+    },
+    {
+      "id": "broker-esp",
+      "from": "broker",
+      "to": "esp",
+      "label": "Wi-Fi",
+      "variant": "dashed"
+    },
+    {
+      "id": "bridge-mn",
+      "from": "bridge",
+      "to": "mn",
+      "label": "HTTP"
+    },
+    {
+      "id": "esp-bridge",
+      "from": "esp",
+      "to": "bridge",
+      "label": "Bluetooth",
+      "variant": "emphasis"
+    },
+    {
+      "id": "esp-motor",
+      "from": "esp",
+      "to": "motor",
+      "label": "steps",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "cellsensor-esp",
+      "from": "cellsensor",
+      "to": "esp",
+      "label": "I2C"
+    },
+    {
+      "id": "desk-esp",
+      "from": "desk",
+      "to": "esp",
+      "label": "I2C"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Run on the real cell",
+      "items": [
+        "Bluetooth build: the laptop bridge turns the cell's lines into CSE requests",
+        "Closed-angle sweeps and the AI loop used this path"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "MQTT build (dashed)",
+      "items": [
+        "oneM2M MQTT binding with commands as SUB notifications",
+        "Passed host tests and a fake cell; not run on the real ESP32"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Fail-safe",
+      "items": [
+        "No CSE reply for 60 s: the cell opens",
+        "No new command for 30 min: the cell opens"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PolaGrid oneM2M resource tree (one zone on one MN-CSE)",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [
+      1280,
+      640
+    ]
+  },
+  "components": [
+    {
+      "id": "mn",
+      "type": "cloud",
+      "label": "MN-CSE",
+      "sublabel": "tinyIoT, TinyIoT-mn001",
+      "pos": [
+        60,
+        270
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "env",
+      "type": "backend",
+      "label": "AE {run}env",
+      "sublabel": "room sensors",
+      "pos": [
+        420,
+        67
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "sun",
+      "type": "database",
+      "label": "CNT sun",
+      "sublabel": "altitude, azimuth, outdoor lux",
+      "pos": [
+        800,
+        30
+      ],
+      "size": [
+        260,
+        56
+      ]
+    },
+    {
+      "id": "desks",
+      "type": "database",
+      "label": "CNT desks",
+      "sublabel": "desk lux per command id",
+      "pos": [
+        800,
+        104
+      ],
+      "size": [
+        260,
+        56
+      ]
+    },
+    {
+      "id": "cell",
+      "type": "backend",
+      "label": "AE {run}p{i}",
+      "sublabel": "one per cell",
+      "pos": [
+        420,
+        270
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "lux",
+      "type": "database",
+      "label": "CNT lux",
+      "sublabel": "cell sensor (real cell)",
+      "pos": [
+        800,
+        196
+      ],
+      "size": [
+        260,
+        56
+      ]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "FCNT state",
+      "sublabel": "SDT cod:opeLl, 0 to 100",
+      "pos": [
+        800,
+        270
+      ],
+      "size": [
+        260,
+        56
+      ]
+    },
+    {
+      "id": "command",
+      "type": "messagebus",
+      "label": "CNT command",
+      "sublabel": "angle table, mni 10, SUB s",
+      "pos": [
+        800,
+        344
+      ],
+      "size": [
+        260,
+        56
+      ]
+    },
+    {
+      "id": "ctl",
+      "type": "backend",
+      "label": "AE {run}ctl",
+      "sublabel": "controller",
+      "pos": [
+        420,
+        456
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "grp",
+      "type": "messagebus",
+      "label": "GRP grp",
+      "sublabel": "mid = command containers",
+      "pos": [
+        800,
+        456
+      ],
+      "size": [
+        260,
+        56
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "mn-env",
+      "from": "mn",
+      "to": "env"
+    },
+    {
+      "id": "mn-cell",
+      "from": "mn",
+      "to": "cell"
+    },
+    {
+      "id": "mn-ctl",
+      "from": "mn",
+      "to": "ctl"
+    },
+    {
+      "id": "env-sun",
+      "from": "env",
+      "to": "sun"
+    },
+    {
+      "id": "env-desks",
+      "from": "env",
+      "to": "desks"
+    },
+    {
+      "id": "cell-lux",
+      "from": "cell",
+      "to": "lux"
+    },
+    {
+      "id": "cell-state",
+      "from": "cell",
+      "to": "state"
+    },
+    {
+      "id": "cell-command",
+      "from": "cell",
+      "to": "command"
+    },
+    {
+      "id": "ctl-grp",
+      "from": "ctl",
+      "to": "grp"
+    },
+    {
+      "id": "grp-fanout",
+      "from": "grp",
+      "to": "command",
+      "label": "fopt",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One command per zone",
+      "items": [
+        "The controller writes one CIN to grp/fopt",
+        "The group copies it into every cell's command container"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Discovery and notification",
+      "items": [
+        "Command containers are found by label polagrid/{run}/command",
+        "SUB on command notifies the cell; SUB on desks notifies the controller"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Access control",
+      "items": [
+        "One ACP per cell AE, one for env, one for the controller",
+        "Controller: create, retrieve, notify, discover. Viewer: read only"
+      ]
+    }
+  ]
+}
