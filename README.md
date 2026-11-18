@@ -146,7 +146,7 @@ Twelve-cell room view: open `sw/app_ui/mockup/index.html?room=12` (add `&live=1`
 
 This is a prototype. What is not done:
 
-- The `docker compose up` quick start reached the first CIN in 176 s with a cold rebuild and 10 to 11 s warm (three runs on one PC, base images already cached). The first CIN comes from the controller setup, not from a closed-loop run.
+- The `docker compose up` quick start reached the first CIN in 176 s with a cold rebuild and 10 to 11 s warm (three runs on one PC, base images already cached). From a fresh clone of this repository with a cold rebuild it took 110 s (18 November, one run, `first_cin_1118_clone_cold.txt`). The first CIN comes from the controller setup, not from a closed-loop run.
 - The 1,000 cells are virtual. Only one real cell exists.
 - The real cell's AI loop closes by a desk-lux threshold. The rule reads a falling desk value as a reason to reopen, so with a continuous flashlight the cell can open and close in a loop. A minimum hold time after closing would fix it, and it is not written yet.
 - The ACP hardening, TLS and SAREF mapping planned for the contest are not in this repository.

@@ -1,0 +1,11 @@
+Fresh clone of https://github.com/gustjr3332/Polargrid at 70f4a43, then COLD=1 bash sw/edge_ai/tools/first_cin.sh
+(docker compose build --no-cache, then up -d, until mn001 holds a CIN). 2026-11-18, one run, Windows docker on the
+laptop, base images (ubuntu:24.04, python:3.12-slim, eclipse-mosquitto:2) already cached; apt and pip downloads were not.
+COMPOSE_PROJECT_NAME=pgclean IN_PORT=13000 MN_PORT=13001 (Windows port 3001 is taken on this PC).
+
+ Container pgclean-mn-1 Healthy 
+ Container pgclean-controller-1 Starting 
+ Container pgclean-controller-1 Started 
+first CIN after 110 s (cold=1)
+mn001 registered on IN:
+{"m2m:uril":["TinyIoT/id-mn001"]}
