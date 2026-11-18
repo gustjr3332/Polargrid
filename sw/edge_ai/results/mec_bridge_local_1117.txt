@@ -1,0 +1,44 @@
+FAKE MEC platform, not a Sandbox run
+tools/mec_bridge.py against a real tinyIoT MN-CSE (docker compose stack of this repository, IN 13000, MN mn001 13001)
+and a stand-in for the MEC platform: a local HTTP stub that answers the two MEC 011 paths the bridge reads, with the
+service names, versions and paths the hosted Sandbox returned on 2026-11-12 (sandbox_dep_opt_c_1112.txt).
+2026-11-17, one PC, one run of each step. The stub's base URL was http://127.0.0.1:18080/sbxFAKE/mep1.
+
+== 1. bridge --once, then read as the viewer originator (run id mect)
+[bridge] 6 services, 6 active
+mep1-mec012-1     ACTIVE    2.2.1   /rni/v2/
+mep1-mec013-1     ACTIVE    3.1.1   /location/v3/
+mep1-mec021-1     ACTIVE    2.1.1   /amsi/v1/
+mep1-mec033-1     ACTIVE    3.1.1   /iots/v1/
+mep1-mec040-1     ACTIVE    3.3.1   /fed_enablement/v1/
+mep1-mec046-1     ACTIVE    3.1.1   /sens/v1/
+platform time 1794891602 (TRACEABLE), local clock 1794891603
+(read = label discovery of the two containers as C<run>view, then <container>/la. No MEC call.)
+
+== 2. loop, fresh run id mect2, poll every 2 s for 9 s. The stub drops one service from its third answer on.
+[bridge] 6 services, 6 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+container cni afterwards: services 2, time 5
+(the service list is written when it changes, the time on every poll)
+newest services CIN read as the viewer: mec012, mec013, mec033, mec040, mec046 (mec021 gone)
+
+== 3. access control on the bridge's containers (HTTP status)
+viewer  (Cmect2view) GET services/la        200
+controller (Cmect2ctl) GET time/la          200
+originator in no rule GET services/la       403
+viewer POST a CIN to services               403
+originator in no rule, discovery by label   {} (empty)
+
+== 4. session key
+The newest services CIN holds neither "sbxFAKE" nor the stub's host: endpoints are stored relative to the MEP base.
+
+Not tested here: a real MEC platform (the hosted Sandbox needs a logged-in session), TLS (--insecure path),
+subscription and notification on the two containers, a consumer that acts on the values, the IN-forwarded
+originator form.
+
+== 5. restart: bridge --once again on run id mect2 (AE, ACP and containers already there)
+[bridge] 5 services, 5 active
+(setup accepted the existing resources and the poll wrote as before)

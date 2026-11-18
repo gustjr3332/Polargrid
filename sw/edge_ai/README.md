@@ -3,6 +3,23 @@
 PolaGrid edge AI: the `polagrid` package (physics model, AI (1) to (3), oneM2M client, zone controller), tests,
 tools and results. Run commands from this folder. The tinyIoT setup is described in `sim/README.md`.
 
+## MEC services through oneM2M
+
+`tools/mec_bridge.py` is a bridge AE on the zone MN-CSE. It reads MEC 011 on a MEC platform (the service list with
+each state, and the platform time) and writes them into two labelled containers, so other AEs read them from the CSE
+instead of calling the MEC API. It stands in for the Sandbox MEC-IPE, which does not run on tinyIoT.
+
+```bash
+python tools/mec_bridge.py bridge <mep_base> --cse http://127.0.0.1:3001/TinyIoT-mn001 --once --insecure
+python tools/mec_bridge.py read --cse http://127.0.0.1:3001/TinyIoT-mn001     # as the viewer, CSE only
+python tools/mec_bridge.py watch --cse http://127.0.0.1:3001/TinyIoT-mn001 --for 60   # controller subscribes, prints changes
+```
+
+`<mep_base>` is the session URL of the MEC platform (for the hosted Sandbox `https://<host>/<sandbox-key>/mep1`); do not
+commit it. `watch` needs the CSE to reach `127.0.0.1:<port>`, so run it next to the MN (same host or network namespace).
+Results: `results/mec_bridge_sandbox_1117.txt` (live Sandbox), `results/mec_bridge_local_1117.txt` and
+`results/mec_bridge_sub_local_1118.txt` (local stub).
+
 ## Real cell (one control module)
 
 `tools/real_cell.py` drives the one real cell running the ESP32 firmware in `sw/actuator`. It uses the same MN-CSE,

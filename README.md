@@ -125,6 +125,8 @@ Where each number above comes from. All files are in `sw/edge_ai/results/`; each
 | Same MN-CSE (mep1): AE, container, CIN and latest retrieval following TR-0086 clause 5.3 | `sandbox_dep_opt_c_5_3_1112.txt` |
 | Same MN-CSE: our resource tree (ACP, AE, command container, `cod:opeLl` FlexContainer, label discovery, command round trip); all accepted except one subscription whose `nu` was not reachable from the sandbox | `sandbox_dep_opt_c_tree_1112.txt` |
 | Same MN-CSE: controller AE, group with two command containers, one fan-out CIN reached both; an originator without rights got 403 | `sandbox_dep_opt_c_grp_1112.txt` |
+| MEC services through oneM2M: a bridge AE on a tinyIoT MN-CSE copied the Sandbox's MEC 011 service list (seven services, all active) and platform time into two containers; a viewer originator read them back by label, and an originator in no rule got 403 | `mec_bridge_sandbox_1117.txt` (live Sandbox), `mec_bridge_local_1117.txt` (local stub) |
+| Same bridge, local stub MEC platform: the zone controller subscribed to the service list and was notified of exactly the one service that disappeared | `mec_bridge_sub_local_1118.txt` |
 
 The ACME and tinyIoT runs are one laptop, one run each, and the settings differ between files, so quote them with their file. The Sandbox runs are one run each on one cell (two for the group), with request and response logs, the sandbox id masked. The 577 figure is from the write-ahead-log configuration of 1 October; the latest build measured 458.
 
@@ -149,8 +151,16 @@ This is a prototype. What is not done:
 - The real cell's AI loop closes by a desk-lux threshold. The rule reads a falling desk value as a reason to reopen, so with a continuous flashlight the cell can open and close in a loop. A minimum hold time after closing would fix it, and it is not written yet.
 - The ACP hardening, TLS and SAREF mapping planned for the contest are not in this repository.
 - MEC deployment is only partly done. On the hosted Sandbox we used the preconfigured `dep-opt-c` scenario and registered our own AEs, ACP and group on its ACME MN-CSE. We did not deploy our own container there, because the hosted page has no scenario editor, and we did not test notification delivery into the Sandbox. We did not check from the IN-CSE side that our resources are visible, because that needs an account we do not have.
-- tinyIoT cannot register to a public IN-CSE over HTTPS with Basic auth by itself (no TLS, no Authorization header, IP addresses only). A reverse proxy next to the MN would work according to the tinyIoT maintainers; we did not build it. MEC-IPE does not work with tinyIoT, so the MEC services path uses ACME.
+- MEC services reach oneM2M through a small bridge AE (`sw/edge_ai/tools/mec_bridge.py`). It reads MEC 011 on the Sandbox and writes the service list and the platform time into the tinyIoT MN-CSE, where other AEs find them by label. It ran once against the live Sandbox, from a laptop and with certificate verification off. Locally, against a stub MEC platform, the zone controller subscribed to the service list and was notified when a service disappeared (`watch` mode); that was not repeated against the live Sandbox. tinyIoT asks for CREATE before it accepts a subscription, so the controller may also write into those containers. The controller reports changes and does not act on them yet.
+- tinyIoT cannot register to a public IN-CSE over HTTPS with Basic auth by itself (no TLS, no Authorization header, IP addresses only). A reverse proxy next to the MN would work according to the tinyIoT maintainers; we did not build it. MEC-IPE does not work with tinyIoT, so on tinyIoT the bridge AE above stands in for it.
 - The ESP32 MQTT firmware passes host tests and a fake-cell run. It has not run on real hardware against a real broker.
+
+## oneM2M and related projects
+
+- oneM2M, the IoT service-layer standard PolaGrid is built on: https://www.onem2m.org/
+- tinyIoT, the CSE used for the IN and the MN-CSEs here: https://github.com/seslabSJU/tinyIoT
+- ACME, the CSE inside the ETSI MEC Sandbox scenario: https://github.com/ankraft/ACME-oneM2M-CSE
+- ETSI MEC Sandbox: https://try-mec.etsi.org/
 
 ## Contributing
 

@@ -1,0 +1,47 @@
+FAKE MEC platform, not a Sandbox run
+tools/mec_bridge.py watch: the zone controller subscribes to the bridge's service list and is notified of changes.
+Real tinyIoT MN-CSE (docker compose stack of this repository). The bridge, the watcher and the MEC stub ran in a
+python container sharing the stack's network namespace (docker run --network container:polargrid-mqtt-1), so the
+CSE could reach the watcher's notification URL http://127.0.0.1:9795/mec. The stub answers the two MEC 011 paths with
+the Sandbox's service list of 2026-11-12 and drops one service (mep1-mec021-1) from its third answer on.
+2026-11-18, one run, run id subt3. An earlier run (subt) showed tinyIoT refuses <subscription> creation without the
+CREATE privilege (403 "originator has no privilege" with R|N|DISC), so the bridge's ACP now gives the controller
+C|R|N|DISC (as on env/desks) and the viewer R|N|DISC.
+
+== 1. bridge --once (stub answer 1)
+[bridge] 6 services, 6 active
+== 2. watch as the controller, 30 s, in the background
+== 3. bridge loop every 3 s for 14 s (stub drops one service from its 3rd answer)
+[bridge] 6 services, 6 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+[bridge] 5 services, 5 active
+== watch output so far
+[watch] 6 services known, subscribing to subt3mec/services
+[watch] notified, no change
+[watch] mep1-mec021-1: ACTIVE -> gone
+== subscription resource (as CAdmin)
+200 {"nu": ["http://127.0.0.1:9795/mec"], "enc": {"net": [3]}, "nct": 1, "cr": null}
+SUB create as Csubt3view: 403
+SUB create as Cstranger: 403
+== CIN create on services (HTTP status)
+CIN create as Csubt3view: 403
+CIN create as Csubt3ctl: 201
+CIN create as Cstranger: 403
+== watch log at the end
+[watch] 6 services known, subscribing to subt3mec/services
+[watch] notified, no change
+[watch] mep1-mec021-1: ACTIVE -> gone
+[watch] ignored a notification without a service list
+
+Notes
+- "notified, no change": the loop is a new bridge process, which writes the list once when it starts.
+- "mep1-mec021-1: ACTIVE -> gone": the stub's third answer; the bridge wrote a new list and the CSE notified the
+  controller. Later polls found no change and wrote only the time, so no further notification.
+- "ignored a notification without a service list": the CIN created above as Csubt3ctl ("{}"). Since the controller
+  may create in the container (needed to subscribe on tinyIoT), it can also write content there; the watcher skips
+  content without a service list.
+
+Not tested: a real MEC platform for the watcher (the live-Sandbox run of the bridge is mec_bridge_sandbox_1117.txt),
+the controller acting on a change, the viewer subscribing (it has no CREATE), notification over MQTT.

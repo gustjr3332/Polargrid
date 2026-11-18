@@ -1,0 +1,40 @@
+tools/mec_bridge.py against the hosted ETSI MEC Sandbox (scenario dep-opt-c, MEC platform mep1) and a tinyIoT MN-CSE
+on the laptop (docker compose stack of this repository, IN 13000, MN mn001 13001). 2026-11-17 (UTC), one run.
+The bridge ran on the laptop and read MEC 011 over HTTPS with certificate verification off (--insecure: the Sandbox
+has a self-signed certificate). Sandbox id masked as sbxXXXX. Local-stub run of the same steps: mec_bridge_local_1117.txt.
+
+### 2026-11-17T07:42:10Z bridge --once --insecure, run id sbx1117
+[bridge] 7 services, 7 active
+### read as viewer (label discovery + la, no MEC call)
+MEC IPE Service   ACTIVE    1.0     /meep_ipe/v1
+mep1-mec012-1     ACTIVE    2.2.1   /rni/v2/
+mep1-mec013-1     ACTIVE    3.1.1   /location/v3/
+mep1-mec021-1     ACTIVE    2.1.1   /amsi/v1/
+mep1-mec033-1     ACTIVE    3.1.1   /iots/v1/
+mep1-mec040-1     ACTIVE    3.3.1   /fed_enablement/v1/
+mep1-mec046-1     ACTIVE    3.1.1   /sens/v1/
+platform time 1794901335 (TRACEABLE), local clock 1794901336
+### 2026-11-17T07:42:16Z loop, poll every 10 s for 35 s
+[bridge] 7 services, 7 active
+[bridge] 7 services, 7 active
+cni services: 2
+cni time: 3
+### access control (HTTP status)
+viewer GET services/la: 200
+originator in no rule GET services/la: 403
+viewer POST CIN: 403
+### raw newest services CIN (as CAdmin)
+{"m2m:cin":{"con":"{\"services\": [{\"name\": \"MEC IPE Service\", \"id\": \"5978fe46-9ee6-4f2a-b59e-d68597964e19\", \"state\": \"ACTIVE\", \"version\": \"1.0\", \"paths\": [\"/meep_ipe/v1\"]}, {\"name\": \"mep1-mec012-1\", \"id\": \"c30cfb93-a6dd-4039-b5e6-386f48dc1ae2\", \"state\": \"ACTIVE\", \"version\": \"2.2.1\", \"paths\": [\"/rni/v2/\"]}, {\"name\": \"mep1-mec013-1\", \"id\": \"52461c7c-9513-44d5-9122-5dfaa732d81f\", \"state\": \"ACTIVE\", \"version\": \"3.1.1\", \"paths\": [\"/location/v3/\"]}, {\"name\": \"mep1-mec021-1\", \"id\": \"19d125c8-7e58-4743-956c-22b0a07bc057\", \"state\": \"ACTIVE\", \"version\": \"2.1.1\", \"paths\": [\"/amsi/v1/\"]}, {\"name\": \"mep1-mec033-1\", \"id\": \"b12a5294-b7ad-4b50-9b78-c49be5146cc2\", \"state\": \"ACTIVE\", \"version\": \"3.1.1\", \"paths\": [\"/iots/v1/\"]}, {\"name\": \"mep1-mec040-1\", \"id\": \"1e543f8e-b9fd-4a7b-8cdc-02163565e2b3\",
+
+session key or host in the stored CINs: 0
+
+Notes
+- services cni 2: the --once run wrote the list, and the loop run wrote it once more when it started (a new bridge
+  process has no previous list). The loop's second poll found the list unchanged and wrote only the time.
+- The loop finished two polls in 35 s at --every 10, so one poll against the Sandbox took several seconds.
+- "MEC IPE Service" is the Sandbox's own MEC-IPE, registered in MEC 011 next to the six mep1-mec* services.
+- read = label discovery of the two containers as C<run>view, then <container>/la on the MN-CSE. No MEC call.
+
+Not tested: subscription and notification on the two containers, a consumer that acts on the values (the controller
+does not use them), the bridge running inside the Sandbox, the IN-forwarded originator form, the reverse direction
+in the same session (registering the zone CSE as a MEC 011 service, tools/mec011_smoke.py, last run 2026-10-08).
