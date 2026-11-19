@@ -68,6 +68,11 @@ read every 2 s from `/api/real` of `demo/server.py` (viewer GETs only). Serve it
 Start `tools/fake_cell.py --run real1` first to try it without hardware (the page then says "FAKE CELL"). Checked with a stub CSE
 and a headless screenshot, not yet with tinyIoT or the ESP32. Mode, goal, brightness slider and the other four screens are still
 made-up, and the Mode/Comfort buttons do not send anything.
+Since 2026-11-19 every screen reads live values with `?live=1` (checked with tinyIoT and the real ESP32 over Bluetooth):
+Comfort shows the desk reading and scales its slider to it (up to half the reading), Today shows desk and cell lux now, the
+desk maximum and motor moves since the page opened and the real cell's correction count, Settings shows the CSE link, the
+viewer originator, Bluetooth and the time of the last state. Mode marks Manual, because the live stack runs `real_cell.py app`.
+Only Today's comparison (fixed open, blind, timer) is simulation, and it is labelled so.
 
 **Phone install as PWA (2026-10-19).** The mockup has a manifest and an apple-touch-icon, so Safari on an iPhone can add it to the home
 screen (Share, Add to Home Screen) and it opens full screen. Open `http://<PC IP>:8000/mockup/?live=1` from the phone on the same Wi-Fi first

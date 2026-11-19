@@ -4,6 +4,8 @@ PolaGrid cuts glare at the desk without darkening the room. A window is divided 
 
 This repository is open source (MIT). It holds the edge AI, the ESP32 firmware for one real cell, the demo and phone-app mockup, and the hardware notes. It was built by one person for a university maker contest, and it is being prepared for the oneM2M developer contest.
 
+Project write-up with the demo video: https://www.hackster.io/gustjr3332/polargrid-54ae9e
+
 ## The problem
 
 With the sun on a monitor or a book, most people pull the blind down, and then the room is dark enough that the lights go on. The sun also moves, so the blind goes up and down all day, and the seat next to you gets different light from the same window. Glare is about where the light lands, not how much of it there is.
@@ -118,8 +120,7 @@ Where each number above comes from. All files are in `sw/edge_ai/results/`; each
 | Other-room model 3.04 to 4.12 h, retrained 0.05 to 0.23 h | `ai3_rooms_1017.txt` |
 | 1,000-cell closed loop p95 1.8 to 2.9 s (five zones at a time), 4.4 to 6.7 s (ten at once) | `closed_loop_1000_repeat_1015.txt` |
 | IN down for 240 s, 48 of 48 zone-control requests succeeded | `in_outage_1027*.csv` and `.log` |
-| Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` |
-| ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
+| Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` || ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
 | tinyIoT MN steady writes: 69 req/s default, 458 req/s after the serialization patch, 577 req/s in a separate write-ahead-log configuration | `bench_tinyiot_mn_1001.txt`, `bench_tinyiot_mn_latest_1007.txt`, `bench_tinyiot_mn_wal_1001.txt` |
 | Hosted MEC Sandbox, scenario `dep-opt-c`: four preconfigured ACME MN-CSEs answer with `cst=2` and hold a `<remoteCSE>` for the organizers' IN-CSE; MEC 011 and MEC 033 answer | `sandbox_dep_opt_c_1112.txt` |
 | Same MN-CSE (mep1): AE, container, CIN and latest retrieval following TR-0086 clause 5.3 | `sandbox_dep_opt_c_5_3_1112.txt` |

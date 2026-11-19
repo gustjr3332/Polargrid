@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How the PolaGrid AI decides",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "viewBox": [1380, 780]
+  },
+  "components": [
+    {"id": "sun", "type": "external", "label": "Sun position", "sublabel": "from time and place", "pos": [40, 60], "size": [210, 70]},
+    {"id": "sensors", "type": "frontend", "label": "Light sensors", "sublabel": "each cell and each desk", "pos": [40, 240], "size": [210, 70]},
+    {"id": "taps", "type": "frontend", "label": "User taps", "sublabel": "too bright / too dark", "pos": [40, 420], "size": [210, 70]},
+    {"id": "kalman", "type": "backend", "label": "1. Kalman filter", "sublabel": "each cell's share of each desk's light", "pos": [350, 240], "size": [230, 70]},
+    {"id": "ridge", "type": "backend", "label": "3. Ridge regression", "sublabel": "each user's preferred desk light", "pos": [630, 420], "size": [230, 70]},
+    {"id": "lp", "type": "backend", "label": "2. Linear program", "sublabel": "picks every cell's angle", "pos": [630, 240], "size": [230, 70]},
+    {"id": "cse", "type": "cloud", "label": "oneM2M MN-CSE", "sublabel": "one content instance reaches every cell AE", "pos": [940, 240], "size": [260, 70]},
+    {"id": "cells", "type": "frontend", "label": "Cells turn", "sublabel": "motors move the discs", "pos": [940, 570], "size": [260, 70]}
+  ],
+  "boundaries": [
+    {"kind": "region", "label": "AI: runs on the edge", "wraps": ["kalman", "ridge", "lp", "cse"]}
+  ],
+  "connections": [
+    {"id": "sun-k", "from": "sun", "to": "kalman", "fromSide": "right", "toSide": "top"},
+    {"id": "sens-k", "from": "sensors", "to": "kalman"},
+    {"id": "taps-r", "from": "taps", "to": "ridge"},
+    {"id": "k-r", "from": "kalman", "to": "ridge", "fromSide": "bottom", "toSide": "left"},
+    {"id": "r-lp", "from": "ridge", "to": "lp", "fromSide": "top", "toSide": "bottom"},
+    {"id": "lp-cse", "from": "lp", "to": "cse"},
+    {"id": "cse-cells", "from": "cse", "to": "cells", "fromSide": "bottom", "toSide": "top"},
+    {"id": "cells-sens", "from": "cells", "to": "sensors", "label": "sensors read again", "fromSide": "bottom", "toSide": "left", "via": [[1070, 675], [15, 675], [15, 275]], "variant": "dashed"}
+  ]
+}
