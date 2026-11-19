@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "PolaGrid 150 mm cell wiring v0.3",
+    "title": "PolaGrid real cell wiring",
     "quality_profile": "showcase",
     "viewBox": [
       1120,
@@ -14,9 +14,23 @@
       "id": "button",
       "type": "external",
       "label": "Open-all button",
-      "sublabel": "Manual override",
+      "sublabel": "Firmware input, to GND",
       "pos": [
         40,
+        100
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "laptop",
+      "type": "backend",
+      "label": "Laptop bridge",
+      "sublabel": "tools/bt_bridge.py",
+      "pos": [
+        340,
         100
       ],
       "size": [
@@ -39,13 +53,13 @@
       ]
     },
     {
-      "id": "psu",
+      "id": "adapter",
       "type": "security",
-      "label": "USB 5 V charger",
-      "sublabel": "Powers ESP32 and motor driver",
+      "label": "9 V DC adapter",
+      "sublabel": "Single supply for the cell",
       "pos": [
         40,
-        300
+        280
       ],
       "size": [
         168,
@@ -56,7 +70,7 @@
       "id": "esp32",
       "type": "backend",
       "label": "Central module (ESP32)",
-      "sublabel": "Motor IN1-4, I2C, Wi-Fi",
+      "sublabel": "Bluetooth SPP polagrid-cell",
       "pos": [
         340,
         300
@@ -73,7 +87,7 @@
       "sublabel": "BH1750 0x23, behind the cell",
       "pos": [
         900,
-        200
+        260
       ],
       "size": [
         168,
@@ -95,12 +109,12 @@
       ]
     },
     {
-      "id": "stepper",
-      "type": "frontend",
-      "label": "28BYJ-48 stepper",
-      "sublabel": "Z24 pinion, 6.25:1 to disc rim",
+      "id": "mb102",
+      "type": "security",
+      "label": "MB102 supply",
+      "sublabel": "5 V rail for the ESP32 and the motor",
       "pos": [
-        340,
+        40,
         500
       ],
       "size": [
@@ -114,7 +128,21 @@
       "label": "ULN2003 driver",
       "sublabel": "4 phases to the motor",
       "pos": [
-        40,
+        340,
+        500
+      ],
+      "size": [
+        168,
+        72
+      ]
+    },
+    {
+      "id": "stepper",
+      "type": "frontend",
+      "label": "28BYJ-48 stepper",
+      "sublabel": "40T MXL pulley, belt on disc rim",
+      "pos": [
+        640,
         500
       ],
       "size": [
@@ -130,24 +158,42 @@
       "to": "esp32",
       "label": "GPIO 25",
       "fromSide": "right",
-      "toSide": "top"
+      "toSide": "left"
+    },
+    {
+      "id": "esp-lap",
+      "from": "esp32",
+      "to": "laptop",
+      "label": "Bluetooth SPP",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "lap-mn",
+      "from": "laptop",
+      "to": "mn",
+      "label": "oneM2M requests",
+      "fromSide": "right",
+      "toSide": "left"
     },
     {
       "id": "esp-mn",
       "from": "esp32",
       "to": "mn",
-      "label": "Wi-Fi MQTT (planned)",
+      "label": "Wi-Fi MQTT (not run on hardware)",
       "variant": "dashed",
-      "fromSide": "top",
-      "toSide": "left"
+      "fromSide": "right",
+      "toSide": "bottom"
     },
     {
       "id": "esp-cell",
       "from": "esp32",
       "to": "cellsens",
-      "label": "I2C GPIO 21/22 (cable)",
+      "label": "I2C SDA 21, SCL 22",
       "fromSide": "right",
-      "toSide": "left"
+      "toSide": "left",
+      "labelDy": -24,
+      "labelDx": 110
     },
     {
       "id": "esp-desk",
@@ -158,29 +204,47 @@
       "toSide": "left"
     },
     {
-      "id": "psu-esp",
-      "from": "psu",
-      "to": "esp32",
-      "label": "5 V (VIN)"
-    },
-    {
-      "id": "psu-uln",
-      "from": "psu",
+      "id": "mb-uln",
+      "from": "mb102",
       "to": "uln",
       "label": "5 V motor supply",
       "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelDy": 24
+    },
+    {
+      "id": "ad-mb",
+      "from": "adapter",
+      "to": "mb102",
+      "label": "9 V DC",
       "fromSide": "bottom",
       "toSide": "top",
-      "labelDy": 24
+      "labelAt": [
+        124,
+        426
+      ]
+    },
+    {
+      "id": "mb-esp",
+      "from": "mb102",
+      "to": "esp32",
+      "label": "5 V to VIN pin, common GND",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelAt": [
+        274,
+        440
+      ]
     },
     {
       "id": "esp-uln",
       "from": "esp32",
       "to": "uln",
-      "label": "IN1-4 GPIO 13/26/14/27",
-      "labelDy": 24,
+      "label": "IN1-4 GPIO 13/14/27/26",
       "fromSide": "bottom",
-      "toSide": "right"
+      "toSide": "top",
+      "labelDy": 24
     },
     {
       "id": "uln-step",
@@ -202,10 +266,12 @@
     },
     {
       "dot": "amber",
-      "title": "No servo rail",
+      "title": "Power and motion",
       "items": [
         "The stepper draws about a quarter amp (typical, not measured)",
-        "Home by driving the disc against a stop at boot"
+        "USB only for flashing: pull the ESP32 5V jumper and switch the MB102 off first",
+        "No homing: the disc position at power-up is 0, so set the disc open by hand before power-on",
+        "Coils are switched off when the disc reaches its target"
       ]
     }
   ]

@@ -39,8 +39,8 @@ Ordered parts that fix the geometry:
 - Transmission is about T_single^2 x cos^2(theta) between L1 and L3 (Malus). Measure it with the 10-point test before
   trusting any number.
 - Mark the transmission axis on the sheet and check it by laying two pieces at 90 deg (dark) and 0 deg (clear).
-- Home: the firmware drives the disc 100 deg back until a stop touches, and calls that 0 deg. The stop design is not
-  decided for the round disc (v0.3 used an arc slot and a pin).
+- Home: there is no stop on the round disc, so the firmware does not home (`HOME_OVERDRIVE_DEG` = 0). The disc position
+  at power-up is 0 deg; set the disc open by hand before power-on.
 - Not measured yet: belt slip and backlash, friction of the disc against the frame, light lost in the acrylic disc, and where
   the motor body goes (its 28 mm body does not fit in the corner next to the pulley).
 

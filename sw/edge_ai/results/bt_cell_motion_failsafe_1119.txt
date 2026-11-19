@@ -1,0 +1,61 @@
+Real cell over Bluetooth: test move and link-loss failsafe
+CORRECTION (same day, user watching the cell): the disc did NOT turn during these runs. OK/POS are the firmware's
+own step count, not a measured position, so this file shows the Bluetooth link, the command parser and the board-side
+link-loss rule, not motion. The lux changes below come from the sky, not from the disc. Cause of the stopped motor: open.
+2026-11-19, about 10:33. One run each. Laptop COM4 (outgoing SPP port to "polagrid-cell"), 115200 baud, no CSE in the loop.
+Firmware on the board: env:bt (answers the bt protocol below). Commands are typed lines; the cell answers OK/POS/DESK/LUX.
+LUX <cell> <desk>, DESK <desk>: lux from the sensor behind the disc and the desk sensor.
+
+== 1. test move 0 -> 45 -> 90 -> 0
+10:33:11 < POS 0.0                      (sent by the cell on connect)
+10:33:11 < LUX 8263.3 15145.8
+10:33:14 > PING
+10:33:15 > A 0 45
+10:33:15 < OK 0 45.0 1312
+10:33:18 < POS 45.0
+10:33:18 < DESK 15118.3
+10:33:21 < LUX 4289.2 15025.8
+10:33:21 > A 0 90
+10:33:21 < OK 0 90.0 2624
+10:33:24 < POS 90.0
+10:33:24 < DESK 14993.3
+10:33:27 > A 0 0
+10:33:27 < OK 0 0.0 0
+10:33:31 < LUX 5897.5 15052.5
+10:33:33 < POS 0.0
+10:33:33 < DESK 15146.7
+Command to POS (1 s clock, firmware step count only): 3 s for 0 -> 45, 3 s for 45 -> 90, 6 s for 90 -> 0.
+
+== 2. link-loss failsafe: close the cell, drop the link, reconnect after 77 s
+10:33:52 connected
+10:33:52 < POS 0.0
+10:33:54 > PING                         (arms the failsafe: FAILSAFE fires 60 s after the last PING)
+10:33:55 > A 0 90
+10:33:55 < OK 0 90.0 2624
+10:34:01 < POS 90.0
+10:34:01 < DESK 14977.5
+10:34:01 < LUX 1502.5 14979.2           (1,502 lux behind the disc)
+10:34:01 port closed, link dropped, no PING from here on
+10:35:18 reconnected after 77 s
+10:35:18 < POS 0.0                      (the board had run FAILSAFE and stepped back to 0)
+10:35:21 < LUX 8598.3 15050.0           (8,598 lux behind the disc)
+
+Result: with the link gone, the board ran its link-loss rule and stepped back to 0 without any command.
+The disc itself did not move (motor not turning). The exact moment between 60 s and 77 s
+was not seen, because the cell cannot report while the link is down.
+
+Limits: the desk reading stayed near 15,000 lux at every angle, so the desk sensor was not in the cell's shadow
+in this run; this run checks the link and the board's rules, not motion or dimming at the desk. Privacy mode was off (PRIV 1 would
+keep the cell closed). The sky was not controlled between readings.
+
+== 3. same day, 11:04, full chain: dashboard API -> real_cell.py app -> tinyIoT MN-CSE -> bt_bridge.py (COM4) -> cell
+(after the user checked the motor side; WSL stack from sw/app_ui/demo/demo_up.sh real, bridge on Windows)
+11:04:25 POST /api/real/level {"level":0}   app: level 0 (angle 90.0) -> cells [0]   bridge: real1a1795053814: 90.0   cell: OK 0 90.0 2624
+11:04:39 POST /api/real/level {"level":100} app: level 100 (angle 0.0) -> cells [0]  bridge: real1a1795053815: 0.0    cell: OK 0 0.0 0
+/api/real 8 s after each: level 0, cell_lux 915; level 100, cell_lux 6672.
+The user watched the disc close and open this time. The link-loss open (section 2) has not been repeated with a turning disc.
+
+== 4. 11:17 angle sweep through the same API: see real_cell_sweep_1119_1117.csv. Closed (command 90): cell 817 lux with the
+desk at 5,815; the user also saw the cell sensor under 500 lux when fully closed. Firmware MOTOR_CLOSED_DEG 33 -> 40 built
+(env:bt, host tests pass) and uploaded over USB at about 11:26; command 90 now gives `OK 0 90.0 3180` (motor 40 deg).
+After that upload both BH1750 stopped answering (`ERR desk sensor`, no LUX), so the new closed angle has no light reading yet.

@@ -36,7 +36,9 @@ inline float clampDisc(float d) { return d < 0 ? 0 : (d > DISC_MAX_DEG ? DISC_MA
 constexpr float MOTOR_OPEN_DEG = 0.0f;     // motor angle of the brightest reading
 // 11-01: two more sweeps (3 and 5 readings per 10 deg, command angle) put the darkest reading at command 70..75 deg = motor ~31..33,
 // and a cos^2 fit puts it at 75 (motor 33); at command 90 the old 40 read 10% of the open lux instead of ~0.
-constexpr float MOTOR_CLOSED_DEG = 33.0f;  // motor angle of the darkest reading
+// 11-19 (sun, 10 deg steps, cell lux over desk lux because the sky changed): still falling at command 90 (motor 33), a sin^2 fit
+// puts the dark end at motor 40 again (results/real_cell_sweep_1119_1117.csv). No homing, so this follows the disc's boot position.
+constexpr float MOTOR_CLOSED_DEG = 40.0f;  // motor angle of the darkest reading
 
 inline float motorFromDisc(float disc) {
   return MOTOR_OPEN_DEG + clampDisc(disc) / DISC_MAX_DEG * (MOTOR_CLOSED_DEG - MOTOR_OPEN_DEG);

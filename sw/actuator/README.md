@@ -10,12 +10,13 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 14, 27, 26 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it: the ULN2003 on it broke flashing on 10-24). One half step every 2 ms, the serial parser is never blocked.
   Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`, `HOMING` at boot and `HOMED` when done.
   Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (90.4 mm belt pitch radius / 12.94 mm pulley pitch radius, 40T MXL, 10-22) / 360, about 79 half steps per degree (estimate, calibrate) (`hw/README.md`).
-  10-31: the pulley is engaged about 40 deg off, so a command angle (0 open .. 90 closed) is mapped linearly onto motor 0..40 deg (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open (measured max about 17.5 lux against about 1.7 at the dark end, small sample). Re-measure after re-seating the cell.
-- Homing: at boot the motor drives `HOME_OVERDRIVE_DEG` = 100 deg of disc back toward the stop pin, then position 0 is set. Coils switch off when the motor is idle.
+  10-31: the pulley is engaged about 40 deg off, so a command angle (0 open .. 90 closed) is mapped linearly onto motor 0..40 deg
+  (11-01 sweeps moved it to 33, the 11-19 sweep in sunlight back to 40: `sw/edge_ai/results/real_cell_sweep_1119_1117.csv`) (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open (measured max about 17.5 lux against about 1.7 at the dark end, small sample). Re-measure after re-seating the cell.
+- No homing: `HOME_OVERDRIVE_DEG` = 0, so the disc position at power-up is 0. Set the disc open by hand before power-on. Coils switch off when the motor is idle.
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.
 - Build: `pio run` (PlatformIO, ESP32 Arduino). Built 2026-10-18 with the oneM2M part (RAM 14.4 %, flash 74.4 %).
-- Fail-safe and privacy (2026-10-20, host tests and `pio run` pass, not run on hardware):
+- Fail-safe and privacy (2026-10-20, host tests and `pio run` pass; not run on hardware, except the board-side link-loss rule below):
   - The cell opens by itself (serial `FAILSAFE`) when the CSE has not answered for `LINK_LOST_MS` = 60 s, or a fresh command carries an angle that is not a number or outside 0..90. The 30 min watchdog still covers a controller that went silent while the link is fine.
   - Privacy mode: a command CIN with `"mode": "privacy"` (the controller sends angles 90) makes the cell send `PRIV 1` and close fully; the watchdog, the link-loss open and a nonsense angle then leave it dark. A command without `mode` sends `PRIV 0`. The button or serial `OPEN` always opens and ends privacy (the user's own hand). Serial `PRIV <0|1>` sets the flag by hand.
   - After a reboot the disc homes open and the old command is skipped (below), so privacy is restored by the controller's next heartbeat (10 min at most), not by the cell. Mode is not stored in flash.
@@ -73,8 +74,10 @@ The ESP32 can run from its own adapter; it needs no USB link to the laptop.
   - `LUX <cell> <desk>` every 10 s, `-1` for a sensor that did not answer.
 - Fail-open: no `PING` for `LINK_LOST_MS` = 60 s sends `FAILSAFE` (opens unless privacy mode is on). That covers a lost
   BT link, a stopped bridge and a silent CSE. The bridge does the old-command skip after its own start and the angle check.
+  On the real board (2026-11-19, one run) the rule fired: after the link was down 77 s the board reported `POS 0.0`.
+  The motor did not turn in that run, so the disc opening itself is not shown yet (`sw/edge_ai/results/bt_cell_motion_failsafe_1119.txt`).
 - The helpers (`isPing`, `replySteps`, `posLine`, `deskLine`, `luxLine`) are in `src/cell_logic.h`, tested in `tests_host/test_logic.cpp`.
-- Not run on hardware yet: BT pairing, the SPP link from Windows and its range in the demo room.
+- On hardware: pairing and the SPP link from Windows work (the outgoing COM port, 2026-10-29 and 2026-11-19). Range in the demo room was not measured.
 
 Request check without a CSE: `tests_host/zone_capture.py` records what zone.py sends for one cell (fake
 `requests.Session`, output in `tests_host/zone_requests.txt`) and `./test_onem2m --print` prints the firmware's
