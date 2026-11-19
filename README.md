@@ -83,7 +83,7 @@ bash preflight.sh 10           # checks the stack
 bash demo_down.sh              # stops it
 ```
 
-`demo_up.sh replay` plays a recorded day instead of running the zones live, which is faster than real time. The page follows Start, Stop, speed and cloud controls.
+`demo_up.sh replay` plays a recorded day instead of running the zones live, which is faster than real time. Recordings are not in the repository: run `bash record_day.sh` once first (25 to 30 minutes, it writes `replay/day_10min.jsonl`), otherwise replay has nothing to play. The page follows Start, Stop, speed and cloud controls.
 
 One real cell:
 
@@ -105,10 +105,12 @@ cd ../actuator && g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic 
 
 ## Layout
 
-- `hw/`: hardware notes, wiring diagrams, parts
-- `sw/edge_ai/`: the `polagrid` package (physics model, AI stages, oneM2M client), tests, tools, simulator setup, results
-- `sw/actuator/`: ESP32 firmware, with host-side tests
-- `sw/app_ui/`: phone-app mockup and the demo server
+- `hw/`: wiring and architecture diagrams, parts list and build notes
+- `sw/edge_ai/`: the `polagrid` package (physics model, AI stages, oneM2M client), tests, tools, `data/weather`, `sim/` (tinyIoT setup), `results/`
+- `sw/actuator/`: ESP32 firmware, host-side tests, I2C scanner
+- `sw/app_ui/`: phone-app mockup, demo server, classroom replay
+- `compose.yaml`: the quick-start stack
+- `LICENSE`: MIT
 
 ## Evidence and methods
 
@@ -120,7 +122,8 @@ Where each number above comes from. All files are in `sw/edge_ai/results/`; each
 | Other-room model 3.04 to 4.12 h, retrained 0.05 to 0.23 h | `ai3_rooms_1017.txt` |
 | 1,000-cell closed loop p95 1.8 to 2.9 s (five zones at a time), 4.4 to 6.7 s (ten at once) | `closed_loop_1000_repeat_1015.txt` |
 | IN down for 240 s, 48 of 48 zone-control requests succeeded | `in_outage_1027*.csv` and `.log` |
-| Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` || ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
+| Real cell, closed angle sweeps | `real_cell_sweep_1101_1505.csv`, `real_cell_sweep_1101_1516.csv` |
+| ACME 10 req/s steady writes (1,000 AEs, 3,000 writes, default settings) | `bench_acme_0929_1942.txt` |
 | tinyIoT MN steady writes: 69 req/s default, 458 req/s after the serialization patch, 577 req/s in a separate write-ahead-log configuration | `bench_tinyiot_mn_1001.txt`, `bench_tinyiot_mn_latest_1007.txt`, `bench_tinyiot_mn_wal_1001.txt` |
 | Hosted MEC Sandbox, scenario `dep-opt-c`: four preconfigured ACME MN-CSEs answer with `cst=2` and hold a `<remoteCSE>` for the organizers' IN-CSE; MEC 011 and MEC 033 answer | `sandbox_dep_opt_c_1112.txt` |
 | Same MN-CSE (mep1): AE, container, CIN and latest retrieval following TR-0086 clause 5.3 | `sandbox_dep_opt_c_5_3_1112.txt` |
@@ -142,6 +145,10 @@ The three AI stages, and what is implemented here and what is a library call:
 The Kalman filter's uncertainties (initial 3,000 lux, drift 300 lux per step, measurement noise 2% of the mean desk reading plus 25 lux squared) were tuned in the virtual room, not measured on the real sensor.
 
 Twelve-cell room view: open `sw/app_ui/mockup/index.html?room=12` (add `&live=1` with `demo/server.py --real RUN` to show the real cell as the first cell). One real cell plus eleven virtual cells; sun on the right two columns. A cell closes when its lux is at or above the limit (default 2,000, the real cell's full-close threshold; change it in the page or with `?thr=`). The virtual cells' lux values are assumptions, not measurements.
+
+## Data credits
+
+The weather CSVs in `sw/edge_ai/data/weather` come from Open-Meteo.com (ERA5 reanalysis), licensed CC BY 4.0. The source's free API tier is for non-commercial use; see `SOURCE.txt` next to the files.
 
 ## Status and limits
 

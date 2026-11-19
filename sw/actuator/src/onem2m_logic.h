@@ -194,7 +194,7 @@ inline bool parseCommandCin(const std::string& body, int i, std::string& cmd, fl
   return true;
 }
 
-// ---- oneM2M over MQTT (hw/MASTER_MQTT_펌웨어_설계.md 2-2, 2-3, 2-5, 2-6) ----
+// ---- oneM2M over MQTT (see the MQTT design notes) ----
 
 // Request primitive: op 1/2/3 = create/retrieve/update, rvi is the STRING "3" (tinyIoT reads valuestring), ty only for create,
 // pc only when there is a body. `to` is the CSE name plus the HTTP path.

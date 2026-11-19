@@ -66,7 +66,7 @@ body.cmp #cmp{display:flex} body.cmp #stage,body.cmp aside{display:none}
     <section><h2 data-i18n="Command to applied"></h2>
       <div class="row"><span data-i18n="Latency p50"></span><b id="p50">-</b><small>ms</small></div>
       <div class="row"><span data-i18n="Latency p95"></span><b id="p95">-</b><small>ms</small></div>
-      <div class="row"><span data-i18n="Servo moves"></span><b id="mv">-</b><small data-i18n="total"></small></div>
+      <div class="row"><span data-i18n="Motor moves"></span><b id="mv">-</b><small data-i18n="total"></small></div>
     </section>
     <section><h2 data-i18n="Simulated time"></h2><div id="clock">--:--</div>
       <div class="bar" style="margin-top:8px"><i id="day" style="width:0"></i></div></section>
@@ -92,7 +92,7 @@ const KO = {
 "Glare and desk light: PolaGrid AI vs. common methods":"Glare와 책상 밝기: PolaGrid AI와 기존 방식 비교",
 "Simulated room, not measured on hardware.":"시뮬레이션 방입니다. 실물 하드웨어로 측정한 값이 아닙니다.",
 "Desk illuminance":"책상 조도","Desk A":"책상 A","Desk B":"책상 B","Glare index":"Glare 지수","h (cumulative)":"h (누적)","Target line (demo setting)":"목표선 (데모 설정)",
-"Command to applied":"명령 → 적용까지","Servo moves":"Servo 동작","total":"누적",
+"Command to applied":"명령 → 적용까지","Motor moves":"모터 동작","total":"누적",
 "Simulated time":"시뮬레이션 시각","Simulation":"시뮬레이션","Room":"방","Start":"시작","Stop":"정지","Cloud":"구름","Turn window":"창문 방향 돌리기","Reset":"초기화",
 "Events:":"이벤트:","none":"없음","Connection:":"연결:","Cells:":"셀:","Run:":"실행:","Live":"실시간","Replay":"녹화 재생",
 "desk-hours per day, lower is better":"하루 desk-hours, 낮을수록 좋음","Desk too dark":"책상이 너무 어두움",
@@ -195,7 +195,7 @@ function makeFrame(dtSim) {
     const glare = sunI * Math.exp(-(d * d) / 50) * (1 - rw / ROWS * .4);
     const target = elev === 0 ? 15 : Math.max(0, 100 - 100 * glare * 1.1);
     const nv = sim.cells[i] + (target - sim.cells[i]) * .35;
-    if (Math.abs(nv - sim.com[i]) >= 12) { moved++; sim.com[i] = nv; } // a servo move = change of 12+ levels since the last move
+    if (Math.abs(nv - sim.com[i]) >= 12) { moved++; sim.com[i] = nv; } // a motor move = change of 12+ levels since the last move
     sim.cells[i] = nv;
   }
   const avg = (a, b) => { let t = 0, n = 0; for (let r = 0; r < ROWS; r++) for (let c = a; c < b; c++) { t += sim.cells[r * COLS + c]; n++; } return t / n; };

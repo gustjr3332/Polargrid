@@ -24,3 +24,6 @@ hw/archaive/
 
 # Classroom replay frames and GIF (large), made by sw/app_ui/classroom/make_gif.py
 sw/app_ui/classroom/video/
+
+# Editor settings with local paths
+sw/actuator/.vscode/

@@ -6,9 +6,9 @@ One central control module plus control modules sold one cell at a time. A contr
 on the window; the user buys as many as the window needs. The 11/4 demo hardware is one central module and one control
 module, built into a picture frame that stands in for the window (the frame's inner glass area is one cell).
 
-## Cell design v0.4 (10-22: round acrylic disc, timing belt, no laser cutting)
-Everything below is calculated or read from the order list, nothing is measured. The 150 mm design (v0.3, laser-cut disc and
-groove plate, drawings in `diagrams/cell150.html` and `cutting/`) is no longer built; those files are kept as history only.
+## Cell design v0.4 (10-22: round acrylic disc, timing belt)
+Everything below is calculated or read from the order list, nothing is measured. The earlier 150 mm design (v0.3, laser-cut disc and
+groove plate) is no longer built and its drawings were removed.
 
 Ordered parts that fix the geometry:
 
@@ -33,8 +33,8 @@ Ordered parts that fix the geometry:
   pulley sits near 73 mm from the disc centre, inside a square corner whose half width is 89 mm. The pulley flange diameter
   is not in the order list; check that it stays under about 32 mm, or the pulley will touch the frame wall.
 - A servo does not work here: 180 deg at the pulley is only about 26 deg at the disc.
-- Layers are glued or taped, no laser cutting. The stack order (L1 film on the front glass, L3 film on the disc, fixed L2
-  crossed film in the corners) from v0.3 still applies in principle, but the corner offcut plan depended on a 150 mm disc
+- Layers are glued or taped. The stack order (L1 film on the front glass, L3 film on the disc, fixed L2
+  crossed film in the corners) from v0.3 still applies in principle, but the earlier corner offcut plan depended on a 150 mm disc
   in a 150 mm window and has to be redone for a round 179 mm disc in a 178 mm square. Not decided.
 - Transmission is about T_single^2 x cos^2(theta) between L1 and L3 (Malus). Measure it with the 10-point test before
   trusting any number.
@@ -43,7 +43,3 @@ Ordered parts that fix the geometry:
   at power-up is 0 deg; set the disc open by hand before power-on.
 - Not measured yet: belt slip and backlash, friction of the disc against the frame, light lost in the acrylic disc, and where
   the motor body goes (its 28 mm body does not fit in the corner next to the pulley).
-
-Korean versions (for the 11/4 school demo): the wiring diagram is `diagrams/wiring.ko.html` (source
-`wiring.architecture.ko.json`); the English `wiring.html` is unchanged. `diagrams/cell150.html` still shows the old 150 mm
-cell.

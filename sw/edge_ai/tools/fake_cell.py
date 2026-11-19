@@ -14,7 +14,7 @@ left). The app draws each cell there. --index is CELL_INDEX (resource {run}p<ind
 
 --mqtt talks oneM2M over MQTT instead of HTTP (needs paho-mqtt): requests go out as primitives on /oneM2M/req/<originator>/<cse-ri>/json
 and the cell SUBscribes to its command container, so a notification triggers the command read; la is polled every 60 s as a
-safety net (design: hw/MASTER_MQTT_펌웨어_설계.md). --broker is where this script reaches the broker, --nu-broker how the CSE sees it.
+safety net (design: the MQTT design notes). --broker is where this script reaches the broker, --nu-broker how the CSE sees it.
 
     python3 tools/fake_cell.py --mqtt --broker 127.0.0.1:1883 --cse-ri id-mn001
 """

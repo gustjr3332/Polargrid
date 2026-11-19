@@ -1,24 +1,23 @@
-# app_ui: PolaGrid Android app (draft v0)
+# app_ui: PolaGrid phone-app mockup, demo server and classroom replay
 
-The app shows the window's cells and the desk light, and lets the user correct the AI. It talks to the oneM2M CSE
-only. It never talks to the cells or the AI controller directly, so the same app works for 12 real cells or 1,000
-virtual ones.
+This folder holds an HTML mockup of the phone app (`mockup/`), the demo server and 1,000-virtual-cell demo page (`demo/`), and a 3D classroom replay (`classroom/`). There is no installed app. The mockup shows the window's cells and the desk light, and lets the user correct the AI. It talks to the oneM2M CSE
+only, never to the cells or the AI controller directly. Today there is one real cell (ESP32, stepper motor); the other cells in the demo are virtual, up to 1,000.
 
 ## Scope
 
-In v0: see the window, change the mode, say "too bright / too dark", move a single cell by hand, see today's numbers.
-Out of v0: accounts, multiple windows, push notifications, anything that needs a number we have not measured.
+In the mockup: see the window, change the mode, say "too bright / too dark", move a single cell by hand, see today's numbers.
+Out of scope: accounts, multiple windows, push notifications, anything that needs a number we have not measured.
 
 ## Screens
 
-1. **Window** (home). The cell grid (3 x 4 for the demo window), each cell filled by its open level (`cod:opeLl`, 0 to
+1. **Window** (home). The cell grid (3 x 4 in the mockup), each cell filled by its open level (`cod:opeLl`, 0 to
    100). Below it the desk light per desk in lux, the mode chip, and a connection badge. Tap a cell for manual control.
 2. **Comfort**. Two big buttons, "Too bright" and "Too dark", plus a slider for how much (about 100 to 500 lux). Each
    press is one correction: it is sent to the controller and also kept as a training sample for the AI (3) preference model.
    With `?live=1` the Comfort screen also shows "My AI": the page learns the preference itself (`mockup/ridge.js`, Ridge in the browser), draws the wanted offset now and over the day, and posts the model to the demo server (`/api/real/params`). `tools/real_cell.py ai --pref web` aims the cell with it. Web demo only: no installed app.
 3. **Mode**. Auto, Manual, Privacy (all cells closed at night), Away (all open). Auto is the default. Manual keeps the
    AI out until the user switches back or the timer ends.
-4. **Today**. Measured values only: glare hours, hours the desk was below target, number of corrections, servo moves.
+4. **Today**. Measured values only: glare hours, hours the desk was below target, number of corrections, motor moves.
    No savings figures until we have measured ones (project rule).
 5. **Settings**. CSE address, originator, connection test, language, safe-state explanation.
 
@@ -30,7 +29,7 @@ closed: cells return to the open state on their own (project safety rule), and t
 | App action | Resource | Operation |
 |---|---|---|
 | Read cell levels | cell `state` FlexContainer (`cod:opeLl`), found by label `polagrid/<run>/state` | discovery (`fu=1`), then GET |
-| Read desk light, sun | `env/desks`, `env/sun` containers | GET `/la` every 3 s (v0), subscription later |
+| Read desk light, sun | `env/desks`, `env/sun` containers | GET `/la` every 3 s (polling), subscription later |
 | Mode, correction, manual cell | new container `ctl/app` (CIN with `{type, ...}`) | POST CIN |
 
 The controller subscribes to `ctl/app` and applies the request. This needs two things on the CSE side that do not
@@ -39,28 +38,14 @@ create on `ctl/app` only. The existing viewer role (read and discover only) is t
 
 ## Stack
 
-Kotlin, Jetpack Compose, OkHttp for the oneM2M HTTP binding, kotlinx.serialization. v0 polls; the MQTT binding is a
-later step (it also serves the protocol-diversity item of the contest rubric). UI text is Korean or English (see "Language toggle").
+Plain HTML, CSS and JavaScript in `mockup/` and `demo/static/`, served by `demo/server.py` (Python). The page polls the demo server, which reads the CSE over HTTP. UI text is Korean or English.
 
-## Design (Figma)
+## Screen mockup
 
-Frames to draw first: Window (3 states: auto, manual, offline), Comfort, Mode, Today, Settings, cell sheet.
-Tokens: one accent color for "open light", neutral grays for the rest, glare shown by a warm tint on the affected
-cells. Cell fill encodes open level; do not use color alone (add the number on tap).
-
-## Open questions
-
-- Which phone and Android version the demo uses (decides the minimum SDK).
-- Whether the demo phone reaches the CSE directly (same Wi-Fi, port forward) or through the IN.
-- Does the app write the correction as an absolute offset in lux or as a +/- step.
-
-## Screen mockup (for the 11/4 slide)
-
-`mockup/index.html` is a static HTML mockup of the five screens in a phone frame, with made-up numbers labelled "DEMO DATA".
-It is only captured for one slide, so the app does not have to run on Android and no Android Studio is needed. Open it in
+`mockup/index.html` is an HTML mockup of the five screens in a phone frame, with made-up numbers labelled "DEMO DATA" unless `?live=1` is set. Open it in
 Chrome: `?s=0..4` shows one screen (0 Window, 1 Comfort, 2 Mode, 3 Today, 4 Settings), `?view=all` shows all five. The Mode
 screen puts the three goals from the proposal (reduce desk glare, reduce screen reflection, brightest) under Auto.
-**Status 2026-10-19: app development is finished (decision of the project owner).** The only work left is to connect the real cell after it is built (10/24) and check it the week after: see "Live real cell" below. A real Kotlin/Compose app is after 11/4.
+The mockup is the finished app work: a native Android or iOS app is not planned. See "Live real cell" below for the connection to the real cell.
 
 **Live real cell (2026-10-19).** `?live=1` makes the Window screen show the one real cell: its open level, desk lux and cell-sensor lux,
 read every 2 s from `/api/real` of `demo/server.py` (viewer GETs only). Serve it from that server, with `--real RUN`, in WSL:
@@ -85,7 +70,6 @@ screen (Share, Add to Home Screen) and it opens full screen. Open `http://<PC IP
 **Select cells, one slider for all of them (2026-10-19).** The "Select cells" chip on the live Window screen turns tapping into picking: tap cells to tick them (all are ticked when the mode is switched on; "Select all" / "Clear" toggles), and the slider under it sets the open level of the ticked cells at once. The page POSTs `{"level", "cells": [indexes]}` to `/api/real/level` and `real_cell.py app` sends each listed cell its own command (a single `i`, or no list = every cell, still work). With select mode off, touching a cell and dragging its edge sets that one cell. Checked with four fake cells: ticking 0 and 3 and moving the slider to 40 set cells 0 and 3 to 40 after about 10 s and left cells 1 and 2 at 100.
 
 **Cells appear one by one, where they were installed.** Each cell firmware has `CELL_INDEX`, `CELL_ROW`, `CELL_COL` in `secrets.h` (row 0 = top, col 0 = left, seen from inside the room). It puts the position on its `state` as a second label `polagrid/<run>/pos/<row>/<col>`. `/api/real` finds the cells by the state label (cached 3 s), reads each position and level, and returns `cells`; the Window screen draws one box per cell at its row and column, dashed boxes for empty places, and a new cell pops in. Checked with `fake_cell.py --index 1 --row 0 --col 1` etc. (four cells in a 2 x 2 grid, the fourth appeared within a few seconds of starting it). Not done: a cell cannot be removed from the screen except by deleting its resources on the CSE. While the disc turns the cell shows "Moving, target N%". The status bar has a Wi-Fi icon (struck out when the cell cannot be read) because the phone must be on the same Wi-Fi as the cell module. It reads `/api/real` from the same server, so there is no API address setting. Not tried on a phone.
-An Android app via Capacitor was scaffolded and removed the same day (the SDK alone was about 7 GB and the demo phone is an iPhone).
 
 ## Virtual lecture room (3D replay)
 

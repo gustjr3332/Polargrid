@@ -2,13 +2,13 @@
 Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of one control module with a 28BYJ-48 stepper and talks to a oneM2M MN-CSE (tinyIoT) over Wi-Fi with plain HTTP, or over Bluetooth through a bridge on the laptop (`env:bt`, below).
 
 ## Prototype (one control module, ESP32, 28BYJ-48 + ULN2003)
-- `src/cell_logic.h`: angle to half steps, half-step coil table, a position-keeping `Stepper` (homing first, then one half step per call), serial command parser, watchdog. No hardware calls, tested on the PC:
+- `src/cell_logic.h`: angle to half steps, half-step coil table, a position-keeping `Stepper` (one half step per call, no homing), serial command parser, watchdog. No hardware calls, tested on the PC:
   `g++ -std=c++17 -I src tests_host/test_logic.cpp -o test_logic && ./test_logic` (passes, 2026-10-18).
 - `src/onem2m_logic.h`: the oneM2M side without hardware calls: request paths, originators and JSON bodies, the
   command CIN parser, angle to `opeLl`, retry backoff.
   `g++ -std=c++17 -I src tests_host/test_onem2m.cpp -o test_onem2m && ./test_onem2m` (passes, 2026-10-18).
 - `src/main.cpp`: ULN2003 IN1..IN4 on GPIO 13, 14, 27, 26 (`N_CELLS = 1`, GPIO 12 is a strapping pin, avoid it: the ULN2003 on it broke flashing on 10-24). One half step every 2 ms, the serial parser is never blocked.
-  Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`, `HOMING` at boot and `HOMED` when done.
+  Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`.
   Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (90.4 mm belt pitch radius / 12.94 mm pulley pitch radius, 40T MXL, 10-22) / 360, about 79 half steps per degree (estimate, calibrate) (`hw/README.md`).
   10-31: the pulley is engaged about 40 deg off, so a command angle (0 open .. 90 closed) is mapped linearly onto motor 0..40 deg
   (11-01 sweeps moved it to 33, the 11-19 sweep in sunlight back to 40: `sw/edge_ai/results/real_cell_sweep_1119_1117.csv`) (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open (measured max about 17.5 lux against about 1.7 at the dark end, small sample). Re-measure after re-seating the cell.
@@ -19,7 +19,7 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
 - Fail-safe and privacy (2026-10-20, host tests and `pio run` pass; not run on hardware, except the board-side link-loss rule below):
   - The cell opens by itself (serial `FAILSAFE`) when the CSE has not answered for `LINK_LOST_MS` = 60 s, or a fresh command carries an angle that is not a number or outside 0..90. The 30 min watchdog still covers a controller that went silent while the link is fine.
   - Privacy mode: a command CIN with `"mode": "privacy"` (the controller sends angles 90) makes the cell send `PRIV 1` and close fully; the watchdog, the link-loss open and a nonsense angle then leave it dark. A command without `mode` sends `PRIV 0`. The button or serial `OPEN` always opens and ends privacy (the user's own hand). Serial `PRIV <0|1>` sets the flag by hand.
-  - After a reboot the disc homes open and the old command is skipped (below), so privacy is restored by the controller's next heartbeat (10 min at most), not by the cell. Mode is not stored in flash.
+  - After a reboot the disc position is taken as 0 (open) and the old command is skipped (below), so privacy is restored by the controller's next heartbeat (10 min at most), not by the cell. Mode is not stored in flash.
   - PC side: `evaluate.fail_open(controller)` opens every cell when the AI raises, answers NaN or angles outside 0..90, or the desk reading is broken; `real_cell.py app` takes `POST /mode {"mode": "privacy" | "auto"}` (and answers `/level` with 409 while privacy is on).
 - Position in the window: `CELL_ROW`/`CELL_COL` in `secrets.h` say where the cell sits in the window (row 0 = top, col 0 = left, seen from inside); the cell adds them to its `state` as the label `polagrid/<run>/pos/<row>/<col>` so the app draws it there (host test passes, 2026-10-19, not run on hardware).
 
@@ -68,7 +68,7 @@ The ESP32 can run from its own adapter; it needs no USB link to the laptop.
   Built 2026-10-25 with the default partition table (bt: RAM 12.3 %, flash 85.2 %; esp32dev: RAM 15.7 %, flash 77.8 %).
 - Bridge to cell: the serial commands (`A 0 <deg>`, `PRIV <0|1>`, `FAILSAFE`, `OPEN`), plus `PING` after every CSE reply.
   `PING` keeps the link alive but is not a controller heartbeat, so the 30 min watchdog still counts only commands.
-- Cell to bridge: `OK ...`, `HOMING`, `HOMED` and the other log lines as on USB, and
+- Cell to bridge: `OK ...` and the other log lines as on USB, and
   - `POS <disc deg>` when the motor stops at a new position (any cause, and again on every new BT connection). The bridge PUTs `state`.
   - `DESK <lux>` once the disc reaches the target of the last `A` (or 0 after `FAILSAFE`), 250 ms after arrival. The bridge posts it to `{run}env/desks` with the command id, which is the reply the controller waits for. No reading gives `ERR desk sensor` and no reply.
   - `LUX <cell> <desk>` every 10 s, `-1` for a sensor that did not answer.
@@ -89,5 +89,4 @@ differ as listed above. The command parser is tested on CINs shaped like the one
 Still needed on the PC side (not in this folder): a driver that runs `Controller(client, RUN_ID, port).setup(1)`
 against the same MN, publishes `{run}env/sun` (zone.py makes it from the sun model), and uses a one-desk room.
 
-Not done: the half steps per turn (4096), the step interval (2 ms) and the turning direction are typical values to calibrate on the real module (flip `phase` direction if the disc turns the wrong way). Nothing has run on a real ESP32 yet: Wi-Fi, HTTP against tinyIoT, the BH1750 reads and the button are built
-but untested. No MQTT yet. The earlier Wokwi simulation (servo) was removed with the servo hardware; the 28BYJ-48 is not simulated.
+Not done: the half steps per turn (4096), the step interval (2 ms) and the turning direction are typical values to calibrate on the real module (flip `phase` direction if the disc turns the wrong way). The Bluetooth build (`env:bt`) has run on one real ESP32 with one cell (2026-11-19, see above). The Wi-Fi HTTP build against tinyIoT and the button are built but not re-tested on hardware. The MQTT build (`env:mqtt`, `-DUSE_MQTT`) passes the host tests and a fake-cell run, and has not run on real hardware against a real broker. There is one real cell and it uses a stepper motor; the motor is not simulated.
