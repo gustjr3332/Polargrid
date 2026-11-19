@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One command to start the 11/4 demo stack inside WSL, and a fresh database every time (a database with many old resources
-# was slow: docs 0-8 #9). Stop everything with demo_down.sh, check it with preflight.sh.
+# was slow). Stop everything with demo_down.sh, check it with preflight.sh.
 #
 #   bash demo_up.sh real            # the real cell (or tools/fake_cell.py): IN, one fresh MN, narrowed defaultACP, real_cell.py app, demo server
 #   bash demo_up.sh virtual [M=10]  # M virtual zones of 100 cells (1,000 cells): fresh MNs, narrowed defaultACP, zones, demo server (waits for Start)

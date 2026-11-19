@@ -1,0 +1,12 @@
+# Versions of the first four are pinned as in the Dockerfile (Python 3.12). The rest are unpinned.
+numpy==1.26.4
+scipy==1.11.4
+scikit-learn==1.9.1
+requests==2.31.0
+joblib
+pytest
+# bt_bridge.py (Bluetooth bridge)
+pyserial
+# sw/app_ui/demo/server.py (demo server)
+fastapi
+uvicorn

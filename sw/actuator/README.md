@@ -11,7 +11,7 @@ Polarizer drive software: ESP32 firmware that turns the inner polarizer disc of 
   Serial 115200: `A <cell> <deg>` (cell 0), `ALL <deg>`, `OPEN`. Replies `OK <cell> <disc deg> <target half steps>`.
   Angles follow polagrid (0 = open, 90 = closed). The disc turns `STEPS_PER_DISC_DEG` = 4096 x (90.4 mm belt pitch radius / 12.94 mm pulley pitch radius, 40T MXL, 10-22) / 360, about 79 half steps per degree (estimate, calibrate) (`hw/README.md`).
   10-31: the pulley is engaged about 40 deg off, so a command angle (0 open .. 90 closed) is mapped linearly onto motor 0..40 deg
-  (11-01 sweeps moved it to 33, the 11-19 sweep in sunlight back to 40: `sw/edge_ai/results/real_cell_sweep_1119_1117.csv`) (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open (measured max about 17.5 lux against about 1.7 at the dark end, small sample). Re-measure after re-seating the cell.
+  (11-01 sweeps moved it to 33, the 11-19 sweep in sunlight back to 40: `sw/edge_ai/results/real_cell_sweep_1119_1117.csv`) (`MOTOR_OPEN_DEG` = brightest, `MOTOR_CLOSED_DEG` = darkest in the desk-sensor sweep, `cell_logic.h`). `POS` and the state level use the inverse. The film's true open is outside the motor range, so "open" is only partly open. Two sweep sets: 1 Nov, indoor and low light, a closed cell read 0.0 lux behind the disc against 113 to 132 lux open, and the desk sensor fell from 62 to 72 lux to 1.7 (about 2.7 %); 19 Nov, in sunlight (one run, 10 deg steps), the cell sensor read 4,303 lux at command 0 and 817 lux at command 90 and was still falling, while the sky changed (desk 3,941 to 6,964 lux) and the curve is not monotonic. Re-measure after re-seating the cell.
 - No homing: `HOME_OVERDRIVE_DEG` = 0, so the disc position at power-up is 0. Set the disc open by hand before power-on. Coils switch off when the motor is idle.
 - Watchdog: no command for `WATCHDOG_MS` (30 min by default) opens the cell.
 - Button on GPIO 25 (to GND, internal pull-up, 50 ms debounce) opens the cell, the same as `OPEN`.
@@ -85,8 +85,5 @@ requests in the same line format. Compared 2026-10-18: ACPs, CNTs `sun`/`desks`/
 FlexContainer and the `state` PUT are byte for byte the same. The AE bodies, the desk count and the extra `lux` CNT
 differ as listed above. The command parser is tested on CINs shaped like the one the controller creates through
 `grp/fopt`; a real tinyIoT `command/la` reply has not been fed to it yet.
-
-Still needed on the PC side (not in this folder): a driver that runs `Controller(client, RUN_ID, port).setup(1)`
-against the same MN, publishes `{run}env/sun` (zone.py makes it from the sun model), and uses a one-desk room.
 
 Not done: the half steps per turn (4096), the step interval (2 ms) and the turning direction are typical values to calibrate on the real module (flip `phase` direction if the disc turns the wrong way). The Bluetooth build (`env:bt`) has run on one real ESP32 with one cell (2026-11-19, see above). The Wi-Fi HTTP build against tinyIoT and the button are built but not re-tested on hardware. The MQTT build (`env:mqtt`, `-DUSE_MQTT`) passes the host tests and a fake-cell run, and has not run on real hardware against a real broker. There is one real cell and it uses a stepper motor; the motor is not simulated.

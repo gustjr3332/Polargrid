@@ -40,6 +40,8 @@ python3 tools/real_cell.py --run real1 sweep --n 5            # 0,10,..,90,0 deg
 python3 tools/real_cell.py --run real1 ai --speed 120         # AI (1)+(2), sun from a SIMULATED clock
 ```
 
+`~/polargrid/nodes.sh` comes from `sw/edge_ai/sim` (copy `nodes.sh`, `gen_nodes.sh` and the configs to `~/polargrid` in WSL; the steps are in `sw/edge_ai/sim/README.md`). With Docker, use `docker compose up -d` instead.
+
 - `manual` prints, for each angle, the time from command to the cell's desk reply (the disc needs about 13 s for
   90 deg; the controller waits up to 30 s), the `state` opeLl next to the expected value, the desk lux and the newest
   cell-sensor reading (posted every 10 s, so it can be up to 10 s old).
@@ -73,7 +75,7 @@ desk reply, 10 s readings), but the disc and the sensors are the real ones on th
 3. In Windows PowerShell, from this folder: `pip install pyserial` (once), then
    `python tools/bt_bridge.py --port COM5 --run real1` (your COM number). The default `--host` is `http://127.0.0.1:3001`,
    the MN in WSL as Windows sees it. Lines from the cell that are not protocol lines print as `[cell] ...`.
-4. In WSL, start the IN and the MN and use `real_cell.py` as above (`check`, `manual`, `sweep`, `ai`).
+4. In WSL, start the IN and the MN and use `real_cell.py` as above (`check`, `manual`, `sweep`, `ai`) (the IN and MN scripts are described in `sw/edge_ai/sim/README.md`).
 
 If the port drops, the bridge reopens it every 3 s. If the cell gets no `PING` for 60 s it opens by itself (not in
 privacy mode). Test with a fake port and CSE: `python -m pytest -q tests/test_bt_bridge.py`.

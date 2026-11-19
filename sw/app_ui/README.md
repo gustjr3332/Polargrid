@@ -45,31 +45,40 @@ Plain HTML, CSS and JavaScript in `mockup/` and `demo/static/`, served by `demo/
 `mockup/index.html` is an HTML mockup of the five screens in a phone frame, with made-up numbers labelled "DEMO DATA" unless `?live=1` is set. Open it in
 Chrome: `?s=0..4` shows one screen (0 Window, 1 Comfort, 2 Mode, 3 Today, 4 Settings), `?view=all` shows all five. The Mode
 screen puts the three goals from the proposal (reduce desk glare, reduce screen reflection, brightest) under Auto.
-The mockup is the finished app work: a native Android or iOS app is not planned. See "Live real cell" below for the connection to the real cell.
+There is no native Android or iOS app; the mockup runs in a browser and can be added to a phone's home screen (below).
 
-**Live real cell (2026-10-19).** `?live=1` makes the Window screen show the one real cell: its open level, desk lux and cell-sensor lux,
-read every 2 s from `/api/real` of `demo/server.py` (viewer GETs only). Serve it from that server, with `--real RUN`, in WSL:
-`python3 server.py --live --mns 1 --real real1` (or `--replay FILE --real real1`), then open `http://localhost:8000/mockup/?live=1`.
-Start `tools/fake_cell.py --run real1` first to try it without hardware (the page then says "FAKE CELL"). Checked with a stub CSE
-and a headless screenshot, not yet with tinyIoT or the ESP32. Mode, goal, brightness slider and the other four screens are still
-made-up, and the Mode/Comfort buttons do not send anything.
-Since 2026-11-19 every screen reads live values with `?live=1` (checked with tinyIoT and the real ESP32 over Bluetooth):
-Comfort shows the desk reading and scales its slider to it (up to half the reading), Today shows desk and cell lux now, the
-desk maximum and motor moves since the page opened and the real cell's correction count, Settings shows the CSE link, the
-viewer originator, Bluetooth and the time of the last state. Mode marks Manual, because the live stack runs `real_cell.py app`.
-Only Today's comparison (fixed open, blind, timer) is simulation, and it is labelled so.
+### Live mode (`?live=1`)
 
-**Phone install as PWA (2026-10-19).** The mockup has a manifest and an apple-touch-icon, so Safari on an iPhone can add it to the home
-screen (Share, Add to Home Screen) and it opens full screen. Open `http://<PC IP>:8000/mockup/?live=1` from the phone on the same Wi-Fi first
-(WSL needs a port proxy to the PC's IP). Checked 2026-10-19 in WSL with tinyIoT (IN first, then MN 1) and `fake_cell.py`: `/api/real` followed `real_cell.py manual 45 90 0` as level 100, 50, 0, 100, and Windows `localhost:8000` reached it. The MN exits at start if the IN on port 3000 is not up. On the live Window screen you touch a cell and drag the top edge of its yellow part up or down (steps of 5 %); letting go sends that cell's open level (0 to 100) to `/api/real/level` (`{level, i}`, no `i` = every cell; the "Open all" / "Close all" buttons use that). `server.py` forwards it to `tools/real_cell.py --run real1 app` (127.0.0.1:9600), which posts one command CIN into `{run}p<i>/command` as the controller, so a cell that was added later works at once (no command group); a dashed line and "level → target" show the target until the cell arrives (or 45 s). Start `real_cell.py app` next to the server. This is a stopgap, not the `ctl/app` container planned above, and the endpoint has no login, so use it on a trusted Wi-Fi only. Checked with fake_cell: POST 30 gave level 30 after about 8 s, a screenshot showed the slider, a headless Chrome run that fires the slider events moved the cell 10 to 80 to 20 after about 9 s (an earlier build never sent the command: `API` was undefined). On the live Comfort screen "Too bright" / "Too dark" (size 100 to 500 lux) POST `/api/real/correction`, and `server.py` stores one row in `demo/corrections.db` (SQLite, git-ignored): time (KST), kind, size, wanted offset (negative = too bright, as in `polagrid/prefs.py`), cell open level, desk and cell lux, and `fake` = 1 when the cell is `fake_cell.py`. `GET /api/real/corrections` returns the count and last 5. The controller does not use the fitted model yet. `python3 tools/fit_corrections.py` (in `sw/edge_ai`) reads the table, rebuilds `ai.features()` from each timestamp (clear-sky outdoor light, since the real cell has no outdoor sensor) and fits `ai.fit_preference`; fake rows are skipped unless `--include-fake`, and that model file is named `preference_FAKE`. Phone access: `demo/phone_proxy.ps1` in an admin PowerShell forwards Windows port 8000 to WSL and opens the firewall for the local subnet (`-Remove` undoes it). **Rooms on the demo page (2026-10-19).** `demo/static/index.html` now draws the 1,000 cells as ten 10 x 10 rooms (5 across, 2 down, "방 1" to "방 10", row 0 at the bottom as in `physics.py`) when the frames come from a server (live or replay). Before, the flat list was laid out 40 cells per line, which cut every room into pieces. The built-in demo generator (no server) keeps the flat grid. Checked on the 10-17 recording at 1,920 x 1,080: every room shows one dark patch where the sun lands, the same shape in all rooms because the ten zones run the same model and sun.
+Live mode reads the real cell through `demo/server.py`. Serve the page from that server in WSL, with `--real RUN`:
+`python3 server.py --live --mns 1 --real real1`, then open `http://localhost:8000/mockup/?live=1`. Start `tools/fake_cell.py --run real1`
+first to try it without hardware (the page then says "FAKE CELL").
 
-**Access token (2026-10-19).** `demo/server.py --token T` (or `DEMO_TOKEN`) makes every POST need the header `X-Demo-Token`; the pages read `?token=...` from their address and keep it in localStorage. `demo/demo_up.sh` generates one per start and prints the links. Details in `demo/README.md`.
+- Checked on 19 Nov 2026 with tinyIoT and the real ESP32 over Bluetooth: every screen shows live values.
+- Window: the cell's open level, desk lux and cell-sensor lux, read every 2 s from `/api/real` (viewer GETs only). Cells appear one by one at the row and column set in the firmware (`CELL_ROW`, `CELL_COL`, label `polagrid/<run>/pos/<row>/<col>`), with dashed boxes for empty places. A cell cannot be removed from the screen except by deleting its resources on the CSE.
+- Moving cells: touch a cell and drag its top edge (steps of 5 %), or tick cells with "Select cells" and use one slider for all of them. The page POSTs `{level, i}` or `{level, cells}` to `/api/real/level`; `server.py` forwards it to `tools/real_cell.py --run real1 app` (127.0.0.1:9600), which posts one command CIN per cell. "Open all" / "Close all" use the same endpoint. The endpoint has no login, so use it on a trusted Wi-Fi only.
+- Comfort: "Too bright" and "Too dark" (100 to 500 lux, scaled to the desk reading) POST `/api/real/correction`. `server.py` stores one row per correction in `demo/corrections.db` (SQLite, git-ignored), and `python3 tools/fit_corrections.py` fits a preference model from them. The controller does not use that model yet. "My AI" learns the preference in the browser (`mockup/ridge.js`) and posts it to `/api/real/params`; `tools/real_cell.py ai --pref web` aims the cell with it.
+- Today: desk and cell lux now, the desk maximum and motor moves since the page opened, and the correction count. Only the comparison with fixed open, blind and timer is simulation, and it is labelled so.
+- Settings: the CSE link, the viewer originator, Bluetooth and the time of the last state.
+- Mode: the Mode buttons send nothing; the screen marks Manual, because the live stack runs `real_cell.py app`. The goal and brightness controls are still made-up values.
+- Not tried on a phone: the cell list and Wi-Fi icon.
 
-**Layout polish (2026-10-19).** With `?bare` (phone) the page fills the screen height (`100dvh`) and the body scrolls, so nothing is cut off on a short phone; the "live / fake cell" badge moved from the bottom to the header, cells in a 2-column grid are wider than tall, and the glare legend is hidden on the live screen. Checked in headless Chrome at 390 x 844, 2x.
+![Dashboard with live values from the real cell](mockup/screens/dashboard_live.png)
 
-**Select cells, one slider for all of them (2026-10-19).** The "Select cells" chip on the live Window screen turns tapping into picking: tap cells to tick them (all are ticked when the mode is switched on; "Select all" / "Clear" toggles), and the slider under it sets the open level of the ticked cells at once. The page POSTs `{"level", "cells": [indexes]}` to `/api/real/level` and `real_cell.py app` sends each listed cell its own command (a single `i`, or no list = every cell, still work). With select mode off, touching a cell and dragging its edge sets that one cell. Checked with four fake cells: ticking 0 and 3 and moving the slider to 40 set cells 0 and 3 to 40 after about 10 s and left cells 1 and 2 at 100.
+Dashboard in live mode: live values from the real cell, 19 Nov.
 
-**Cells appear one by one, where they were installed.** Each cell firmware has `CELL_INDEX`, `CELL_ROW`, `CELL_COL` in `secrets.h` (row 0 = top, col 0 = left, seen from inside the room). It puts the position on its `state` as a second label `polagrid/<run>/pos/<row>/<col>`. `/api/real` finds the cells by the state label (cached 3 s), reads each position and level, and returns `cells`; the Window screen draws one box per cell at its row and column, dashed boxes for empty places, and a new cell pops in. Checked with `fake_cell.py --index 1 --row 0 --col 1` etc. (four cells in a 2 x 2 grid, the fourth appeared within a few seconds of starting it). Not done: a cell cannot be removed from the screen except by deleting its resources on the CSE. While the disc turns the cell shows "Moving, target N%". The status bar has a Wi-Fi icon (struck out when the cell cannot be read) because the phone must be on the same Wi-Fi as the cell module. It reads `/api/real` from the same server, so there is no API address setting. Not tried on a phone.
+### Phone install (PWA)
+
+- The mockup has a manifest and an apple-touch-icon, so Safari on an iPhone can add it to the home screen (Share, Add to Home Screen) and it opens full screen.
+- Open `http://<PC IP>:8000/mockup/?live=1` from the phone on the same Wi-Fi first. WSL needs a port proxy to the PC's IP: run `demo/phone_proxy.ps1` in an admin PowerShell (`-Remove` undoes it).
+- With `?bare` the page fills the screen height (`100dvh`), so nothing is cut off on a short phone. Checked in headless Chrome at 390 x 844.
+
+### Access token
+
+`demo/server.py --token T` (or `DEMO_TOKEN`) makes every POST need the header `X-Demo-Token`. The pages read `?token=...` from their address and keep it in localStorage. `demo/demo_up.sh` generates one per start and prints the links. Details in `demo/README.md`.
+
+### Rooms on the demo page
+
+`demo/static/index.html` draws the 1,000 cells as ten 10 x 10 rooms (5 across, 2 down, labelled "Room 1" to "Room 10", row 0 at the bottom as in `physics.py`) when the frames come from a server. The built-in generator (no server) keeps a flat grid. Checked on a recording at 1,920 x 1,080: every room shows one dark patch where the sun lands, the same shape in all rooms because the ten zones run the same model and sun.
 
 ## Virtual lecture room (3D replay)
 

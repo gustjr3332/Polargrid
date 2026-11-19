@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Record one simulated day at 10-minute steps for the replay (replay/day_10min.jsonl). Takes about 25 to 30 minutes and loads the CPU
 # (10 zones of 100 cells over the CSE). The zones run at speed 0.05 (20 s per step) because reading all 1,000 cells takes about 10 s under
-# that load; at 1x the recorder would miss most steps (docs 0-4). Run in WSL from sw/app_ui/demo/:  bash record_day.sh
+# that load; at 1x the recorder would miss most steps. Run in WSL from sw/app_ui/demo/:  bash record_day.sh
 D=$(cd "$(dirname "$0")" && pwd)
 TOKEN=$(python3 -c "import secrets;print(secrets.token_urlsafe(6))"); export DEMO_TOKEN=$TOKEN
 bash "$D/demo_down.sh" quiet

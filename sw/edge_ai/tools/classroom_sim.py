@@ -1,6 +1,6 @@
 """Virtual lecture room with a high south window nobody can reach: compare PolaGrid with the baselines.
 
-Scenario: docs/2_개발/PolaGrid_가상강의실_시나리오.md (Korean). Every number below is an ASSUMPTION of the virtual room,
+Every number below is an ASSUMPTION of the virtual room,
 not a measurement. Sky: KMA ASOS Seoul 2025 hourly (data/weather/kma_seoul_2025.csv, polagrid.weather).
 
     python tools/classroom_sim.py                # test days + replay day -> results/classroom_<mmdd>.txt

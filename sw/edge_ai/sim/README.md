@@ -1,5 +1,11 @@
 # polargrid sim: oneM2M multi-node development environment
 
+## Quick path: Docker
+
+`docker compose up -d` in the repository root builds tinyIoT IN-CSE and MN-CSE (mn001) with `sw/edge_ai/sim/Dockerfile`: a pinned upstream commit (`c140495`) plus the patch in `sw/edge_ai/sim/patches`. The IN listens on port 3000 and the MN on 3001; set `IN_PORT` and `MN_PORT` to publish other host ports. This is all you need for the one-cell and 12-cell runs.
+
+The rest of this file describes the WSL multi-MN setup used for the 1,000-cell runs (one IN and up to ten MNs on one laptop).
+
 A development and simulation setup built on tinyIoT (a oneM2M CSE): one central server (IN-CSE) and N field nodes (MN-CSE), connected over MQTT.
 
 ## Layout (WSL Ubuntu 24.04)
