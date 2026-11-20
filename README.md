@@ -2,7 +2,8 @@
 
 PolaGrid cuts glare at the desk without darkening the room. A window is divided into cells, each cell holds a rotating polarizing film, and an AI turns only the cells whose light lands on a desk. Each cell is a oneM2M AE, and the controller talks to the cells through a standard CSE: [tinyIoT](https://github.com/seslabSJU/tinyIoT) in an IN-CSE plus MN-CSE hierarchy. The same resource tree was also run on the [ETSI MEC Sandbox](https://try-mec.etsi.org/). The standard is described at [onem2m.org](https://www.onem2m.org/).
 
-Write-up and demo video: https://www.hackster.io/gustjr3332/polargrid-54ae9e
+- Write-up: https://www.hackster.io/gustjr3332/polagrid-per-cell-window-dimming-with-onem2m-and-edge-ai-54ae9e
+- Demo video (3 min): https://www.youtube.com/watch?v=S3Rqu0ENBUw
 
 ![oneM2M resource tree of one zone](sw/edge_ai/polagrid/diagrams/resource_tree.png)
 
